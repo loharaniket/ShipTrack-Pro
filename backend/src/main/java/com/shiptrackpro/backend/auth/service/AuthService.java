@@ -9,8 +9,11 @@ import com.shiptrackpro.backend.auth.dto.RegisterRequest;
 import com.shiptrackpro.backend.auth.dto.ResetPasswordRequest;
 import com.shiptrackpro.backend.security.CustomUserDetailsService;
 import com.shiptrackpro.backend.security.JwtService;
+import com.shiptrackpro.backend.user.entity.AppRole;
 import com.shiptrackpro.backend.user.entity.AppUser;
+import com.shiptrackpro.backend.user.entity.Company;
 import com.shiptrackpro.backend.user.entity.UserSession;
+import com.shiptrackpro.backend.user.repository.CompanyRepository;
 import com.shiptrackpro.backend.user.repository.UserRepository;
 import com.shiptrackpro.backend.user.repository.UserSessionRepository;
 
@@ -32,8 +35,10 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final CustomUserDetailsService userDetailsService;
     private final UserSessionRepository userSessionRepository;
+    private final CompanyRepository companyRepository;
 
     public AuthResponse register(RegisterRequest request) {
+
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new IllegalArgumentException("Email is already in use");
         }
@@ -43,7 +48,19 @@ public class AuthService {
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
-        user.setRole(com.shiptrackpro.backend.user.entity.AppRole.CUSTOMER);
+        user.setRole(AppRole.CUSTOMER);
+
+        if (request.getCompanyName() != null
+                && !companyRepository.existsByCompanyName(request.getCompanyName().toUpperCase())) {
+            Company company = new Company();
+            company.setCompanyName(request.getCompanyName().toUpperCase());
+            company.setEmail(request.getEmail());
+            company.setPhone(request.getPhone());
+            company.setWebsite(request.getWebsite());
+            companyRepository.save(company);
+            user.setRole(AppRole.BUSINESS_CLIENT);
+            user.setCompany(company);
+        }
 
         userRepository.save(user);
 
@@ -51,7 +68,7 @@ public class AuthService {
         String jwtToken = jwtService.generateToken(userDetails);
         String refreshToken = jwtService.generateRefreshToken(userDetails);
         saveUserSession(user, refreshToken);
-        
+
         return new AuthResponse(jwtToken, refreshToken);
     }
 
@@ -59,23 +76,21 @@ public class AuthService {
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         request.getEmail(),
-                        request.getPassword()
-                )
-        );
+                        request.getPassword()));
 
         UserDetails userDetails = userDetailsService.loadUserByUsername(request.getEmail());
         String jwtToken = jwtService.generateToken(userDetails);
         String refreshToken = jwtService.generateRefreshToken(userDetails);
-        
+
         AppUser user = userRepository.findByEmail(request.getEmail()).orElseThrow();
         saveUserSession(user, refreshToken);
-        
+
         return new AuthResponse(jwtToken, refreshToken);
     }
 
     public AuthResponse oauth2Login(String provider, OAuth2LoginRequest request) {
-        String email = request.getIdToken(); 
-        
+        String email = request.getIdToken();
+
         AppUser user = userRepository.findByEmail(email).orElseGet(() -> {
             AppUser newUser = new AppUser();
             newUser.setEmail(email);
@@ -90,14 +105,14 @@ public class AuthService {
         String jwtToken = jwtService.generateToken(userDetails);
         String refreshToken = jwtService.generateRefreshToken(userDetails);
         saveUserSession(user, refreshToken);
-        
+
         return new AuthResponse(jwtToken, refreshToken);
     }
 
     public String forgotPassword(ForgotPasswordRequest request) {
         AppUser user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
-                
+
         UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
         return jwtService.generateToken(userDetails);
     }
@@ -105,7 +120,7 @@ public class AuthService {
     public void resetPassword(ResetPasswordRequest request) {
         String email = jwtService.extractUsername(request.getToken());
         UserDetails userDetails = userDetailsService.loadUserByUsername(email);
-        
+
         if (jwtService.isTokenValid(request.getToken(), userDetails)) {
             AppUser user = userRepository.findByEmail(email)
                     .orElseThrow(() -> new IllegalArgumentException("User not found"));
@@ -119,10 +134,10 @@ public class AuthService {
     public AuthResponse refreshToken(RefreshTokenRequest request) {
         String refreshToken = request.getRefreshToken();
         String email = jwtService.extractUsername(refreshToken);
-        
+
         if (email != null) {
             UserDetails userDetails = userDetailsService.loadUserByUsername(email);
-            
+
             if (jwtService.isTokenValid(refreshToken, userDetails)) {
                 UserSession session = userSessionRepository.findByRefreshToken(refreshToken)
                         .orElseThrow(() -> new IllegalArgumentException("Invalid refresh token"));
