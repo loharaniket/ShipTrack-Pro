@@ -33,6 +33,7 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.success("User created successfully", response));
     }
 
+    @PreAuthorize("hasRole('ADMINISTRATOR')")
     @GetMapping
     public ResponseEntity<ApiResponse<Page<UserDto>>> getAllUsers(
             @RequestParam(defaultValue = "0") int page,
@@ -48,6 +49,7 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.success("User fetched successfully", response));
     }
 
+    @PreAuthorize("hasRole('ADMINISTRATOR')")
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<UserDto>> updateUser(
             @PathVariable UUID id,
@@ -56,6 +58,7 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.success("User updated successfully", response));
     }
 
+    @PreAuthorize("hasRole('ADMINISTRATOR')")
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<String>> deleteUser(@PathVariable UUID id) {
         userService.deleteUser(id);
