@@ -1,4 +1,4 @@
-package com.shiptrackpro.backend.user.repository;
+package com.shiptrackpro.backend.admin.repository;
 
 import java.util.UUID;
 

@@ -1,4 +1,4 @@
-package com.shiptrackpro.backend.user.dto;
+package com.shiptrackpro.backend.admin.dto;
 
 import lombok.Data;
 import java.time.ZonedDateTime;

@@ -1,5 +1,6 @@
 package com.shiptrackpro.backend.auth.service;
 
+import com.shiptrackpro.backend.admin.repository.CompanyRepository;
 import com.shiptrackpro.backend.auth.dto.AuthResponse;
 import com.shiptrackpro.backend.auth.dto.ForgotPasswordRequest;
 import com.shiptrackpro.backend.auth.dto.LoginRequest;
@@ -13,7 +14,6 @@ import com.shiptrackpro.backend.user.entity.AppRole;
 import com.shiptrackpro.backend.user.entity.AppUser;
 import com.shiptrackpro.backend.user.entity.Company;
 import com.shiptrackpro.backend.user.entity.UserSession;
-import com.shiptrackpro.backend.user.repository.CompanyRepository;
 import com.shiptrackpro.backend.user.repository.UserRepository;
 import com.shiptrackpro.backend.user.repository.UserSessionRepository;
 

@@ -1,4 +1,4 @@
-package com.shiptrackpro.backend.user.dto;
+package com.shiptrackpro.backend.admin.dto;
 
 import com.shiptrackpro.backend.user.entity.AppRole;
 import lombok.Data;

@@ -1,9 +1,10 @@
-package com.shiptrackpro.backend.user.service;
+package com.shiptrackpro.backend.admin.service;
 
-import com.shiptrackpro.backend.user.dto.CompanyDto;
-import com.shiptrackpro.backend.user.dto.CreateCompanyRequest;
+import com.shiptrackpro.backend.admin.dto.CompanyDto;
+import com.shiptrackpro.backend.admin.dto.CreateCompanyRequest;
+import com.shiptrackpro.backend.admin.repository.CompanyRepository;
 import com.shiptrackpro.backend.user.entity.Company;
-import com.shiptrackpro.backend.user.repository.CompanyRepository;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
