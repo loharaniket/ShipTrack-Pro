@@ -9,6 +9,10 @@ import java.util.UUID;
 
 public interface ShipmentRepository extends JpaRepository<Shipment, UUID> {
     Optional<Shipment> findByTrackingNumber(String trackingNumber);
+
     Page<Shipment> findAllByCompanyId(UUID companyId, Pageable pageable);
+
     Page<Shipment> findAllByCreatedById(UUID userId, Pageable pageable);
+
+    Optional<Shipment> findById(UUID id);
 }

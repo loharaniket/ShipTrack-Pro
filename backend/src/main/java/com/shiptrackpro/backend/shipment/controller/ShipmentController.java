@@ -2,8 +2,10 @@ package com.shiptrackpro.backend.shipment.controller;
 
 import com.shiptrackpro.backend.common.response.ApiResponse;
 import com.shiptrackpro.backend.shipment.dto.*;
+import com.shiptrackpro.backend.shipment.entity.ShipmentStatus;
 import com.shiptrackpro.backend.shipment.service.ShipmentService;
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -64,6 +66,7 @@ public class ShipmentController {
     public ResponseEntity<ApiResponse<PackageDto>> addPackageToShipment(
             @PathVariable UUID id, @RequestBody PackageDto request) {
         PackageDto response = shipmentService.addPackageToShipment(id, request);
+        System.out.println("\n***********Package Add Successfully************");
         return ResponseEntity.ok(ApiResponse.success("Package added successfully", response));
     }
 
@@ -72,5 +75,13 @@ public class ShipmentController {
             @PathVariable UUID id) {
         List<ShipmentHistoryDto> response = shipmentService.getShipmentHistory(id);
         return ResponseEntity.ok(ApiResponse.success("History fetched successfully", response));
+    }
+
+    // LOGISTICS_OPERATOR, SUPPORT_AGENT,ADMINISTRATOR
+    @PostMapping("/{id}/history/{status}")
+    public ResponseEntity<ApiResponse<String>> updateShipmentHistory(@PathVariable UUID id,
+            @PathVariable ShipmentStatus status, Authentication auth) {
+        shipmentService.updateShipmentHistory(id, status, auth);
+        return ResponseEntity.ok(ApiResponse.success("Shipment History Update", null));
     }
 }

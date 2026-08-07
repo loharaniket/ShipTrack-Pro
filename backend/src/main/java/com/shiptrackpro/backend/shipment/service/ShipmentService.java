@@ -89,7 +89,7 @@ public class ShipmentService {
             return shipmentRepository.findAllByCreatedById(user.getId(), pageable)
                     .map(this::toSummaryDto);
         }
-        
+
         // Admin or Operator sees all
         return shipmentRepository.findAll(pageable).map(this::toSummaryDto);
     }
@@ -97,11 +97,14 @@ public class ShipmentService {
     public ShipmentDto updateShipment(UUID id, UpdateShipmentRequest request, Authentication auth) {
         Shipment shipment = shipmentRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Shipment not found"));
-                
-        if (request.getReceiverName() != null) shipment.setReceiverName(request.getReceiverName());
-        if (request.getReceiverPhone() != null) shipment.setReceiverPhone(request.getReceiverPhone());
-        if (request.getPriority() != null) shipment.setPriority(request.getPriority());
-        
+
+        if (request.getReceiverName() != null)
+            shipment.setReceiverName(request.getReceiverName());
+        if (request.getReceiverPhone() != null)
+            shipment.setReceiverPhone(request.getReceiverPhone());
+        if (request.getPriority() != null)
+            shipment.setPriority(request.getPriority());
+
         if (request.getReceiverAddress() != null) {
             Address newAddress = saveAddress(request.getReceiverAddress());
             shipment.setReceiverAddress(newAddress);
@@ -114,26 +117,26 @@ public class ShipmentService {
     public void cancelShipment(UUID id, Authentication auth) {
         Shipment shipment = shipmentRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Shipment not found"));
-        
+
         AppUser user = userRepository.findByEmail(auth.getName()).orElse(null);
-        
+
         shipment.setStatus(ShipmentStatus.CANCELLED);
         shipment.setDeletedAt(ZonedDateTime.now());
         shipmentRepository.save(shipment);
-        
+
         logHistory(shipment, ShipmentStatus.CANCELLED, "Shipment cancelled by user", user);
     }
 
     public PackageDto addPackageToShipment(UUID shipmentId, PackageDto request) {
         Shipment shipment = shipmentRepository.findById(shipmentId)
                 .orElseThrow(() -> new IllegalArgumentException("Shipment not found"));
-                
+
         Package pkg = new Package();
         pkg.setShipment(shipment);
         pkg.setWeightKg(request.getWeightKg());
         pkg.setDimensionsCm(request.getDimensionsCm());
         pkg.setContentDescription(request.getContentDescription());
-        
+
         Package saved = packageRepository.save(pkg);
         return toPackageDto(saved);
     }
@@ -141,6 +144,16 @@ public class ShipmentService {
     public List<ShipmentHistoryDto> getShipmentHistory(UUID shipmentId) {
         List<ShipmentHistory> history = historyRepository.findAllByShipmentIdOrderByRecordedAtAsc(shipmentId);
         return history.stream().map(this::toHistoryDto).collect(Collectors.toList());
+    }
+
+    public void updateShipmentHistory(UUID id, ShipmentStatus status, Authentication auth) {
+        var shipment = shipmentRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Shipment Not Found!"));
+        var user = userRepository.findByEmail(auth.getName())
+                .orElseThrow(() -> new IllegalArgumentException("User Not Found!"));
+        shipment.setStatus(status);
+        shipmentRepository.save(shipment);
+        logHistory(shipment, status, "Update by user", user);
     }
 
     // --- Helper Methods ---
@@ -181,6 +194,7 @@ public class ShipmentService {
     }
 
     private ShipmentDto toDto(Shipment s) {
+        var pkg = packageRepository.findByShipment(s).stream().map(this::toPackageDto).toList();
         return ShipmentDto.builder()
                 .id(s.getId())
                 .trackingNumber(s.getTrackingNumber())
@@ -196,11 +210,13 @@ public class ShipmentService {
                 .estimatedDeliveryTime(s.getEstimatedDeliveryTime())
                 .actualDeliveryDate(s.getActualDeliveryDate())
                 .createdAt(s.getCreatedAt())
+                .packages(pkg)
                 .build();
     }
 
     private AddressDto toAddressDto(Address a) {
-        if (a == null) return null;
+        if (a == null)
+            return null;
         return AddressDto.builder()
                 .id(a.getId())
                 .line1(a.getLine1())
