@@ -1,18 +1,65 @@
 @import "tailwindcss";
 
-:root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+@theme {
+  --font-sans: 'Inter', system-ui, sans-serif;
+  
+  /* Color Palette */
+  --color-brand: #4F46E5; /* Deep Indigo */
+  --color-brand-hover: #4338CA;
+  --color-accent: #06B6D4; /* Electric Cyan */
+  
+  /* Status Colors */
+  --color-status-success: #10B981;
+  --color-status-warning: #F59E0B;
+  --color-status-error: #E11D48;
+  --color-status-info: #0EA5E9;
+  --color-status-neutral: #64748B;
+  
+  /* Backgrounds */
+  --color-bg-light: #F8FAFC;
+  --color-bg-card-light: #FFFFFF;
+  --color-bg-dark: #0F172A;
+  --color-bg-card-dark: #1E293B;
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  /* Text Colors */
+  --color-text-light: #1E293B;
+  --color-text-dark: #F1F5F9;
 }
 
-@media (prefers-color-scheme: light) {
+@layer base {
   :root {
-    color: #213547;
-    background-color: #ffffff;
+    color-scheme: light dark;
+    color: var(--color-text-light);
+    background-color: var(--color-bg-light);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color: var(--color-text-dark);
+      background-color: var(--color-bg-dark);
+    }
+  }
+
+  body {
+    font-family: var(--font-sans);
+    margin: 0;
+    min-height: 100vh;
+  }
+}
+
+@layer components {
+  /* Glassmorphism utilities */
+  .glass {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+  }
+  
+  @media (prefers-color-scheme: dark) {
+    .glass {
+      background: rgba(30, 41, 59, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
   }
 }
