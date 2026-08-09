@@ -19,11 +19,35 @@ const Dashboard = () => {
           Your centralized hub for managing and tracking shipments. 
         </p>
         
-        <div className="pt-6">
+        <div className="pt-6 pb-4">
           <Button onClick={() => navigate('/shipments')} className="gap-2 text-lg px-8 py-3">
             Go to Shipments
             <ArrowRight className="h-5 w-5" />
           </Button>
+        </div>
+
+        <div className="mt-8 pt-8 border-t border-gray-100 dark:border-gray-800 text-left">
+          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <Package className="h-5 w-5 text-[var(--color-brand)]" />
+            Quick Track
+          </h3>
+          <form 
+            onSubmit={(e) => {
+              e.preventDefault();
+              const val = new FormData(e.target).get('trackingNumber');
+              if (val) navigate(`/track/${val.trim()}`);
+            }}
+            className="flex gap-2"
+          >
+            <input 
+              name="trackingNumber"
+              type="text" 
+              placeholder="Enter Tracking Number (e.g. TRK-XXXX)" 
+              className="flex-1 px-4 py-2 border rounded-md shadow-sm bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)]"
+              required
+            />
+            <Button type="submit" className="whitespace-nowrap px-6">Track</Button>
+          </form>
         </div>
       </div>
     </div>

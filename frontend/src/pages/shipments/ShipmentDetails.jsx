@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
 import Button from '../../components/ui/Button';
 import { useAuth } from '../../context/AuthContext';
 import { formatDateOnly, formatDateTime } from '../../utils/dateFormatter';
-import { ArrowLeft, PackagePlus, Edit2, Trash2, Clock, CheckCircle2, Package as PackageIcon, Truck, MapPin } from 'lucide-react';
+import { ArrowLeft, PackagePlus, Edit2, Trash2, Clock, Package as PackageIcon, Truck, MapPin } from 'lucide-react';
 
 const ShipmentDetails = () => {
   const { id } = useParams();
@@ -12,12 +12,22 @@ const ShipmentDetails = () => {
   const { currentUser } = useAuth();
   
   const [shipment, setShipment] = useState(null);
-  const [history, setHistory] = useState([]);
+  const [history, setHistory] = useState([]); // Public timeline
+  const [internalHistory, setInternalHistory] = useState([]); // Internal audit trail
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   
-  const [newStatus, setNewStatus] = useState('IN_TRANSIT');
   const [updatingHistory, setUpdatingHistory] = useState(false);
+  const [updatingInternalHistory, setUpdatingInternalHistory] = useState(false);
+  const [newInternalStatus, setNewInternalStatus] = useState('IN_TRANSIT');
+  const [newEvent, setNewEvent] = useState({
+    status: 'IN_TRANSIT',
+    eventType: 'STATUS_UPDATE',
+    description: '',
+    locationName: '',
+    latitude: '',
+    longitude: ''
+  });
 
   const [addingPackage, setAddingPackage] = useState(false);
   const [newPackage, setNewPackage] = useState({
@@ -35,15 +45,44 @@ const ShipmentDetails = () => {
     fetchShipmentDetails();
   }, [id]);
 
-  const handleUpdateHistory = async () => {
+  const handleUpdateHistory = async (e) => {
+    e.preventDefault();
     try {
       setUpdatingHistory(true);
-      await api.post(`/shipments/${id}/history/${newStatus}`);
+      await api.post(`/tracking/${shipment.trackingNumber}/events`, {
+        status: newEvent.status,
+        eventType: newEvent.eventType,
+        description: newEvent.description || null,
+        locationName: newEvent.locationName || null,
+        latitude: newEvent.latitude ? parseFloat(newEvent.latitude) : null,
+        longitude: newEvent.longitude ? parseFloat(newEvent.longitude) : null
+      });
+      setNewEvent({
+        status: newEvent.status,
+        eventType: 'STATUS_UPDATE',
+        description: '',
+        locationName: '',
+        latitude: '',
+        longitude: ''
+      });
       fetchShipmentDetails();
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to update history');
+      alert(err.response?.data?.message || 'Failed to update tracking history');
     } finally {
       setUpdatingHistory(false);
+    }
+  };
+
+  const handleUpdateInternalHistory = async (e) => {
+    e.preventDefault();
+    try {
+      setUpdatingInternalHistory(true);
+      await api.post(`/shipments/${id}/history/${newInternalStatus}`);
+      fetchShipmentDetails();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to update internal history');
+    } finally {
+      setUpdatingInternalHistory(false);
     }
   };
 
@@ -69,14 +108,25 @@ const ShipmentDetails = () => {
   const fetchShipmentDetails = async () => {
     try {
       setLoading(true);
-      const [shipmentRes, historyRes] = await Promise.all([
+      const [shipmentRes, internalHistoryRes] = await Promise.all([
         api.get(`/shipments/${id}`),
         api.get(`/shipments/${id}/history`)
       ]);
-      setShipment(shipmentRes.data.data);
-      setHistory(historyRes.data.data || []);
+      const shipmentData = shipmentRes.data.data;
+      setShipment(shipmentData);
+      setInternalHistory(internalHistoryRes.data.data || []);
+
+      if (shipmentData.trackingNumber) {
+        try {
+          const trackingRes = await api.get(`/tracking/${shipmentData.trackingNumber}`);
+          setHistory(trackingRes.data.data.events || []);
+        } catch (trackingErr) {
+          console.error("Failed to fetch rich tracking events:", trackingErr);
+          setHistory([]);
+        }
+      }
     } catch (err) {
-      setError('Failed to fetch shipment details.');
+      setError(err.response?.data?.message || 'Failed to fetch shipment details');
     } finally {
       setLoading(false);
     }
@@ -107,7 +157,7 @@ const ShipmentDetails = () => {
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6 mt-4 pb-12">
+    <div className="max-w-6xl mx-auto space-y-6 mt-4 pb-12 px-4 sm:px-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center gap-4">
           <Button variant="ghost" className="px-2" onClick={() => navigate('/shipments')}>
@@ -140,9 +190,12 @@ const ShipmentDetails = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column: Details */}
-        <div className="lg:col-span-2 space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        {/* LEFT COLUMN: Order Details, Packages, Internal Ledger */}
+        <div className="lg:col-span-2 space-y-8">
+          
+          {/* Routing Information */}
           <div className="glass p-6 rounded-2xl shadow-sm">
             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 border-b border-gray-100 dark:border-gray-800 pb-2">
               <MapPin className="h-5 w-5 text-[var(--color-brand)]" />
@@ -172,6 +225,7 @@ const ShipmentDetails = () => {
             </div>
           </div>
 
+          {/* Packages */}
           <div className="glass p-6 rounded-2xl shadow-sm">
             <div className="flex justify-between items-center border-b border-gray-100 dark:border-gray-800 pb-2 mb-4">
               <h2 className="text-lg font-semibold flex items-center gap-2">
@@ -272,43 +326,148 @@ const ShipmentDetails = () => {
               )}
             </div>
           </div>
+
+          {/* Internal History Ledger */}
+          {(currentUser?.role === 'ADMINISTRATOR' || currentUser?.role === 'SUPPORT_AGENT' || currentUser?.role === 'LOGISTICS_OPERATOR' || currentUser?.role === 'BUSINESS_CLIENT') && (
+            <div className="glass p-6 rounded-2xl shadow-sm">
+              <h2 className="text-lg font-semibold flex items-center gap-2 border-b border-gray-100 dark:border-gray-800 pb-2 mb-6">
+                <Clock className="h-5 w-5 text-gray-500" />
+                Internal Ledger (Financial & Audit Trail)
+              </h2>
+
+              {canUpdateHistory && (
+                <form onSubmit={handleUpdateInternalHistory} className="mb-6 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-xl border border-gray-100 dark:border-gray-800">
+                  <h4 className="text-sm font-semibold mb-2">Log Status Update</h4>
+                  <div className="flex gap-2">
+                    <select
+                      value={newInternalStatus}
+                      onChange={(e) => setNewInternalStatus(e.target.value)}
+                      className="flex-1 px-3 py-2 border rounded-md shadow-sm bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-sm"
+                    >
+                      <option value="CREATED">CREATED</option>
+                      <option value="PICKED_UP">PICKED UP</option>
+                      <option value="IN_TRANSIT">IN TRANSIT</option>
+                      <option value="OUT_FOR_DELIVERY">OUT FOR DELIVERY</option>
+                      <option value="DELIVERED">DELIVERED</option>
+                      <option value="FAILED">FAILED</option>
+                      <option value="RETURNED">RETURNED</option>
+                      <option value="CANCELLED">CANCELLED</option>
+                    </select>
+                    <Button type="submit" disabled={updatingInternalHistory} className="whitespace-nowrap">
+                      {updatingInternalHistory ? 'Saving...' : 'Add Log'}
+                    </Button>
+                  </div>
+                </form>
+              )}
+
+              {internalHistory.length === 0 ? (
+                <p className="text-gray-500 text-center py-8">No internal logs found.</p>
+              ) : (
+                <div className="relative border-l-2 border-gray-200 dark:border-gray-700 ml-3 space-y-6">
+                  {internalHistory.map((log, index) => (
+                    <div key={log.id || index} className="relative pl-6">
+                      <div className="absolute -left-[9px] top-1 h-4 w-4 rounded-full border-2 border-white dark:border-gray-900 bg-gray-400" />
+                      <div className="flex flex-col mb-1">
+                        <h3 className="font-medium text-sm text-gray-800 dark:text-gray-200">
+                          Status changed to <span className="font-bold">{log.status}</span>
+                        </h3>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-1">
+                          by {log.changedByName || 'System'}
+                        </p>
+                        <time className="text-xs text-gray-400 mt-1">
+                          {formatDateTime(log.timestamp)}
+                        </time>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Right Column: Tracking History */}
+        {/* RIGHT COLUMN: Physical Tracking Timeline */}
         <div className="lg:col-span-1 space-y-6">
           <div className="glass p-6 rounded-2xl shadow-sm h-full">
-            <h2 className="text-lg font-semibold mb-6 flex items-center gap-2 border-b border-gray-100 dark:border-gray-800 pb-2">
-              <Clock className="h-5 w-5 text-[var(--color-brand)]" />
-              Tracking History
+            <h2 className="text-lg font-semibold flex items-center gap-2 border-b border-gray-100 dark:border-gray-800 pb-2 mb-6">
+              <Truck className="h-5 w-5 text-[var(--color-brand)]" />
+              Tracking Timeline (Physical)
             </h2>
-
+            
             {canUpdateHistory && (
-              <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-xl border border-gray-100 dark:border-gray-800">
-                <h3 className="text-sm font-semibold mb-2">Log Status Update</h3>
-                <div className="flex gap-2">
-                  <select 
-                    value={newStatus} 
-                    onChange={(e) => setNewStatus(e.target.value)}
-                    className="flex-1 px-3 py-2 border rounded-md shadow-sm bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-sm"
+              <form onSubmit={handleUpdateHistory} className="mb-8 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-xl border border-gray-100 dark:border-gray-800 space-y-4">
+                <h4 className="text-sm font-semibold flex items-center gap-1">Add Tracking Event</h4>
+                
+                <div className="flex flex-col space-y-3">
+                  <select
+                    value={newEvent.status}
+                    onChange={(e) => setNewEvent({...newEvent, status: e.target.value})}
+                    className="w-full px-3 py-2 border rounded-md shadow-sm bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-sm"
                   >
-                    <option value="CREATED">Created</option>
-                    <option value="PICKED_UP">Picked Up</option>
-                    <option value="IN_TRANSIT">In Transit</option>
-                    <option value="OUT_FOR_DELIVERY">Out For Delivery</option>
-                    <option value="DELIVERED">Delivered</option>
-                    <option value="FAILED">Failed</option>
-                    <option value="RETURNED">Returned</option>
-                    <option value="CANCELLED">Cancelled</option>
+                    <option value="PENDING">PENDING</option>
+                    <option value="IN_TRANSIT">IN TRANSIT</option>
+                    <option value="OUT_FOR_DELIVERY">OUT FOR DELIVERY</option>
+                    <option value="DELIVERED">DELIVERED</option>
+                    <option value="CANCELLED">CANCELLED</option>
+                    <option value="RETURNED">RETURNED</option>
                   </select>
-                  <Button 
-                    onClick={handleUpdateHistory} 
-                    disabled={updatingHistory}
-                    className="whitespace-nowrap"
+
+                  <select
+                    value={newEvent.eventType}
+                    onChange={(e) => setNewEvent({...newEvent, eventType: e.target.value})}
+                    className="w-full px-3 py-2 border rounded-md shadow-sm bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-sm"
                   >
-                    {updatingHistory ? 'Saving...' : 'Add'}
+                    <option value="SCAN">SCAN</option>
+                    <option value="STATUS_UPDATE">STATUS UPDATE</option>
+                    <option value="LOCATION_UPDATE">LOCATION UPDATE</option>
+                    <option value="PICKUP">PICKUP</option>
+                    <option value="DELIVERY">DELIVERY</option>
+                    <option value="EXCEPTION">EXCEPTION</option>
+                  </select>
+
+                  <input 
+                    type="text" 
+                    placeholder="Location Name (e.g. Sort Facility, NY)" 
+                    value={newEvent.locationName} 
+                    onChange={(e) => setNewEvent({...newEvent, locationName: e.target.value})}
+                    className="w-full px-3 py-2 border rounded-md shadow-sm bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-sm"
+                  />
+
+                  <input 
+                    type="text" 
+                    placeholder="Description (e.g. Package scanned)" 
+                    value={newEvent.description} 
+                    onChange={(e) => setNewEvent({...newEvent, description: e.target.value})}
+                    className="w-full px-3 py-2 border rounded-md shadow-sm bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-sm"
+                  />
+                  
+                  <div className="grid grid-cols-2 gap-2">
+                    <input 
+                      type="number" 
+                      step="any"
+                      placeholder="Latitude" 
+                      value={newEvent.latitude} 
+                      onChange={(e) => setNewEvent({...newEvent, latitude: e.target.value})}
+                      className="w-full px-3 py-2 border rounded-md shadow-sm bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-sm"
+                    />
+
+                    <input 
+                      type="number" 
+                      step="any"
+                      placeholder="Longitude" 
+                      value={newEvent.longitude} 
+                      onChange={(e) => setNewEvent({...newEvent, longitude: e.target.value})}
+                      className="w-full px-3 py-2 border rounded-md shadow-sm bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-sm"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end mt-2">
+                  <Button type="submit" disabled={updatingHistory} className="w-full text-sm py-2">
+                    {updatingHistory ? 'Adding...' : 'Add Event to Timeline'}
                   </Button>
                 </div>
-              </div>
+              </form>
             )}
             
             {history.length === 0 ? (
@@ -322,19 +481,21 @@ const ShipmentDetails = () => {
                     }`} />
                     <div className="flex flex-col mb-1">
                       <h3 className={`font-semibold ${index === 0 ? 'text-gray-900 dark:text-gray-100' : 'text-gray-600 dark:text-gray-300'}`}>
-                        {event.status}
+                        {event.status} {event.eventType && <span className="text-xs text-gray-400 font-normal ml-1">({event.eventType})</span>}
                       </h3>
                       <time className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        {formatDateTime(event.timestamp)}
+                        {formatDateTime(event.createdAt || event.recordedAt)}
                       </time>
                     </div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1 mt-1">
-                      <MapPin className="h-3 w-3" />
-                      {event.location}
-                    </p>
-                    {event.notes && (
+                    {(event.locationName || event.location) && (
+                      <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1 mt-1">
+                        <MapPin className="h-3 w-3" />
+                        {event.locationName || event.location}
+                      </p>
+                    )}
+                    {(event.description || event.notes) && (
                       <p className="text-xs text-gray-500 bg-gray-50 dark:bg-gray-900/50 p-2 rounded mt-2 border border-gray-100 dark:border-gray-800">
-                        {event.notes}
+                        {event.description || event.notes}
                       </p>
                     )}
                   </div>

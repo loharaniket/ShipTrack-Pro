@@ -15,6 +15,7 @@ import CreateShipment from './pages/shipments/CreateShipment';
 import ShipmentDetails from './pages/shipments/ShipmentDetails';
 import EditShipment from './pages/shipments/EditShipment';
 import ProfileSettings from './pages/settings/ProfileSettings';
+import PublicTracking from './pages/tracking/PublicTracking';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -34,6 +35,8 @@ function App() {
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/track" element={<PublicTracking />} />
+            <Route path="/track/:trackingNumber" element={<PublicTracking />} />
 
             {/* Protected Routes */}
             <Route path="/" element={
