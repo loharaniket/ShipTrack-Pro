@@ -2,7 +2,6 @@ package com.shiptrackpro.backend.delivery.controller;
 
 import com.shiptrackpro.backend.common.response.ApiResponse;
 import com.shiptrackpro.backend.delivery.dto.*;
-import com.shiptrackpro.backend.delivery.entity.VehicleStatus;
 import com.shiptrackpro.backend.delivery.service.DeliveryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -18,13 +17,6 @@ import java.util.UUID;
 public class DeliveryController {
 
     private final DeliveryService deliveryService;
-
-    @GetMapping("/vehicles")
-    public ResponseEntity<ApiResponse<List<VehicleDto>>> getVehicles(
-            @RequestParam(required = false) VehicleStatus status) {
-        List<VehicleDto> response = deliveryService.getVehicles(status);
-        return ResponseEntity.ok(ApiResponse.success("Vehicles fetched successfully", response));
-    }
 
     @GetMapping("/drivers")
     public ResponseEntity<ApiResponse<List<DriverDto>>> getDrivers() {

@@ -1,7 +1,10 @@
 package com.shiptrackpro.backend.delivery.service;
 
 import com.shiptrackpro.backend.delivery.dto.*;
-import com.shiptrackpro.backend.delivery.entity.*;
+import com.shiptrackpro.backend.delivery.entity.AssignmentStatus;
+import com.shiptrackpro.backend.delivery.entity.Driver;
+import com.shiptrackpro.backend.delivery.entity.DriverLocation;
+import com.shiptrackpro.backend.delivery.entity.ShipmentAssignment;
 import com.shiptrackpro.backend.delivery.repository.*;
 import com.shiptrackpro.backend.shipment.entity.Shipment;
 import com.shiptrackpro.backend.shipment.entity.ShipmentStatus;
@@ -21,22 +24,11 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class DeliveryService {
 
-    private final VehicleRepository vehicleRepository;
     private final DriverRepository driverRepository;
     private final ShipmentAssignmentRepository assignmentRepository;
     private final DriverLocationRepository locationRepository;
     private final ShipmentRepository shipmentRepository;
     private final UserRepository userRepository;
-
-    public List<VehicleDto> getVehicles(VehicleStatus status) {
-        List<Vehicle> vehicles;
-        if (status != null) {
-            vehicles = vehicleRepository.findAllByStatus(status);
-        } else {
-            vehicles = vehicleRepository.findAll();
-        }
-        return vehicles.stream().map(this::toVehicleDto).collect(Collectors.toList());
-    }
 
     public List<DriverDto> getDrivers() {
         return driverRepository.findAll().stream()
@@ -115,16 +107,6 @@ public class DeliveryService {
                 .latitude(location.getLatitude())
                 .longitude(location.getLongitude())
                 .recordedAt(location.getRecordedAt())
-                .build();
-    }
-
-    private VehicleDto toVehicleDto(Vehicle vehicle) {
-        return VehicleDto.builder()
-                .id(vehicle.getId())
-                .vehicleNumber(vehicle.getVehicleNumber())
-                .vehicleType(vehicle.getVehicleType())
-                .capacityKg(vehicle.getCapacityKg())
-                .status(vehicle.getStatus())
                 .build();
     }
 

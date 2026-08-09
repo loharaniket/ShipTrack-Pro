@@ -8,6 +8,9 @@ const AdminDashboard = () => {
   const tabs = [
     { name: 'Users Management', path: '/admin/users', icon: <Users className="h-5 w-5" /> },
     { name: 'Company Management', path: '/admin/companies', icon: <Building2 className="h-5 w-5" /> },
+    { name: 'Route Planning', path: '/admin/routes/plan', icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 18h18"/><path d="M3 6h18"/><path d="M3 12h18"/></svg> },
+    { name: 'Active Routes', path: '/admin/routes/active', icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg> },
+    { name: 'Tracking Events', path: '/admin/tracking/events', icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg> },
   ];
 
   return (

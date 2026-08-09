@@ -10,7 +10,7 @@ const Sidebar = () => {
 
   const navItems = [
     { name: 'Dashboard', path: isDriver ? '/driver-dashboard' : '/', icon: <LayoutDashboard className="h-5 w-5" /> },
-    { name: 'Shipments', path: '/shipments', icon: <Truck className="h-5 w-5" /> },
+    { name: ['ADMINISTRATOR', 'LOGISTICS_OPERATOR'].includes(currentUser?.role) ? 'Shipment Operations' : 'My Shipments', path: '/shipments', icon: <Truck className="h-5 w-5" /> },
     { name: 'Settings', path: '/settings', icon: <Settings className="h-5 w-5" /> },
   ];
 

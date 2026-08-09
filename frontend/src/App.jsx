@@ -25,6 +25,11 @@ import UsersList from './pages/admin/UsersList';
 import CreateEditUser from './pages/admin/CreateEditUser';
 import UserActivity from './pages/admin/UserActivity';
 import CompanyManagement from './pages/admin/CompanyManagement';
+import TrackingEvents from './pages/admin/TrackingEvents';
+
+// Route Management Pages
+import RoutePlanning from './pages/routes/RoutePlanning';
+import ActiveRoutes from './pages/routes/ActiveRoutes';
 
 function App() {
   return (
@@ -101,6 +106,9 @@ function App() {
               <Route path="users/:id/edit" element={<CreateEditUser />} />
               <Route path="users/:id/activity" element={<UserActivity />} />
               <Route path="companies" element={<CompanyManagement />} />
+              <Route path="routes/plan" element={<RoutePlanning />} />
+              <Route path="routes/active" element={<ActiveRoutes />} />
+              <Route path="tracking/events" element={<TrackingEvents />} />
             </Route>
 
             {/* Fallback */}
