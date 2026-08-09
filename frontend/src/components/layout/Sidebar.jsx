@@ -1,16 +1,22 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Truck, Users, Settings } from 'lucide-react';
+import { LayoutDashboard, Truck, Users, Settings, Map } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 const Sidebar = () => {
   const { currentUser } = useAuth();
 
+  const isDriver = currentUser?.role === 'LOGISTICS_OPERATOR';
+
   const navItems = [
-    { name: 'Dashboard', path: '/', icon: <LayoutDashboard className="h-5 w-5" /> },
+    { name: 'Dashboard', path: isDriver ? '/driver-dashboard' : '/', icon: <LayoutDashboard className="h-5 w-5" /> },
     { name: 'Shipments', path: '/shipments', icon: <Truck className="h-5 w-5" /> },
     { name: 'Settings', path: '/settings', icon: <Settings className="h-5 w-5" /> },
   ];
+
+  if (currentUser?.role === 'ADMINISTRATOR' || currentUser?.role === 'LOGISTICS_OPERATOR') {
+    navItems.splice(1, 0, { name: 'Fleet Tracking', path: '/fleet-tracking', icon: <Map className="h-5 w-5" /> });
+  }
 
   if (currentUser?.role === 'ADMINISTRATOR') {
     navItems.push({ name: 'Admin Panel', path: '/admin', icon: <Users className="h-5 w-5" /> });

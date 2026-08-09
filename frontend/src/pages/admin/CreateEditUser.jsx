@@ -17,6 +17,8 @@ const CreateEditUser = () => {
     password: '',
     role: 'CUSTOMER',
     isActive: true,
+    licenseNumber: '',
+    experienceYears: '',
   });
   
   const [loading, setLoading] = useState(false);
@@ -119,6 +121,13 @@ const CreateEditUser = () => {
               <option value="ADMINISTRATOR">Administrator</option>
             </select>
           </div>
+
+          {formData.role === 'LOGISTICS_OPERATOR' && !isEditing && (
+            <>
+              <Input label="License Number" name="licenseNumber" value={formData.licenseNumber} onChange={handleChange} required />
+              <Input label="Years of Experience" name="experienceYears" type="number" min="0" value={formData.experienceYears} onChange={handleChange} required />
+            </>
+          )}
 
           <div className="flex items-center space-x-2 pt-6">
             <input 

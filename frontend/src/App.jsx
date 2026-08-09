@@ -10,12 +10,14 @@ import Register from './pages/auth/Register';
 import ForgotPassword from './pages/auth/ForgotPassword';
 import ResetPassword from './pages/auth/ResetPassword';
 import Dashboard from './pages/dashboard/Dashboard';
+import DriverDashboard from './pages/dashboard/DriverDashboard';
 import ShipmentList from './pages/shipments/ShipmentList';
 import CreateShipment from './pages/shipments/CreateShipment';
 import ShipmentDetails from './pages/shipments/ShipmentDetails';
 import EditShipment from './pages/shipments/EditShipment';
 import ProfileSettings from './pages/settings/ProfileSettings';
 import PublicTracking from './pages/tracking/PublicTracking';
+import FleetTracking from './pages/delivery/FleetTracking';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -42,6 +44,18 @@ function App() {
             <Route path="/" element={
               <ProtectedRoute>
                 <Dashboard />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/driver-dashboard" element={
+              <ProtectedRoute roles={['LOGISTICS_OPERATOR']}>
+                <DriverDashboard />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/fleet-tracking" element={
+              <ProtectedRoute roles={['ADMINISTRATOR', 'LOGISTICS_OPERATOR']}>
+                <FleetTracking />
               </ProtectedRoute>
             } />
             

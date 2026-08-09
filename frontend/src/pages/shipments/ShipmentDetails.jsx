@@ -14,6 +14,9 @@ const ShipmentDetails = () => {
   const [shipment, setShipment] = useState(null);
   const [history, setHistory] = useState([]); // Public timeline
   const [internalHistory, setInternalHistory] = useState([]); // Internal audit trail
+  const [availableDrivers, setAvailableDrivers] = useState([]);
+  const [selectedDriverId, setSelectedDriverId] = useState('');
+  const [assigningDriver, setAssigningDriver] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   
@@ -45,8 +48,36 @@ const ShipmentDetails = () => {
     fetchShipmentDetails();
   }, [id]);
 
+  useEffect(() => {
+    if (newEvent.status === 'DELIVERED' && newEvent.eventType === 'DELIVERY') {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            setNewEvent(prev => ({
+              ...prev,
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude
+            }));
+          },
+          (error) => {
+            console.error("Error fetching location:", error);
+            alert("Could not automatically fetch location for delivery. Please enter coordinates manually or allow location access.");
+          }
+        );
+      }
+    }
+  }, [newEvent.status, newEvent.eventType]);
+
   const handleUpdateHistory = async (e) => {
     e.preventDefault();
+    
+    if (newEvent.status === 'DELIVERED' && newEvent.eventType === 'DELIVERY') {
+      if (!newEvent.latitude || !newEvent.longitude) {
+        alert("Latitude and Longitude are mandatory for a Delivery event.");
+        return;
+      }
+    }
+
     try {
       setUpdatingHistory(true);
       await api.post(`/tracking/${shipment.trackingNumber}/events`, {
@@ -105,6 +136,24 @@ const ShipmentDetails = () => {
     }
   };
 
+  const handleAssignDriver = async (e) => {
+    e.preventDefault();
+    if (!selectedDriverId) return;
+    try {
+      setAssigningDriver(true);
+      await api.post(`/delivery/assignments`, {
+        shipmentId: id,
+        driverId: selectedDriverId
+      });
+      alert('Driver assigned successfully!');
+      fetchShipmentDetails();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to assign driver');
+    } finally {
+      setAssigningDriver(false);
+    }
+  };
+
   const fetchShipmentDetails = async () => {
     try {
       setLoading(true);
@@ -123,6 +172,15 @@ const ShipmentDetails = () => {
         } catch (trackingErr) {
           console.error("Failed to fetch rich tracking events:", trackingErr);
           setHistory([]);
+        }
+      }
+
+      if (currentUser?.role === 'ADMINISTRATOR') {
+        try {
+          const driversRes = await api.get('/delivery/drivers');
+          setAvailableDrivers(driversRes.data.data || []);
+        } catch (driverErr) {
+          console.error("Failed to fetch drivers:", driverErr);
         }
       }
     } catch (err) {
@@ -178,16 +236,18 @@ const ShipmentDetails = () => {
           </div>
         </div>
         
-        <div className="flex items-center gap-2">
-          <Button variant="outline" className="gap-2" onClick={() => navigate(`/shipments/${id}/edit`)}>
-            <Edit2 className="h-4 w-4" />
-            Edit
-          </Button>
-          <Button variant="outline" className="gap-2 text-[var(--color-status-error)] hover:bg-[var(--color-status-error)] hover:text-white" onClick={handleDelete}>
-            <Trash2 className="h-4 w-4" />
-            Delete
-          </Button>
-        </div>
+        {!['LOGISTICS_OPERATOR', 'SUPPORT_AGENT', 'ADMINISTRATOR'].includes(currentUser?.role) && (
+          <div className="flex items-center gap-2">
+            <Button variant="outline" className="gap-2" onClick={() => navigate(`/shipments/${id}/edit`)}>
+              <Edit2 className="h-4 w-4" />
+              Edit
+            </Button>
+            <Button variant="outline" className="gap-2 text-[var(--color-status-error)] hover:bg-[var(--color-status-error)] hover:text-white" onClick={handleDelete}>
+              <Trash2 className="h-4 w-4" />
+              Delete
+            </Button>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -328,11 +388,11 @@ const ShipmentDetails = () => {
           </div>
 
           {/* Internal History Ledger */}
-          {(currentUser?.role === 'ADMINISTRATOR' || currentUser?.role === 'SUPPORT_AGENT' || currentUser?.role === 'LOGISTICS_OPERATOR' || currentUser?.role === 'BUSINESS_CLIENT') && (
+          {(currentUser?.role === 'ADMINISTRATOR' || currentUser?.role === 'SUPPORT_AGENT' || currentUser?.role === 'BUSINESS_CLIENT') && (
             <div className="glass p-6 rounded-2xl shadow-sm">
               <h2 className="text-lg font-semibold flex items-center gap-2 border-b border-gray-100 dark:border-gray-800 pb-2 mb-6">
                 <Clock className="h-5 w-5 text-gray-500" />
-                Internal Ledger (Financial & Audit Trail)
+                Internal Ledger
               </h2>
 
               {canUpdateHistory && (
@@ -384,6 +444,36 @@ const ShipmentDetails = () => {
               )}
             </div>
           )}
+          
+          {/* Driver Assignment Ledger */}
+          {currentUser?.role === 'ADMINISTRATOR' && (
+            <div className="glass p-6 rounded-2xl shadow-sm">
+              <h2 className="text-lg font-semibold flex items-center gap-2 border-b border-gray-100 dark:border-gray-800 pb-2 mb-6">
+                <Truck className="h-5 w-5 text-gray-500" />
+                Assign Driver
+              </h2>
+
+              <form onSubmit={handleAssignDriver} className="mb-6 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-xl border border-gray-100 dark:border-gray-800">
+                <h4 className="text-sm font-semibold mb-2">Select Driver for Assignment</h4>
+                <div className="flex gap-2">
+                  <select
+                    value={selectedDriverId}
+                    onChange={(e) => setSelectedDriverId(e.target.value)}
+                    required
+                    className="flex-1 px-3 py-2 border rounded-md shadow-sm bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-sm"
+                  >
+                    <option value="">-- Choose a Driver --</option>
+                    {availableDrivers.map(d => (
+                      <option key={d.id} value={d.id}>{d.driverName} (License: {d.licenseNumber})</option>
+                    ))}
+                  </select>
+                  <Button type="submit" disabled={assigningDriver || !selectedDriverId} className="whitespace-nowrap">
+                    {assigningDriver ? 'Assigning...' : 'Assign'}
+                  </Button>
+                </div>
+              </form>
+            </div>
+          )}
         </div>
 
         {/* RIGHT COLUMN: Physical Tracking Timeline */}
@@ -391,7 +481,7 @@ const ShipmentDetails = () => {
           <div className="glass p-6 rounded-2xl shadow-sm h-full">
             <h2 className="text-lg font-semibold flex items-center gap-2 border-b border-gray-100 dark:border-gray-800 pb-2 mb-6">
               <Truck className="h-5 w-5 text-[var(--color-brand)]" />
-              Tracking Timeline (Physical)
+              Tracking Timeline
             </h2>
             
             {canUpdateHistory && (
@@ -446,6 +536,7 @@ const ShipmentDetails = () => {
                       type="number" 
                       step="any"
                       placeholder="Latitude" 
+                      required={newEvent.status === 'DELIVERED' && newEvent.eventType === 'DELIVERY'}
                       value={newEvent.latitude} 
                       onChange={(e) => setNewEvent({...newEvent, latitude: e.target.value})}
                       className="w-full px-3 py-2 border rounded-md shadow-sm bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-sm"
@@ -455,6 +546,7 @@ const ShipmentDetails = () => {
                       type="number" 
                       step="any"
                       placeholder="Longitude" 
+                      required={newEvent.status === 'DELIVERED' && newEvent.eventType === 'DELIVERY'}
                       value={newEvent.longitude} 
                       onChange={(e) => setNewEvent({...newEvent, longitude: e.target.value})}
                       className="w-full px-3 py-2 border rounded-md shadow-sm bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-sm"
