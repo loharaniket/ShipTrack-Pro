@@ -88,9 +88,12 @@ public class ShipmentService {
         } else if (user.getRole() == AppRole.CUSTOMER) {
             return shipmentRepository.findAllByCreatedById(user.getId(), pageable)
                     .map(this::toSummaryDto);
+        } else if (user.getRole() == AppRole.LOGISTICS_OPERATOR) {
+            return shipmentRepository.findAllAssignedToDriverUserId(user.getId(), pageable)
+                    .map(this::toSummaryDto);
         }
 
-        // Admin or Operator sees all
+        // Admin or Support Agent sees all
         return shipmentRepository.findAll(pageable).map(this::toSummaryDto);
     }
 

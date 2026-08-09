@@ -12,4 +12,8 @@ public class CreateUserRequest {
     private String lastName;
     private AppRole role;
     private UUID companyId;
+    
+    // For Driver creation
+    private String licenseNumber;
+    private Integer experienceYears;
 }

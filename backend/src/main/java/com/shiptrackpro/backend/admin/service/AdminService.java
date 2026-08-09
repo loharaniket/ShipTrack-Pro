@@ -18,6 +18,8 @@ import com.shiptrackpro.backend.user.entity.AppRole;
 import com.shiptrackpro.backend.user.entity.AppUser;
 import com.shiptrackpro.backend.user.entity.Company;
 import com.shiptrackpro.backend.user.repository.UserRepository;
+import com.shiptrackpro.backend.delivery.entity.Driver;
+import com.shiptrackpro.backend.delivery.repository.DriverRepository;
 
 import lombok.AllArgsConstructor;
 
@@ -28,6 +30,7 @@ public class AdminService {
     private final CompanyRepository companyRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuditService auditService;
+    private final DriverRepository driverRepository;
 
     public UserDto createUser(CreateUserRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
@@ -49,6 +52,17 @@ public class AdminService {
 
         AppUser savedUser = userRepository.save(user);
         auditService.logAction(savedUser.getId(), AuditAction.CREATE, "User", savedUser.getId());
+
+        if (savedUser.getRole() == AppRole.LOGISTICS_OPERATOR) {
+            if (request.getLicenseNumber() == null || request.getExperienceYears() == null) {
+                throw new IllegalArgumentException("License number and experience years are required for Logistics Operators");
+            }
+            Driver driver = new Driver();
+            driver.setUser(savedUser);
+            driver.setLicenseNumber(request.getLicenseNumber());
+            driver.setExperienceYears(request.getExperienceYears());
+            driverRepository.save(driver);
+        }
 
         return toUserDto(savedUser);
     }
