@@ -1,0 +1,45 @@
+package com.shiptrackpro.backend.tracking.controller;
+
+import com.shiptrackpro.backend.common.response.ApiResponse;
+import com.shiptrackpro.backend.tracking.dto.CreateTrackingEventRequest;
+import com.shiptrackpro.backend.tracking.dto.LocationDto;
+import com.shiptrackpro.backend.tracking.dto.TrackingEventDto;
+import com.shiptrackpro.backend.tracking.dto.TrackingTimelineDto;
+import com.shiptrackpro.backend.tracking.service.TrackingService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/api/v1/tracking")
+@RequiredArgsConstructor
+public class TrackingController {
+
+    private final TrackingService trackingService;
+
+    @GetMapping("/{trackingNumber}")
+    public ResponseEntity<ApiResponse<TrackingTimelineDto>> getTrackingTimeline(
+            @PathVariable String trackingNumber) {
+        TrackingTimelineDto response = trackingService.getTrackingTimeline(trackingNumber);
+        return ResponseEntity.ok(ApiResponse.success("Tracking timeline fetched successfully", response));
+    }
+
+    @PostMapping("/{trackingNumber}/events")
+    @PreAuthorize("hasAnyRole('LOGISTICS_OPERATOR', 'ADMINISTRATOR')")
+    public ResponseEntity<ApiResponse<TrackingEventDto>> addTrackingEvent(
+            @PathVariable String trackingNumber,
+            @RequestBody CreateTrackingEventRequest request,
+            Authentication auth) {
+        TrackingEventDto response = trackingService.addTrackingEvent(trackingNumber, request, auth);
+        return ResponseEntity.ok(ApiResponse.success("Tracking event added successfully", response));
+    }
+
+    @GetMapping("/{trackingNumber}/location")
+    public ResponseEntity<ApiResponse<LocationDto>> getLatestLocation(
+            @PathVariable String trackingNumber) {
+        LocationDto response = trackingService.getLatestLocation(trackingNumber);
+        return ResponseEntity.ok(ApiResponse.success("Latest location fetched successfully", response));
+    }
+}
