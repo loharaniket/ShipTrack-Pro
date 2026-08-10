@@ -9,6 +9,7 @@ const Sidebar = () => {
   const isDriver = currentUser?.role === 'LOGISTICS_OPERATOR';
 
   const navItems = [
+<<<<<<< HEAD
     { name: 'Dashboard', path: isDriver ? '/driver-dashboard' : '/', icon: <LayoutDashboard className="h-5 w-5" /> },
     { name: ['ADMINISTRATOR', 'LOGISTICS_OPERATOR'].includes(currentUser?.role) ? 'Shipment Operations' : 'My Shipments', path: '/shipments', icon: <Truck className="h-5 w-5" /> },
     { name: 'Settings', path: '/settings', icon: <Settings className="h-5 w-5" /> },
@@ -18,6 +19,25 @@ const Sidebar = () => {
     navItems.splice(1, 0, { name: 'Fleet Tracking', path: '/fleet-tracking', icon: <Map className="h-5 w-5" /> });
   }
 
+=======
+    { name: 'Dashboard', path: '/', icon: <LayoutDashboard className="h-5 w-5" /> },
+  ];
+
+  if (['ADMINISTRATOR', 'LOGISTICS_OPERATOR', 'CUSTOMER', 'BUSINESS_CLIENT', 'SUPPORT_AGENT'].includes(currentUser?.role)) {
+    navItems.push({ name: 'Shipments', path: '/shipments', icon: <Truck className="h-5 w-5" /> });
+  }
+
+  if (['ADMINISTRATOR', 'LOGISTICS_OPERATOR'].includes(currentUser?.role)) {
+    navItems.push({ name: 'Dispatch', path: '/dispatch', icon: <Map className="h-5 w-5" /> });
+  }
+
+  if (['ADMINISTRATOR'].includes(currentUser?.role)) {
+    navItems.push({ name: 'Fleet', path: '/fleet', icon: <Users className="h-5 w-5" /> });
+  }
+
+  navItems.push({ name: 'Settings', path: '/settings', icon: <Settings className="h-5 w-5" /> });
+
+>>>>>>> feat/route_management_service
   if (currentUser?.role === 'ADMINISTRATOR') {
     navItems.push({ name: 'Admin Panel', path: '/admin', icon: <Users className="h-5 w-5" /> });
   }

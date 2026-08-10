@@ -78,23 +78,28 @@ public class ShipmentService {
         return toDto(shipment);
     }
 
-    public Page<ShipmentSummaryDto> getAllShipments(Pageable pageable, Authentication auth) {
+    public Page<ShipmentSummaryDto> getAllShipments(Boolean assigned, Pageable pageable, Authentication auth) {
         AppUser user = userRepository.findByEmail(auth.getName())
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
         if (user.getRole() == AppRole.BUSINESS_CLIENT && user.getCompany() != null) {
-            return shipmentRepository.findAllByCompanyId(user.getCompany().getId(), pageable)
+            return shipmentRepository.findAllByCompanyIdWithFilters(user.getCompany().getId(), assigned, pageable)
                     .map(this::toSummaryDto);
         } else if (user.getRole() == AppRole.CUSTOMER) {
-            return shipmentRepository.findAllByCreatedById(user.getId(), pageable)
+            return shipmentRepository.findAllByCreatedByIdWithFilters(user.getId(), assigned, pageable)
                     .map(this::toSummaryDto);
         } else if (user.getRole() == AppRole.LOGISTICS_OPERATOR) {
             return shipmentRepository.findAllAssignedToDriverUserId(user.getId(), pageable)
                     .map(this::toSummaryDto);
         }
 
+<<<<<<< HEAD
         // Admin or Support Agent sees all
         return shipmentRepository.findAll(pageable).map(this::toSummaryDto);
+=======
+        // Admin or Operator sees all
+        return shipmentRepository.findAllWithFilters(assigned, pageable).map(this::toSummaryDto);
+>>>>>>> feat/route_management_service
     }
 
     public ShipmentDto updateShipment(UUID id, UpdateShipmentRequest request, Authentication auth) {

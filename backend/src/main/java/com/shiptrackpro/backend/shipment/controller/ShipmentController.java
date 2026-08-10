@@ -39,11 +39,12 @@ public class ShipmentController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<Page<ShipmentSummaryDto>>> getAllShipments(
+            @RequestParam(required = false) Boolean assigned,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             Authentication auth) {
         Pageable pageable = PageRequest.of(page, size);
-        Page<ShipmentSummaryDto> response = shipmentService.getAllShipments(pageable, auth);
+        Page<ShipmentSummaryDto> response = shipmentService.getAllShipments(assigned, pageable, auth);
         return ResponseEntity.ok(ApiResponse.success("Shipments fetched successfully", response));
     }
 
