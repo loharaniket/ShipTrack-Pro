@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
-import Button from '../../components/ui/Button';
 import { useAuth } from '../../context/AuthContext';
+import Button from '../../components/ui/Button';
+import Input from '../../components/ui/Input';
+import StatusBadge from '../../components/ui/StatusBadge';
+import { ArrowLeft, Edit2, PackagePlus, Trash2, MapPin, Package as PackageIcon, Clock, X, Users } from 'lucide-react';
 import { formatDateOnly, formatDateTime } from '../../utils/dateFormatter';
-import { ArrowLeft, PackagePlus, Edit2, Trash2, Clock, Package as PackageIcon, Truck, MapPin } from 'lucide-react';
 
 const ShipmentDetails = () => {
   const { id } = useParams();
@@ -12,119 +14,78 @@ const ShipmentDetails = () => {
   const { currentUser } = useAuth();
   
   const [shipment, setShipment] = useState(null);
-  const [history, setHistory] = useState([]); // Public timeline
-  const [internalHistory, setInternalHistory] = useState([]); // Internal audit trail
+  const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   
-  const [updatingHistory, setUpdatingHistory] = useState(false);
-  const [updatingInternalHistory, setUpdatingInternalHistory] = useState(false);
-  const [newInternalStatus, setNewInternalStatus] = useState('IN_TRANSIT');
-  const [newEvent, setNewEvent] = useState({
-    status: 'IN_TRANSIT',
-    eventType: 'STATUS_UPDATE',
-    description: '',
-    locationName: '',
-    latitude: '',
-    longitude: ''
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isPackageModalOpen, setIsPackageModalOpen] = useState(false);
+  const [isTrackingEventModalOpen, setIsTrackingEventModalOpen] = useState(false);
+  const [isAssignDriverModalOpen, setIsAssignDriverModalOpen] = useState(false);
+  const [drivers, setDrivers] = useState([]);
+  const [selectedDriverId, setSelectedDriverId] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState('DETAILS'); // 'DETAILS' or 'HISTORY'
+  const [newStatus, setNewStatus] = useState('IN_TRANSIT');
+
+  const [editForm, setEditForm] = useState({
+    receiverName: '',
+    receiverPhone: '',
+    receiverAddressLine1: '',
+    receiverCity: '',
+    receiverState: '',
+    receiverCountry: '',
+    receiverPostalCode: '',
+    priority: 'NORMAL'
   });
 
-  const [addingPackage, setAddingPackage] = useState(false);
-  const [newPackage, setNewPackage] = useState({
+  const [packageForm, setPackageForm] = useState({
     weightKg: '',
-    length: '',
-    width: '',
-    height: '',
+    dimensionsCm: '',
     contentDescription: ''
   });
 
-  const canUpdateHistory = ['LOGISTICS_OPERATOR', 'SUPPORT_AGENT', 'ADMINISTRATOR'].includes(currentUser?.role);
-  const canAddPackage = ['CUSTOMER', 'BUSINESS_CLIENT'].includes(currentUser?.role);
+  const [trackingEventForm, setTrackingEventForm] = useState({
+    status: 'IN_TRANSIT',
+    eventType: 'SCAN',
+    description: '',
+    latitude: '',
+    longitude: '',
+    locationName: ''
+  });
+
+  const hasAccess = ['ADMINISTRATOR', 'LOGISTICS_OPERATOR', 'CUSTOMER', 'BUSINESS_CLIENT'].includes(currentUser?.role);
+  const canUpdateStatus = ['ADMINISTRATOR', 'LOGISTICS_OPERATOR', 'SUPPORT_AGENT'].includes(currentUser?.role);
+  const canEdit = ['CUSTOMER', 'BUSINESS_CLIENT'].includes(currentUser?.role);
+  const canAssignDriver = ['ADMINISTRATOR'].includes(currentUser?.role);
 
   useEffect(() => {
     fetchShipmentDetails();
   }, [id]);
 
-  const handleUpdateHistory = async (e) => {
-    e.preventDefault();
-    try {
-      setUpdatingHistory(true);
-      await api.post(`/tracking/${shipment.trackingNumber}/events`, {
-        status: newEvent.status,
-        eventType: newEvent.eventType,
-        description: newEvent.description || null,
-        locationName: newEvent.locationName || null,
-        latitude: newEvent.latitude ? parseFloat(newEvent.latitude) : null,
-        longitude: newEvent.longitude ? parseFloat(newEvent.longitude) : null
-      });
-      setNewEvent({
-        status: newEvent.status,
-        eventType: 'STATUS_UPDATE',
-        description: '',
-        locationName: '',
-        latitude: '',
-        longitude: ''
-      });
-      fetchShipmentDetails();
-    } catch (err) {
-      alert(err.response?.data?.message || 'Failed to update tracking history');
-    } finally {
-      setUpdatingHistory(false);
-    }
-  };
-
-  const handleUpdateInternalHistory = async (e) => {
-    e.preventDefault();
-    try {
-      setUpdatingInternalHistory(true);
-      await api.post(`/shipments/${id}/history/${newInternalStatus}`);
-      fetchShipmentDetails();
-    } catch (err) {
-      alert(err.response?.data?.message || 'Failed to update internal history');
-    } finally {
-      setUpdatingInternalHistory(false);
-    }
-  };
-
-  const handleAddPackage = async (e) => {
-    e.preventDefault();
-    try {
-      setAddingPackage(true);
-      await api.post(`/shipments/${id}/packages`, {
-        id: null,
-        weightKg: parseFloat(newPackage.weightKg),
-        dimensionsCm: `${newPackage.length}x${newPackage.width}x${newPackage.height}`,
-        contentDescription: newPackage.contentDescription
-      });
-      setNewPackage({ weightKg: '', length: '', width: '', height: '', contentDescription: '' });
-      fetchShipmentDetails();
-    } catch (err) {
-      alert(err.response?.data?.message || 'Failed to add package');
-    } finally {
-      setAddingPackage(false);
-    }
-  };
-
   const fetchShipmentDetails = async () => {
     try {
       setLoading(true);
-      const [shipmentRes, internalHistoryRes] = await Promise.all([
+      const [shipmentRes, historyRes] = await Promise.all([
         api.get(`/shipments/${id}`),
         api.get(`/shipments/${id}/history`)
       ]);
-      const shipmentData = shipmentRes.data.data;
-      setShipment(shipmentData);
-      setInternalHistory(internalHistoryRes.data.data || []);
+      const data = shipmentRes.data.data;
+      setShipment(data);
+      setHistory(historyRes.data.data || []);
+      
+      // Pre-fill edit form
+      setEditForm({
+        receiverName: data.receiverName || '',
+        receiverPhone: data.receiverPhone || '',
+        receiverAddressLine1: data.receiverAddress?.line1 || '',
+        receiverCity: data.receiverAddress?.city || '',
+        receiverState: data.receiverAddress?.state || '',
+        receiverCountry: data.receiverAddress?.country || '',
+        receiverPostalCode: data.receiverAddress?.postalCode || '',
+        priority: data.priority || 'NORMAL'
+      });
 
-      if (shipmentData.trackingNumber) {
-        try {
-          const trackingRes = await api.get(`/tracking/${shipmentData.trackingNumber}`);
-          setHistory(trackingRes.data.data.events || []);
-        } catch (trackingErr) {
-          console.error("Failed to fetch rich tracking events:", trackingErr);
-          setHistory([]);
-        }
-      }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to fetch shipment details');
     } finally {
@@ -143,6 +104,126 @@ const ShipmentDetails = () => {
     }
   };
 
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const payload = {
+        receiverName: editForm.receiverName,
+        receiverPhone: editForm.receiverPhone,
+        receiverAddress: {
+          line1: editForm.receiverAddressLine1,
+          city: editForm.receiverCity,
+          state: editForm.receiverState,
+          country: editForm.receiverCountry,
+          postalCode: editForm.receiverPostalCode
+        },
+        priority: editForm.priority
+      };
+      await api.put(`/shipments/${id}`, payload);
+      setIsEditModalOpen(false);
+      fetchShipmentDetails();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to update shipment');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleAddPackageSubmit = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await api.post(`/shipments/${id}/packages`, {
+        weightKg: parseFloat(packageForm.weightKg),
+        dimensionsCm: packageForm.dimensionsCm,
+        contentDescription: packageForm.contentDescription
+      });
+      setIsPackageModalOpen(false);
+      setPackageForm({ weightKg: '', dimensionsCm: '', contentDescription: '' });
+      fetchShipmentDetails();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to add package');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleStatusUpdate = async () => {
+    try {
+      await api.post(`/shipments/${id}/history/${newStatus}`);
+      fetchShipmentDetails();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to update status');
+    }
+  };
+
+  const handleAddTrackingEventSubmit = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const payload = {
+        status: trackingEventForm.status,
+        eventType: trackingEventForm.eventType,
+        description: trackingEventForm.description,
+        locationName: trackingEventForm.locationName,
+        ...(trackingEventForm.latitude && { latitude: parseFloat(trackingEventForm.latitude) }),
+        ...(trackingEventForm.longitude && { longitude: parseFloat(trackingEventForm.longitude) })
+      };
+      await api.post(`/tracking/${shipment.trackingNumber}/events`, payload);
+      setIsTrackingEventModalOpen(false);
+      setTrackingEventForm({
+        status: 'IN_TRANSIT',
+        eventType: 'SCAN',
+        description: '',
+        latitude: '',
+        longitude: '',
+        locationName: ''
+      });
+      // Optionally re-fetch public tracking or just rely on history depending on how it's wired. 
+      // We will re-fetch history just in case the backend syncs it.
+      fetchShipmentDetails();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to add tracking event');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleOpenAssignModal = async () => {
+    setIsAssignDriverModalOpen(true);
+    try {
+      const res = await api.get('/delivery/drivers');
+      setDrivers(res.data.data || []);
+    } catch (err) {
+      alert('Failed to load drivers');
+    }
+  };
+
+  const handleAssignDriverSubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedDriverId) return;
+    setSaving(true);
+    try {
+      await api.post('/delivery/assignments', {
+        shipmentId: id,
+        driverId: selectedDriverId
+      });
+      setIsAssignDriverModalOpen(false);
+      setSelectedDriverId('');
+      alert('Driver assigned successfully');
+      fetchShipmentDetails();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to assign driver');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!hasAccess) {
+    return <div className="p-8 text-center text-red-500 font-medium">Access Denied.</div>;
+  }
+
   if (loading) {
     return <div className="p-8 text-center text-gray-500">Loading shipment details...</div>;
   }
@@ -150,7 +231,7 @@ const ShipmentDetails = () => {
   if (error || !shipment) {
     return (
       <div className="p-8 text-center">
-        <p className="text-[var(--color-status-error)] mb-4">{error || 'Shipment not found'}</p>
+        <p className="text-red-500 mb-4">{error || 'Shipment not found'}</p>
         <Button onClick={() => navigate('/shipments')}>Back to Shipments</Button>
       </div>
     );
@@ -158,52 +239,71 @@ const ShipmentDetails = () => {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 mt-4 pb-12 px-4 sm:px-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-gray-200 dark:border-gray-700 pb-4">
         <div className="flex items-center gap-4">
           <Button variant="ghost" className="px-2" onClick={() => navigate('/shipments')}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold tracking-tight">{shipment.trackingNumber}</h1>
-              <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                shipment.status === 'DELIVERED' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
-                shipment.status === 'IN TRANSIT' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
-                'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
-              }`}>
-                {shipment.status}
-              </span>
+              <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">{shipment.trackingNumber}</h1>
+              <StatusBadge status={shipment.status} />
             </div>
             <p className="text-gray-500 dark:text-gray-400 text-sm">Created on {formatDateOnly(shipment.createdAt)}</p>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-2">
-          <Button variant="outline" className="gap-2" onClick={() => navigate(`/shipments/${id}/edit`)}>
-            <Edit2 className="h-4 w-4" />
-            Edit
-          </Button>
-          <Button variant="outline" className="gap-2 text-[var(--color-status-error)] hover:bg-[var(--color-status-error)] hover:text-white" onClick={handleDelete}>
-            <Trash2 className="h-4 w-4" />
-            Delete
-          </Button>
+          {canAssignDriver && (
+            <Button variant="outline" className="gap-2 border-blue-200 text-blue-700 hover:bg-blue-50" onClick={handleOpenAssignModal}>
+              <Users className="h-4 w-4" />
+              Assign Driver
+            </Button>
+          )}
+          {canEdit && (
+            <>
+              <Button variant="outline" className="gap-2" onClick={() => setIsEditModalOpen(true)}>
+                <Edit2 className="h-4 w-4" />
+                Edit Details
+              </Button>
+              <Button variant="outline" className="gap-2 text-red-600 hover:bg-red-50 hover:text-red-700 border-red-200" onClick={handleDelete}>
+                <Trash2 className="h-4 w-4" />
+                Cancel Shipment
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
-        {/* LEFT COLUMN: Order Details, Packages, Internal Ledger */}
-        <div className="lg:col-span-2 space-y-8">
-          
-          {/* Routing Information */}
-          <div className="glass p-6 rounded-2xl shadow-sm">
-            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 border-b border-gray-100 dark:border-gray-800 pb-2">
-              <MapPin className="h-5 w-5 text-[var(--color-brand)]" />
-              Routing Information
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div>
-                <h3 className="text-sm font-medium text-gray-500 mb-2 uppercase tracking-wider">Sender</h3>
+      {/* Tabs */}
+      <div className="flex border-b border-gray-200 dark:border-gray-700">
+        <button 
+          className={`px-6 py-3 font-medium text-sm focus:outline-none ${activeTab === 'DETAILS' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+          onClick={() => setActiveTab('DETAILS')}
+        >
+          Shipment Details
+        </button>
+        <button 
+          className={`px-6 py-3 font-medium text-sm focus:outline-none ${activeTab === 'HISTORY' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+          onClick={() => setActiveTab('HISTORY')}
+        >
+          Tracking History
+        </button>
+      </div>
+
+      {/* TABS CONTENT */}
+      {activeTab === 'DETAILS' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Sender & Receiver */}
+          <div className="space-y-6">
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 border-b border-gray-100 dark:border-gray-700 pb-2">
+                <MapPin className="h-5 w-5 text-blue-500" />
+                Sender Information
+              </h2>
+              <div className="space-y-1">
                 <p className="font-medium text-gray-900 dark:text-gray-100">{shipment.senderName}</p>
                 <p className="text-sm text-gray-600 dark:text-gray-400">{shipment.senderPhone}</p>
                 <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
@@ -212,8 +312,14 @@ const ShipmentDetails = () => {
                   <p>{shipment.senderAddress?.country}</p>
                 </div>
               </div>
-              <div>
-                <h3 className="text-sm font-medium text-gray-500 mb-2 uppercase tracking-wider">Receiver</h3>
+            </div>
+
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 border-b border-gray-100 dark:border-gray-700 pb-2">
+                <MapPin className="h-5 w-5 text-emerald-500" />
+                Receiver Information
+              </h2>
+              <div className="space-y-1">
                 <p className="font-medium text-gray-900 dark:text-gray-100">{shipment.receiverName}</p>
                 <p className="text-sm text-gray-600 dark:text-gray-400">{shipment.receiverPhone}</p>
                 <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
@@ -225,286 +331,287 @@ const ShipmentDetails = () => {
             </div>
           </div>
 
-          {/* Packages */}
-          <div className="glass p-6 rounded-2xl shadow-sm">
-            <div className="flex justify-between items-center border-b border-gray-100 dark:border-gray-800 pb-2 mb-4">
-              <h2 className="text-lg font-semibold flex items-center gap-2">
-                <PackageIcon className="h-5 w-5 text-[var(--color-brand)]" />
-                Packages
-              </h2>
-              <span className="text-sm font-medium px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded-md">
-                Priority: {shipment.priority}
-              </span>
-            </div>
-
-            {canAddPackage && (
-              <form onSubmit={handleAddPackage} className="mb-6 p-5 bg-white dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm">
-                <h3 className="text-base font-semibold mb-4 flex items-center gap-2"><PackagePlus className="h-5 w-5 text-[var(--color-brand)]"/> Add New Package</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  <div className="flex flex-col space-y-1">
-                    <label className="text-xs font-medium text-gray-500">Weight (kg)</label>
-                    <input 
-                      type="number" 
-                      step="0.01" 
-                      required 
-                      placeholder="e.g. 2.5" 
-                      value={newPackage.weightKg} 
-                      onChange={(e) => setNewPackage({...newPackage, weightKg: e.target.value})}
-                      className="px-3 py-2 border rounded-md shadow-sm bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-sm focus:ring-2 focus:ring-[var(--color-brand)] focus:border-transparent outline-none"
-                    />
-                  </div>
-                  <div className="flex flex-col space-y-1">
-                    <label className="text-xs font-medium text-gray-500">Content Description</label>
-                    <input 
-                      type="text" 
-                      required 
-                      placeholder="e.g. Electronics, Documents" 
-                      value={newPackage.contentDescription} 
-                      onChange={(e) => setNewPackage({...newPackage, contentDescription: e.target.value})}
-                      className="px-3 py-2 border rounded-md shadow-sm bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-sm focus:ring-2 focus:ring-[var(--color-brand)] focus:border-transparent outline-none"
-                    />
-                  </div>
-                  <div className="md:col-span-2 grid grid-cols-3 gap-4">
-                    <div className="flex flex-col space-y-1">
-                      <label className="text-xs font-medium text-gray-500">Length (cm)</label>
-                      <input 
-                        type="number" 
-                        required 
-                        placeholder="L" 
-                        value={newPackage.length} 
-                        onChange={(e) => setNewPackage({...newPackage, length: e.target.value})}
-                        className="px-3 py-2 border rounded-md shadow-sm bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-sm focus:ring-2 focus:ring-[var(--color-brand)] focus:border-transparent outline-none"
-                      />
-                    </div>
-                    <div className="flex flex-col space-y-1">
-                      <label className="text-xs font-medium text-gray-500">Width (cm)</label>
-                      <input 
-                        type="number" 
-                        required 
-                        placeholder="W" 
-                        value={newPackage.width} 
-                        onChange={(e) => setNewPackage({...newPackage, width: e.target.value})}
-                        className="px-3 py-2 border rounded-md shadow-sm bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-sm focus:ring-2 focus:ring-[var(--color-brand)] focus:border-transparent outline-none"
-                      />
-                    </div>
-                    <div className="flex flex-col space-y-1">
-                      <label className="text-xs font-medium text-gray-500">Height (cm)</label>
-                      <input 
-                        type="number" 
-                        required 
-                        placeholder="H" 
-                        value={newPackage.height} 
-                        onChange={(e) => setNewPackage({...newPackage, height: e.target.value})}
-                        className="px-3 py-2 border rounded-md shadow-sm bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-sm focus:ring-2 focus:ring-[var(--color-brand)] focus:border-transparent outline-none"
-                      />
-                    </div>
-                  </div>
-                </div>
-                <div className="flex justify-end pt-2 border-t border-gray-100 dark:border-gray-700">
-                  <Button type="submit" disabled={addingPackage} className="text-sm px-6">
-                    {addingPackage ? 'Adding...' : 'Add Package'}
+          {/* Packages & Summary */}
+          <div className="space-y-6">
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+              <div className="flex justify-between items-center border-b border-gray-100 dark:border-gray-700 pb-2 mb-4">
+                <h2 className="text-lg font-semibold flex items-center gap-2">
+                  <PackageIcon className="h-5 w-5 text-purple-500" />
+                  Assigned Packages
+                </h2>
+                {canEdit && (
+                  <Button variant="outline" size="sm" onClick={() => setIsPackageModalOpen(true)} className="gap-1 h-8">
+                    <PackagePlus className="h-4 w-4" /> Add Package
                   </Button>
-                </div>
-              </form>
-            )}
-            
-            <div className="space-y-4">
-              {shipment.packages?.map((pkg, idx) => (
-                <div key={pkg.id || idx} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-100 dark:border-gray-800">
-                  <div>
-                    <p className="font-medium text-gray-900 dark:text-gray-100">{pkg.contentDescription || 'Standard Package'}</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">ID: {pkg.id}</p>
+                )}
+              </div>
+
+              <div className="space-y-3">
+                {shipment.packages?.map((pkg) => (
+                  <div key={pkg.id} className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                    <div>
+                      <p className="font-medium text-gray-900 dark:text-gray-100">{pkg.contentDescription}</p>
+                      <p className="text-xs text-gray-500 font-mono mt-1">ID: {pkg.id}</p>
+                    </div>
+                    <div className="text-right text-sm">
+                      <p className="text-gray-700 dark:text-gray-300"><span className="text-gray-500">Wt:</span> {pkg.weightKg} kg</p>
+                      <p className="text-gray-700 dark:text-gray-300"><span className="text-gray-500">Dim:</span> {pkg.dimensionsCm}</p>
+                    </div>
                   </div>
-                  <div className="mt-2 sm:mt-0 text-left sm:text-right text-sm">
-                    <p><span className="text-gray-500">Weight:</span> {pkg.weightKg} kg</p>
-                    <p><span className="text-gray-500">Dimensions:</span> {pkg.dimensionsCm} cm</p>
+                ))}
+                {(!shipment.packages || shipment.packages.length === 0) && (
+                  <p className="text-gray-500 text-center py-4 text-sm">No packages found.</p>
+                )}
+              </div>
+            </div>
+            
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+               <h2 className="text-lg font-semibold border-b border-gray-100 dark:border-gray-700 pb-2 mb-4">Shipment Details</h2>
+               <div className="space-y-3 text-sm">
+                 <div className="flex justify-between border-b border-gray-100 dark:border-gray-700 pb-2">
+                   <span className="text-gray-500">Priority</span>
+                   <span className="font-medium">{shipment.priority}</span>
+                 </div>
+                 <div className="flex justify-between border-b border-gray-100 dark:border-gray-700 pb-2">
+                   <span className="text-gray-500">Company ID</span>
+                   <span className="font-medium font-mono text-xs">{shipment.companyId || 'N/A'}</span>
+                 </div>
+                 <div className="flex justify-between pt-1">
+                   <span className="text-gray-500">Estimated Delivery</span>
+                   <span className="font-medium text-blue-600">{shipment.estimatedDeliveryTime ? formatDateTime(shipment.estimatedDeliveryTime) : 'TBD'}</span>
+                 </div>
+               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'HISTORY' && (
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+          
+          {canUpdateStatus && (
+            <div className="flex items-center gap-3 bg-gray-50 dark:bg-gray-900 p-4 rounded-lg border border-gray-200 dark:border-gray-700 mb-8">
+              <h3 className="font-medium text-sm text-gray-700 dark:text-gray-300">Manual Status Override:</h3>
+              <select 
+                value={newStatus} 
+                onChange={(e) => setNewStatus(e.target.value)}
+                className="px-3 py-1.5 border rounded-md shadow-sm bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="CREATED">CREATED</option>
+                <option value="IN_TRANSIT">IN TRANSIT</option>
+                <option value="OUT_FOR_DELIVERY">OUT FOR DELIVERY</option>
+                <option value="DELIVERED">DELIVERED</option>
+                <option value="EXCEPTION">EXCEPTION</option>
+              </select>
+              <Button size="sm" onClick={handleStatusUpdate}>Update Status</Button>
+            </div>
+          )}
+
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <Clock className="h-5 w-5 text-gray-500" />
+              Tracking History Timeline
+            </h2>
+            {canUpdateStatus && (
+              <Button variant="outline" size="sm" onClick={() => setIsTrackingEventModalOpen(true)}>
+                Add Tracking Event
+              </Button>
+            )}
+          </div>
+          
+          {history.length === 0 ? (
+            <p className="text-gray-500 text-center py-8">No history events recorded.</p>
+          ) : (
+            <div className="relative border-l-2 border-gray-200 dark:border-gray-700 ml-3 space-y-6">
+              {history.map((evt, idx) => (
+                <div key={evt.id} className="relative pl-6">
+                  <div className="absolute -left-[9px] top-1 h-4 w-4 rounded-full border-2 border-white dark:border-gray-800 bg-blue-500" />
+                  <div className="flex flex-col mb-1">
+                    <h3 className="font-semibold text-gray-900 dark:text-white">
+                      {evt.status}
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{evt.statusRemarks}</p>
+                    <div className="flex items-center gap-2 mt-2 text-xs text-gray-500">
+                      <time>{formatDateTime(evt.recordedAt)}</time>
+                      <span>&bull;</span>
+                      <span>By: {evt.changedByName}</span>
+                    </div>
                   </div>
                 </div>
               ))}
-              {(!shipment.packages || shipment.packages.length === 0) && (
-                <p className="text-gray-500 text-center py-4">No packages added yet.</p>
-              )}
-            </div>
-          </div>
-
-          {/* Internal History Ledger */}
-          {(currentUser?.role === 'ADMINISTRATOR' || currentUser?.role === 'SUPPORT_AGENT' || currentUser?.role === 'LOGISTICS_OPERATOR' || currentUser?.role === 'BUSINESS_CLIENT') && (
-            <div className="glass p-6 rounded-2xl shadow-sm">
-              <h2 className="text-lg font-semibold flex items-center gap-2 border-b border-gray-100 dark:border-gray-800 pb-2 mb-6">
-                <Clock className="h-5 w-5 text-gray-500" />
-                Internal Ledger (Financial & Audit Trail)
-              </h2>
-
-              {canUpdateHistory && (
-                <form onSubmit={handleUpdateInternalHistory} className="mb-6 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-xl border border-gray-100 dark:border-gray-800">
-                  <h4 className="text-sm font-semibold mb-2">Log Status Update</h4>
-                  <div className="flex gap-2">
-                    <select
-                      value={newInternalStatus}
-                      onChange={(e) => setNewInternalStatus(e.target.value)}
-                      className="flex-1 px-3 py-2 border rounded-md shadow-sm bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-sm"
-                    >
-                      <option value="CREATED">CREATED</option>
-                      <option value="PICKED_UP">PICKED UP</option>
-                      <option value="IN_TRANSIT">IN TRANSIT</option>
-                      <option value="OUT_FOR_DELIVERY">OUT FOR DELIVERY</option>
-                      <option value="DELIVERED">DELIVERED</option>
-                      <option value="FAILED">FAILED</option>
-                      <option value="RETURNED">RETURNED</option>
-                      <option value="CANCELLED">CANCELLED</option>
-                    </select>
-                    <Button type="submit" disabled={updatingInternalHistory} className="whitespace-nowrap">
-                      {updatingInternalHistory ? 'Saving...' : 'Add Log'}
-                    </Button>
-                  </div>
-                </form>
-              )}
-
-              {internalHistory.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">No internal logs found.</p>
-              ) : (
-                <div className="relative border-l-2 border-gray-200 dark:border-gray-700 ml-3 space-y-6">
-                  {internalHistory.map((log, index) => (
-                    <div key={log.id || index} className="relative pl-6">
-                      <div className="absolute -left-[9px] top-1 h-4 w-4 rounded-full border-2 border-white dark:border-gray-900 bg-gray-400" />
-                      <div className="flex flex-col mb-1">
-                        <h3 className="font-medium text-sm text-gray-800 dark:text-gray-200">
-                          Status changed to <span className="font-bold">{log.status}</span>
-                        </h3>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-1">
-                          by {log.changedByName || 'System'}
-                        </p>
-                        <time className="text-xs text-gray-400 mt-1">
-                          {formatDateTime(log.timestamp)}
-                        </time>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
           )}
         </div>
+      )}
 
-        {/* RIGHT COLUMN: Physical Tracking Timeline */}
-        <div className="lg:col-span-1 space-y-6">
-          <div className="glass p-6 rounded-2xl shadow-sm h-full">
-            <h2 className="text-lg font-semibold flex items-center gap-2 border-b border-gray-100 dark:border-gray-800 pb-2 mb-6">
-              <Truck className="h-5 w-5 text-[var(--color-brand)]" />
-              Tracking Timeline (Physical)
-            </h2>
-            
-            {canUpdateHistory && (
-              <form onSubmit={handleUpdateHistory} className="mb-8 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-xl border border-gray-100 dark:border-gray-800 space-y-4">
-                <h4 className="text-sm font-semibold flex items-center gap-1">Add Tracking Event</h4>
-                
-                <div className="flex flex-col space-y-3">
-                  <select
-                    value={newEvent.status}
-                    onChange={(e) => setNewEvent({...newEvent, status: e.target.value})}
-                    className="w-full px-3 py-2 border rounded-md shadow-sm bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-sm"
+      {/* MODAL: Update Details */}
+      {isEditModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-lg overflow-hidden">
+            <div className="flex justify-between items-center p-4 border-b border-gray-100 dark:border-gray-700">
+              <h2 className="text-lg font-bold">Update Shipment Details</h2>
+              <button onClick={() => setIsEditModalOpen(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <form onSubmit={handleEditSubmit} className="p-6 space-y-4">
+              <Input label="Receiver Name" value={editForm.receiverName} onChange={(e) => setEditForm({...editForm, receiverName: e.target.value})} required />
+              <Input label="Receiver Phone" value={editForm.receiverPhone} onChange={(e) => setEditForm({...editForm, receiverPhone: e.target.value})} required />
+              <Input label="Address Line 1" value={editForm.receiverAddressLine1} onChange={(e) => setEditForm({...editForm, receiverAddressLine1: e.target.value})} required />
+              <div className="grid grid-cols-2 gap-4">
+                <Input label="City" value={editForm.receiverCity} onChange={(e) => setEditForm({...editForm, receiverCity: e.target.value})} required />
+                <Input label="State" value={editForm.receiverState} onChange={(e) => setEditForm({...editForm, receiverState: e.target.value})} required />
+                <Input label="Country" value={editForm.receiverCountry} onChange={(e) => setEditForm({...editForm, receiverCountry: e.target.value})} required />
+                <Input label="Postal Code" value={editForm.receiverPostalCode} onChange={(e) => setEditForm({...editForm, receiverPostalCode: e.target.value})} required />
+              </div>
+              <div className="flex flex-col space-y-1">
+                <label className="text-sm font-medium">Priority</label>
+                <select 
+                  value={editForm.priority} 
+                  onChange={(e) => setEditForm({...editForm, priority: e.target.value})}
+                  className="px-3 py-2 border rounded-md shadow-sm bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 outline-none"
+                >
+                  <option value="LOW">LOW</option>
+                  <option value="NORMAL">NORMAL</option>
+                  <option value="HIGH">HIGH</option>
+                  <option value="URGENT">URGENT</option>
+                </select>
+              </div>
+              <div className="flex justify-end gap-3 pt-4">
+                <Button type="button" variant="ghost" onClick={() => setIsEditModalOpen(false)}>Cancel</Button>
+                <Button type="submit" disabled={saving}>{saving ? 'Saving...' : 'Save Changes'}</Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Add Package */}
+      {isPackageModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-sm overflow-hidden">
+            <div className="flex justify-between items-center p-4 border-b border-gray-100 dark:border-gray-700">
+              <h2 className="text-lg font-bold">Add Package</h2>
+              <button onClick={() => setIsPackageModalOpen(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <form onSubmit={handleAddPackageSubmit} className="p-6 space-y-4">
+              <Input label="Weight (kg)" type="number" step="0.1" value={packageForm.weightKg} onChange={(e) => setPackageForm({...packageForm, weightKg: e.target.value})} required placeholder="2.0" />
+              <Input label="Dimensions (cm)" value={packageForm.dimensionsCm} onChange={(e) => setPackageForm({...packageForm, dimensionsCm: e.target.value})} required placeholder="5x5x5" />
+              <Input label="Content Description" value={packageForm.contentDescription} onChange={(e) => setPackageForm({...packageForm, contentDescription: e.target.value})} required placeholder="Documents or Electronics" />
+              
+              <div className="flex justify-end gap-3 pt-4">
+                <Button type="button" variant="ghost" onClick={() => setIsPackageModalOpen(false)}>Cancel</Button>
+                <Button type="submit" disabled={saving}>{saving ? 'Adding...' : 'Add Package'}</Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Add Tracking Event */}
+      {isTrackingEventModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-lg overflow-hidden">
+            <div className="flex justify-between items-center p-4 border-b border-gray-100 dark:border-gray-700">
+              <h2 className="text-lg font-bold">Add Tracking Event</h2>
+              <button onClick={() => setIsTrackingEventModalOpen(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <form onSubmit={handleAddTrackingEventSubmit} className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col space-y-1">
+                  <label className="text-sm font-medium">Status</label>
+                  <select 
+                    value={trackingEventForm.status} 
+                    onChange={(e) => setTrackingEventForm({...trackingEventForm, status: e.target.value})}
+                    className="px-3 py-2 border rounded-md shadow-sm bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 outline-none"
                   >
-                    <option value="PENDING">PENDING</option>
+                    <option value="CREATED">CREATED</option>
+                    <option value="PICKED_UP">PICKED UP</option>
                     <option value="IN_TRANSIT">IN TRANSIT</option>
                     <option value="OUT_FOR_DELIVERY">OUT FOR DELIVERY</option>
                     <option value="DELIVERED">DELIVERED</option>
-                    <option value="CANCELLED">CANCELLED</option>
-                    <option value="RETURNED">RETURNED</option>
-                  </select>
-
-                  <select
-                    value={newEvent.eventType}
-                    onChange={(e) => setNewEvent({...newEvent, eventType: e.target.value})}
-                    className="w-full px-3 py-2 border rounded-md shadow-sm bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-sm"
-                  >
-                    <option value="SCAN">SCAN</option>
-                    <option value="STATUS_UPDATE">STATUS UPDATE</option>
-                    <option value="LOCATION_UPDATE">LOCATION UPDATE</option>
-                    <option value="PICKUP">PICKUP</option>
-                    <option value="DELIVERY">DELIVERY</option>
                     <option value="EXCEPTION">EXCEPTION</option>
                   </select>
-
-                  <input 
-                    type="text" 
-                    placeholder="Location Name (e.g. Sort Facility, NY)" 
-                    value={newEvent.locationName} 
-                    onChange={(e) => setNewEvent({...newEvent, locationName: e.target.value})}
-                    className="w-full px-3 py-2 border rounded-md shadow-sm bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-sm"
-                  />
-
-                  <input 
-                    type="text" 
-                    placeholder="Description (e.g. Package scanned)" 
-                    value={newEvent.description} 
-                    onChange={(e) => setNewEvent({...newEvent, description: e.target.value})}
-                    className="w-full px-3 py-2 border rounded-md shadow-sm bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-sm"
-                  />
-                  
-                  <div className="grid grid-cols-2 gap-2">
-                    <input 
-                      type="number" 
-                      step="any"
-                      placeholder="Latitude" 
-                      value={newEvent.latitude} 
-                      onChange={(e) => setNewEvent({...newEvent, latitude: e.target.value})}
-                      className="w-full px-3 py-2 border rounded-md shadow-sm bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-sm"
-                    />
-
-                    <input 
-                      type="number" 
-                      step="any"
-                      placeholder="Longitude" 
-                      value={newEvent.longitude} 
-                      onChange={(e) => setNewEvent({...newEvent, longitude: e.target.value})}
-                      className="w-full px-3 py-2 border rounded-md shadow-sm bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-sm"
-                    />
-                  </div>
                 </div>
-
-                <div className="flex justify-end mt-2">
-                  <Button type="submit" disabled={updatingHistory} className="w-full text-sm py-2">
-                    {updatingHistory ? 'Adding...' : 'Add Event to Timeline'}
-                  </Button>
+                <div className="flex flex-col space-y-1">
+                  <label className="text-sm font-medium">Event Type</label>
+                  <select 
+                    value={trackingEventForm.eventType} 
+                    onChange={(e) => setTrackingEventForm({...trackingEventForm, eventType: e.target.value})}
+                    className="px-3 py-2 border rounded-md shadow-sm bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 outline-none"
+                  >
+                    <option value="SCAN">SCAN</option>
+                    <option value="DEPARTURE">DEPARTURE</option>
+                    <option value="ARRIVAL">ARRIVAL</option>
+                    <option value="CUSTOMS_CLEARANCE">CUSTOMS CLEARANCE</option>
+                    <option value="EXCEPTION">EXCEPTION</option>
+                    <option value="DELIVERY">DELIVERY</option>
+                  </select>
                 </div>
-              </form>
-            )}
-            
-            {history.length === 0 ? (
-              <p className="text-gray-500 text-center py-8">No tracking events yet.</p>
-            ) : (
-              <div className="relative border-l-2 border-gray-200 dark:border-gray-700 ml-3 space-y-8">
-                {history.map((event, index) => (
-                  <div key={event.id || index} className="relative pl-6">
-                    <div className={`absolute -left-[9px] top-1 h-4 w-4 rounded-full border-2 border-white dark:border-gray-900 ${
-                      index === 0 ? 'bg-[var(--color-brand)]' : 'bg-gray-300 dark:bg-gray-600'
-                    }`} />
-                    <div className="flex flex-col mb-1">
-                      <h3 className={`font-semibold ${index === 0 ? 'text-gray-900 dark:text-gray-100' : 'text-gray-600 dark:text-gray-300'}`}>
-                        {event.status} {event.eventType && <span className="text-xs text-gray-400 font-normal ml-1">({event.eventType})</span>}
-                      </h3>
-                      <time className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        {formatDateTime(event.createdAt || event.recordedAt)}
-                      </time>
-                    </div>
-                    {(event.locationName || event.location) && (
-                      <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1 mt-1">
-                        <MapPin className="h-3 w-3" />
-                        {event.locationName || event.location}
-                      </p>
-                    )}
-                    {(event.description || event.notes) && (
-                      <p className="text-xs text-gray-500 bg-gray-50 dark:bg-gray-900/50 p-2 rounded mt-2 border border-gray-100 dark:border-gray-800">
-                        {event.description || event.notes}
-                      </p>
-                    )}
-                  </div>
-                ))}
               </div>
-            )}
+              
+              <Input label="Description" value={trackingEventForm.description} onChange={(e) => setTrackingEventForm({...trackingEventForm, description: e.target.value})} required placeholder="e.g. Package arrived at facility." />
+              <Input label="Location Name" value={trackingEventForm.locationName} onChange={(e) => setTrackingEventForm({...trackingEventForm, locationName: e.target.value})} placeholder="e.g. Mumbai Sort Facility" />
+              
+              <div className="grid grid-cols-2 gap-4">
+                <Input label="Latitude (Optional)" type="number" step="any" value={trackingEventForm.latitude} onChange={(e) => setTrackingEventForm({...trackingEventForm, latitude: e.target.value})} placeholder="28.6139" />
+                <Input label="Longitude (Optional)" type="number" step="any" value={trackingEventForm.longitude} onChange={(e) => setTrackingEventForm({...trackingEventForm, longitude: e.target.value})} placeholder="77.2090" />
+              </div>
+              
+              <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
+                <Button type="button" variant="ghost" onClick={() => setIsTrackingEventModalOpen(false)}>Cancel</Button>
+                <Button type="submit" disabled={saving}>{saving ? 'Adding...' : 'Add Event'}</Button>
+              </div>
+            </form>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* MODAL: Assign Driver */}
+      {isAssignDriverModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-sm overflow-hidden">
+            <div className="flex justify-between items-center p-4 border-b border-gray-100 dark:border-gray-700">
+              <h2 className="text-lg font-bold flex items-center gap-2">
+                <Users className="h-5 w-5 text-blue-500" />
+                Assign Driver
+              </h2>
+              <button onClick={() => setIsAssignDriverModalOpen(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <form onSubmit={handleAssignDriverSubmit} className="p-6 space-y-4">
+              <div className="flex flex-col space-y-1">
+                <label className="text-sm font-medium">Select Driver</label>
+                <select 
+                  value={selectedDriverId} 
+                  onChange={(e) => setSelectedDriverId(e.target.value)}
+                  className="px-3 py-2 border rounded-md shadow-sm bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 outline-none w-full"
+                  required
+                >
+                  <option value="">-- Choose Driver --</option>
+                  {drivers.map(driver => (
+                    <option key={driver.id} value={driver.id}>
+                      {driver.driverName} ({driver.licenseNumber})
+                    </option>
+                  ))}
+                </select>
+                {drivers.length === 0 && <p className="text-xs text-red-500 mt-1">No drivers available.</p>}
+              </div>
+              
+              <div className="flex justify-end gap-3 pt-4">
+                <Button type="button" variant="ghost" onClick={() => setIsAssignDriverModalOpen(false)}>Cancel</Button>
+                <Button type="submit" disabled={saving || !selectedDriverId}>{saving ? 'Assigning...' : 'Assign to Shipment'}</Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

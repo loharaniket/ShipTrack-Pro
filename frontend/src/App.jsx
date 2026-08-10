@@ -13,9 +13,11 @@ import Dashboard from './pages/dashboard/Dashboard';
 import ShipmentList from './pages/shipments/ShipmentList';
 import CreateShipment from './pages/shipments/CreateShipment';
 import ShipmentDetails from './pages/shipments/ShipmentDetails';
-import EditShipment from './pages/shipments/EditShipment';
 import ProfileSettings from './pages/settings/ProfileSettings';
 import PublicTracking from './pages/tracking/PublicTracking';
+import DriverDirectory from './pages/delivery/DriverDirectory';
+import DispatchDashboard from './pages/dispatch/DispatchDashboard';
+import DriverDashboard from './pages/delivery/DriverDashboard';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -63,15 +65,28 @@ function App() {
               </ProtectedRoute>
             } />
             
-            <Route path="/shipments/:id/edit" element={
-              <ProtectedRoute>
-                <EditShipment />
-              </ProtectedRoute>
-            } />
-            
             <Route path="/settings" element={
               <ProtectedRoute>
                 <ProfileSettings />
+              </ProtectedRoute>
+            } />
+
+            {/* Delivery/Fleet Routes */}
+            <Route path="/fleet" element={
+              <ProtectedRoute>
+                <DriverDirectory />
+              </ProtectedRoute>
+            } />
+
+            <Route path="/dispatch" element={
+              <ProtectedRoute>
+                <DispatchDashboard />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/driver/dashboard" element={
+              <ProtectedRoute>
+                <DriverDashboard />
               </ProtectedRoute>
             } />
 

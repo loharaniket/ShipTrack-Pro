@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Truck, Users, Settings } from 'lucide-react';
+import { LayoutDashboard, Truck, Users, Settings, Map } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 const Sidebar = () => {
@@ -8,9 +8,21 @@ const Sidebar = () => {
 
   const navItems = [
     { name: 'Dashboard', path: '/', icon: <LayoutDashboard className="h-5 w-5" /> },
-    { name: 'Shipments', path: '/shipments', icon: <Truck className="h-5 w-5" /> },
-    { name: 'Settings', path: '/settings', icon: <Settings className="h-5 w-5" /> },
   ];
+
+  if (['ADMINISTRATOR', 'LOGISTICS_OPERATOR', 'CUSTOMER', 'BUSINESS_CLIENT', 'SUPPORT_AGENT'].includes(currentUser?.role)) {
+    navItems.push({ name: 'Shipments', path: '/shipments', icon: <Truck className="h-5 w-5" /> });
+  }
+
+  if (['ADMINISTRATOR', 'LOGISTICS_OPERATOR'].includes(currentUser?.role)) {
+    navItems.push({ name: 'Dispatch', path: '/dispatch', icon: <Map className="h-5 w-5" /> });
+  }
+
+  if (['ADMINISTRATOR'].includes(currentUser?.role)) {
+    navItems.push({ name: 'Fleet', path: '/fleet', icon: <Users className="h-5 w-5" /> });
+  }
+
+  navItems.push({ name: 'Settings', path: '/settings', icon: <Settings className="h-5 w-5" /> });
 
   if (currentUser?.role === 'ADMINISTRATOR') {
     navItems.push({ name: 'Admin Panel', path: '/admin', icon: <Users className="h-5 w-5" /> });
