@@ -28,12 +28,10 @@ import { Reports } from '@/pages/analytics/Reports';
 import { SystemSettings } from '@/pages/admin/SystemSettings';
 import { Users } from '@/pages/admin/Users';
 import { Roles } from '@/pages/admin/Roles';
-import { Integrations } from '@/pages/admin/Integrations';
-import { ApiKeys } from '@/pages/admin/ApiKeys';
-import { Webhooks } from '@/pages/admin/Webhooks';
 import { AuditLogs } from '@/pages/admin/AuditLogs';
 import { SystemHealth } from '@/pages/admin/SystemHealth';
 import { Customers } from '@/pages/customers/Customers';
+import { Profile } from '@/pages/auth/Profile';
 
 function App() {
   return (
@@ -48,6 +46,7 @@ function App() {
         <Route element={<ProtectedRoute />}>
           <Route element={<DashboardLayout />}>
             <Route path="/" element={<Dashboard />} />
+            <Route path="/profile" element={<Profile />} />
             <Route path="/notifications" element={<NotificationCenter />} />
             <Route path="/shipments" element={<ShipmentList />} />
             <Route path="/shipments/:id" element={<ShipmentDetail />} />
@@ -89,9 +88,6 @@ function App() {
               <Route path="/settings" element={<SystemSettings />} />
               <Route path="/users" element={<Users />} />
               <Route path="/roles" element={<Roles />} />
-              <Route path="/integrations" element={<Integrations />} />
-              <Route path="/api" element={<ApiKeys />} />
-              <Route path="/webhooks" element={<Webhooks />} />
               <Route path="/audit" element={<AuditLogs />} />
               <Route path="/system-health" element={<SystemHealth />} />
             </Route>

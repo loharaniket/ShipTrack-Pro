@@ -1,8 +1,12 @@
 import React from 'react';
-import { Menu, Search, Bell } from 'lucide-react';
+import { Menu, Search, Bell, ChevronDown } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { Input } from '@/components/ui/Input';
+import { useAuth } from '@/context/AuthContext';
 
 export function TopNav() {
+  const { user, logout } = useAuth();
+
   return (
     <header className="h-16 bg-white border-b border-navy-200 flex items-center justify-between px-4 lg:px-6">
       <div className="flex items-center flex-1">
@@ -33,6 +37,36 @@ export function TopNav() {
           <Bell className="h-5 w-5" />
           <span className="absolute top-1.5 right-1.5 block h-2 w-2 rounded-full bg-danger-500 ring-2 ring-white" />
         </button>
+
+        {/* User Menu */}
+        <div className="relative group">
+          <Link to="/profile" className="flex items-center space-x-3 hover:bg-navy-50 p-1.5 rounded-lg transition-colors cursor-pointer">
+            <div className="h-8 w-8 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center font-bold">
+              {user?.name.charAt(0)}
+            </div>
+            <div className="hidden md:block text-left">
+              <p className="text-sm font-medium text-navy-900 leading-tight">{user?.name}</p>
+              <p className="text-xs text-navy-500 leading-tight">{user?.role}</p>
+            </div>
+            <ChevronDown className="h-4 w-4 text-navy-400 hidden md:block" />
+          </Link>
+          
+          {/* Dropdown Menu */}
+          <div className="absolute right-0 mt-2 w-48 bg-white border border-navy-100 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+            <div className="py-1">
+              <Link to="/profile" className="block px-4 py-2 text-sm text-navy-700 hover:bg-navy-50">Profile Settings</Link>
+              <button 
+                onClick={() => {
+                  logout();
+                  window.location.href = '/auth/login';
+                }}
+                className="w-full text-left px-4 py-2 text-sm text-danger-600 hover:bg-danger-50"
+              >
+                Sign out
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </header>
   );
