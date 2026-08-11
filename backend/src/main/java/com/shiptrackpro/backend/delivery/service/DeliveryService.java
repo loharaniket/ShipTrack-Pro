@@ -1,7 +1,6 @@
 package com.shiptrackpro.backend.delivery.service;
 
 import com.shiptrackpro.backend.delivery.dto.*;
-import com.shiptrackpro.backend.delivery.entity.AssignmentStatus;
 import com.shiptrackpro.backend.delivery.entity.Driver;
 import com.shiptrackpro.backend.delivery.entity.DriverLocation;
 import com.shiptrackpro.backend.delivery.entity.ShipmentAssignment;

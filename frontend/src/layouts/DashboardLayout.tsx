@@ -1,0 +1,20 @@
+import React from 'react';
+import { Outlet } from 'react-router-dom';
+import { Sidebar } from '@/components/layout/Sidebar';
+import { TopNav } from '@/components/layout/TopNav';
+import { GlobalSearch } from '@/components/layout/GlobalSearch';
+
+export function DashboardLayout() {
+  return (
+    <div className="flex h-screen bg-navy-50 overflow-hidden">
+      <GlobalSearch />
+      <Sidebar />
+      <div className="flex-1 flex flex-col min-w-0">
+        <TopNav />
+        <main className="flex-1 overflow-y-auto p-4 lg:p-6">
+          <Outlet />
+        </main>
+      </div>
+    </div>
+  );
+}

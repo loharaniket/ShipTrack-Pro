@@ -93,13 +93,10 @@ public class ShipmentService {
                     .map(this::toSummaryDto);
         }
 
-<<<<<<< HEAD
+
         // Admin or Support Agent sees all
         return shipmentRepository.findAll(pageable).map(this::toSummaryDto);
-=======
-        // Admin or Operator sees all
-        return shipmentRepository.findAllWithFilters(assigned, pageable).map(this::toSummaryDto);
->>>>>>> feat/route_management_service
+
     }
 
     public ShipmentDto updateShipment(UUID id, UpdateShipmentRequest request, Authentication auth) {
