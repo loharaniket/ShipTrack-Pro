@@ -12,8 +12,8 @@ import java.util.UUID;
 public class ShipmentSummaryDto {
     private UUID id;
     private String trackingNumber;
-    private String receiverName;
-    private String receiverCity;
+    private String origin;
+    private String destination;
     private ShipmentStatus status;
     private ShipmentPriority priority;
     private ZonedDateTime createdAt;

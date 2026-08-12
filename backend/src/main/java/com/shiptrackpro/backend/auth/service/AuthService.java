@@ -69,7 +69,7 @@ public class AuthService {
         String refreshToken = jwtService.generateRefreshToken(userDetails);
         saveUserSession(user, refreshToken);
 
-        return new AuthResponse(jwtToken, refreshToken);
+        return new AuthResponse(jwtToken, refreshToken, toUserDto(user));
     }
 
     public AuthResponse login(LoginRequest request) {
@@ -85,11 +85,12 @@ public class AuthService {
         AppUser user = userRepository.findByEmail(request.getEmail()).orElseThrow();
         saveUserSession(user, refreshToken);
 
-        return new AuthResponse(jwtToken, refreshToken);
+        return new AuthResponse(jwtToken, refreshToken, toUserDto(user));
     }
 
-    public AuthResponse oauth2Login(String provider, OAuth2LoginRequest request) {
-        String email = request.getIdToken();
+    public AuthResponse oauth2Login(OAuth2LoginRequest request) {
+        // Mock finding user by provider and code
+        String email = "oauth2@example.com";
 
         AppUser user = userRepository.findByEmail(email).orElseGet(() -> {
             AppUser newUser = new AppUser();
@@ -106,7 +107,7 @@ public class AuthService {
         String refreshToken = jwtService.generateRefreshToken(userDetails);
         saveUserSession(user, refreshToken);
 
-        return new AuthResponse(jwtToken, refreshToken);
+        return new AuthResponse(jwtToken, refreshToken, toUserDto(user));
     }
 
     public String forgotPassword(ForgotPasswordRequest request) {
@@ -143,7 +144,7 @@ public class AuthService {
                         .orElseThrow(() -> new IllegalArgumentException("Invalid refresh token"));
                 System.out.println(session.getUser().getEmail());
                 String accessToken = jwtService.generateToken(userDetails);
-                return new AuthResponse(accessToken, refreshToken);
+                return new AuthResponse(accessToken, refreshToken, null);
             }
         }
         throw new IllegalArgumentException("Invalid refresh token");
@@ -161,5 +162,16 @@ public class AuthService {
         session.setRefreshToken(refreshToken);
         session.setExpiresAt(java.time.ZonedDateTime.now().plusDays(7));
         userSessionRepository.save(session);
+    }
+
+    private com.shiptrackpro.backend.user.dto.UserDto toUserDto(AppUser user) {
+        return com.shiptrackpro.backend.user.dto.UserDto.builder()
+                .id(user.getId())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .email(user.getEmail())
+                .isActive(user.getIsActive())
+                .role(user.getRole())
+                .build();
     }
 }

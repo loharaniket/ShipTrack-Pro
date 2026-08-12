@@ -15,13 +15,8 @@ public class ShipmentDto {
     private String trackingNumber;
     private UUID companyId;
 
-    private String senderName;
-    private String senderPhone;
-    private AddressDto senderAddress;
-
-    private String receiverName;
-    private String receiverPhone;
-    private AddressDto receiverAddress;
+    private String origin;
+    private String destination;
 
     private ShipmentStatus status;
     private ShipmentPriority priority;

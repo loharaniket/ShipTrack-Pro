@@ -4,5 +4,6 @@ import lombok.Data;
 
 @Data
 public class OAuth2LoginRequest {
-    private String idToken;
+    private String provider;
+    private String code;
 }

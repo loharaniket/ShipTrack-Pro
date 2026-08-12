@@ -1,11 +1,46 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
-import { Package, Truck, CheckCircle2, Clock, FileDown, Plus } from 'lucide-react';
+import { Package, Truck, CheckCircle2, Clock, FileDown, Plus, Trash2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Modal } from '@/components/ui/Modal';
+import { Input } from '@/components/ui/Input';
 
 export function BusinessClientDashboard() {
+  const navigate = useNavigate();
+  const [shipments, setShipments] = useState([
+    { id: 1, tracking: 'STP-2026-10481', origin: 'Mumbai DC', dest: 'Pune Hub', stat: 'In Transit', eta: 'Today, 4:00 PM' },
+    { id: 2, tracking: 'STP-2026-10482', origin: 'Mumbai DC', dest: 'Thane', stat: 'Delivered', eta: '-' },
+    { id: 3, tracking: 'STP-2026-10483', origin: 'Mumbai DC', dest: 'Nashik', stat: 'In Transit', eta: 'Tomorrow, 10:00 AM' },
+    { id: 4, tracking: 'STP-2026-10484', origin: 'Mumbai DC', dest: 'Pune Hub', stat: 'Delivered', eta: '-' },
+    { id: 5, tracking: 'STP-2026-10485', origin: 'Mumbai DC', dest: 'Aurangabad', stat: 'In Transit', eta: 'Today, 6:00 PM' },
+  ]);
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [newShipment, setNewShipment] = useState({ dest: '', eta: 'Pending' });
+
+  const handleAddShipment = () => {
+    if (!newShipment.dest) return;
+    setShipments([...shipments, {
+      id: Date.now(),
+      tracking: `STP-2026-10${480 + shipments.length + 1}`,
+      origin: 'Mumbai DC',
+      dest: newShipment.dest,
+      stat: 'Processing',
+      eta: newShipment.eta
+    }]);
+    setIsModalOpen(false);
+    setNewShipment({ dest: '', eta: 'Pending' });
+  };
+
+  const handleCancel = (id: number) => {
+    setShipments(shipments.filter(s => s.id !== id));
+  };
+
+  const activeShipmentsCount = shipments.filter(s => s.stat !== 'Delivered').length;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -15,7 +50,7 @@ export function BusinessClientDashboard() {
         </div>
         <div className="flex space-x-3">
           <Button variant="outline"><FileDown className="h-4 w-4 mr-2" /> Download Report</Button>
-          <Button><Plus className="h-4 w-4 mr-2" /> Create Shipment</Button>
+          <Button onClick={() => setIsModalOpen(true)}><Plus className="h-4 w-4 mr-2" /> Create Shipment</Button>
         </div>
       </div>
 
@@ -26,7 +61,7 @@ export function BusinessClientDashboard() {
             <Package className="h-4 w-4 text-navy-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">12,482</div>
+            <div className="text-2xl font-bold">{12477 + shipments.length}</div>
             <p className="text-xs text-success-500 mt-1">+14.2% this month</p>
           </CardContent>
         </Card>
@@ -36,8 +71,8 @@ export function BusinessClientDashboard() {
             <Truck className="h-4 w-4 text-info-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">142</div>
-            <p className="text-xs text-navy-400 mt-1">28 delayed</p>
+            <div className="text-2xl font-bold">{139 + activeShipmentsCount}</div>
+            <p className="text-xs text-navy-400 mt-1">Processing included</p>
           </CardContent>
         </Card>
         <Card>
@@ -79,15 +114,27 @@ export function BusinessClientDashboard() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {[1, 2, 3, 4, 5].map((i) => (
-                <TableRow key={i}>
-                  <TableCell className="font-medium text-primary-600">STP-2026-10{480 + i}</TableCell>
-                  <TableCell>Mumbai DC</TableCell>
-                  <TableCell>Pune Hub</TableCell>
-                  <TableCell><Badge variant={i % 2 === 0 ? 'info' : 'success'}>{i % 2 === 0 ? 'In Transit' : 'Delivered'}</Badge></TableCell>
-                  <TableCell>{i % 2 === 0 ? 'Today, 4:00 PM' : '-'}</TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="sm">Track</Button>
+              {shipments.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-4 text-navy-500">No shipments found.</TableCell>
+                </TableRow>
+              )}
+              {shipments.map((s) => (
+                <TableRow key={s.id}>
+                  <TableCell className="font-medium text-primary-600">{s.tracking}</TableCell>
+                  <TableCell>{s.origin}</TableCell>
+                  <TableCell>{s.dest}</TableCell>
+                  <TableCell>
+                    <Badge variant={s.stat === 'Processing' ? 'warning' : s.stat === 'In Transit' ? 'info' : 'success'}>
+                      {s.stat}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>{s.eta}</TableCell>
+                  <TableCell className="text-right flex justify-end space-x-2">
+                    <Button variant="ghost" size="sm" onClick={() => navigate(`/tracking/${s.tracking}`)}>Track</Button>
+                    <Button variant="ghost" size="sm" className="text-danger-600 hover:text-danger-700 hover:bg-danger-50" onClick={() => handleCancel(s.id)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}
@@ -95,6 +142,20 @@ export function BusinessClientDashboard() {
           </Table>
         </CardContent>
       </Card>
+
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Create New Shipment">
+        <div className="space-y-4">
+          <Input 
+            placeholder="Destination Address" 
+            value={newShipment.dest} 
+            onChange={(e) => setNewShipment({...newShipment, dest: e.target.value})} 
+          />
+          <div className="pt-4 flex justify-end space-x-2">
+            <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
+            <Button onClick={handleAddShipment}>Create Shipment</Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

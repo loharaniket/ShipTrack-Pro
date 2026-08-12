@@ -103,9 +103,9 @@ public class DeliveryService {
 
         return DriverLocationDto.builder()
                 .driverId(location.getDriver().getId())
-                .latitude(location.getLatitude())
-                .longitude(location.getLongitude())
-                .recordedAt(location.getRecordedAt())
+                .lat(location.getLatitude())
+                .lng(location.getLongitude())
+                .speed(0.0)
                 .build();
     }
 

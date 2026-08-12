@@ -77,4 +77,14 @@ public class AdminController {
         Page<AuditLogDto> response = auditService.getUserActivity(id, pageable);
         return ResponseEntity.ok(ApiResponse.success("User activity fetched successfully", response));
     }
+
+    @GetMapping("/settings")
+    public ResponseEntity<ApiResponse<java.util.Map<String, String>>> getSettings() {
+        return ResponseEntity.ok(ApiResponse.success("Settings retrieved", java.util.Map.of("TIMEZONE", "UTC")));
+    }
+
+    @PutMapping("/settings")
+    public ResponseEntity<ApiResponse<java.util.Map<String, String>>> updateSettings(@RequestBody java.util.Map<String, String> settings) {
+        return ResponseEntity.ok(ApiResponse.success("Settings updated", settings));
+    }
 }

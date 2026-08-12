@@ -50,17 +50,21 @@ function App() {
             <Route path="/notifications" element={<NotificationCenter />} />
             <Route path="/shipments" element={<ShipmentList />} />
             <Route path="/shipments/:id" element={<ShipmentDetail />} />
+            <Route path="/tracking/:id" element={<TrackingPage />} />
             
             {/* Business / Logistics / Support / Admin Only */}
             <Route element={<ProtectedRoute allowedRoles={['BusinessClient', 'LogisticsOperator', 'SupportAgent', 'Administrator']} />}>
-              <Route path="/tracking/:id" element={<TrackingPage />} />
               <Route path="/customers" element={<Customers />} />
               <Route path="/reports" element={<Reports />} />
             </Route>
             
+            {/* Customer / Business / Logistics / Admin Only */}
+            <Route element={<ProtectedRoute allowedRoles={['Customer', 'BusinessClient', 'LogisticsOperator', 'Administrator']} />}>
+              <Route path="/shipments/create" element={<CreateShipment />} />
+            </Route>
+            
             {/* Business / Logistics / Admin Only */}
             <Route element={<ProtectedRoute allowedRoles={['BusinessClient', 'LogisticsOperator', 'Administrator']} />}>
-              <Route path="/shipments/create" element={<CreateShipment />} />
               <Route path="/routes/planner" element={<RoutePlanner />} />
               <Route path="/routes/optimization" element={<RouteOptimization />} />
               <Route path="/analytics" element={<ExecutiveAnalytics />} />

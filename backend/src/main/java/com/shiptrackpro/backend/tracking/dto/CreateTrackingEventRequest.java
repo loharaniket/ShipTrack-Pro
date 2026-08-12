@@ -6,6 +6,7 @@ import lombok.Data;
 
 @Data
 public class CreateTrackingEventRequest {
+    private String trackingNumber;
     private ShipmentStatus status;
     private TrackingEventType eventType;
     private String description;

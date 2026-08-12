@@ -32,19 +32,11 @@ public class ShipmentService {
         AppUser user = userRepository.findByEmail(auth.getName())
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-        // 1. Create Addresses
-        Address senderAddress = saveAddress(request.getSenderAddress());
-        Address receiverAddress = saveAddress(request.getReceiverAddress());
-
         // 2. Create Shipment
         Shipment shipment = new Shipment();
         shipment.setTrackingNumber(generateTrackingNumber());
-        shipment.setSenderName(request.getSenderName());
-        shipment.setSenderPhone(request.getSenderPhone());
-        shipment.setSenderAddress(senderAddress);
-        shipment.setReceiverName(request.getReceiverName());
-        shipment.setReceiverPhone(request.getReceiverPhone());
-        shipment.setReceiverAddress(receiverAddress);
+        shipment.setOrigin(request.getOrigin());
+        shipment.setDestination(request.getDestination());
         shipment.setPriority(request.getPriority() != null ? request.getPriority() : ShipmentPriority.NORMAL);
         shipment.setCreatedBy(user);
 
@@ -103,17 +95,8 @@ public class ShipmentService {
         Shipment shipment = shipmentRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Shipment not found"));
 
-        if (request.getReceiverName() != null)
-            shipment.setReceiverName(request.getReceiverName());
-        if (request.getReceiverPhone() != null)
-            shipment.setReceiverPhone(request.getReceiverPhone());
-        if (request.getPriority() != null)
-            shipment.setPriority(request.getPriority());
-
-        if (request.getReceiverAddress() != null) {
-            Address newAddress = saveAddress(request.getReceiverAddress());
-            shipment.setReceiverAddress(newAddress);
-        }
+        if (request.getDestination() != null)
+            shipment.setDestination(request.getDestination());
 
         Shipment saved = shipmentRepository.save(shipment);
         return toDto(saved);
@@ -190,8 +173,8 @@ public class ShipmentService {
         return ShipmentSummaryDto.builder()
                 .id(s.getId())
                 .trackingNumber(s.getTrackingNumber())
-                .receiverName(s.getReceiverName())
-                .receiverCity(s.getReceiverAddress().getCity())
+                .origin(s.getOrigin())
+                .destination(s.getDestination())
                 .status(s.getStatus())
                 .priority(s.getPriority())
                 .createdAt(s.getCreatedAt())
@@ -204,12 +187,8 @@ public class ShipmentService {
                 .id(s.getId())
                 .trackingNumber(s.getTrackingNumber())
                 .companyId(s.getCompany() != null ? s.getCompany().getId() : null)
-                .senderName(s.getSenderName())
-                .senderPhone(s.getSenderPhone())
-                .senderAddress(toAddressDto(s.getSenderAddress()))
-                .receiverName(s.getReceiverName())
-                .receiverPhone(s.getReceiverPhone())
-                .receiverAddress(toAddressDto(s.getReceiverAddress()))
+                .origin(s.getOrigin())
+                .destination(s.getDestination())
                 .status(s.getStatus())
                 .priority(s.getPriority())
                 .estimatedDeliveryTime(s.getEstimatedDeliveryTime())

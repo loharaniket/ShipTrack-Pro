@@ -40,6 +40,7 @@ public class ShipmentController {
     @GetMapping
     public ResponseEntity<ApiResponse<Page<ShipmentSummaryDto>>> getAllShipments(
             @RequestParam(required = false) Boolean assigned,
+            @RequestParam(required = false) String search,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             Authentication auth) {
@@ -56,7 +57,7 @@ public class ShipmentController {
         return ResponseEntity.ok(ApiResponse.success("Shipment updated successfully", response));
     }
 
-    @DeleteMapping("/{id}")
+    @PostMapping("/{id}/cancel")
     public ResponseEntity<ApiResponse<String>> cancelShipment(
             @PathVariable UUID id, Authentication auth) {
         shipmentService.cancelShipment(id, auth);
@@ -79,10 +80,11 @@ public class ShipmentController {
     }
 
     // LOGISTICS_OPERATOR, SUPPORT_AGENT,ADMINISTRATOR
-    @PostMapping("/{id}/history/{status}")
-    public ResponseEntity<ApiResponse<String>> updateShipmentHistory(@PathVariable UUID id,
-            @PathVariable ShipmentStatus status, Authentication auth) {
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<ApiResponse<String>> updateShipmentStatus(@PathVariable UUID id,
+            @RequestBody java.util.Map<String, String> body, Authentication auth) {
+        ShipmentStatus status = ShipmentStatus.valueOf(body.get("status"));
         shipmentService.updateShipmentHistory(id, status, auth);
-        return ResponseEntity.ok(ApiResponse.success("Shipment History Update", null));
+        return ResponseEntity.ok(ApiResponse.success("Shipment Status Updated", null));
     }
 }

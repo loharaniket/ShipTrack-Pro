@@ -1,14 +1,27 @@
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent } from '@/components/ui/Card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Input';
-import { Plus, Filter, Download, MoreHorizontal } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Plus, Filter, Download, XCircle } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 
 export function ShipmentList() {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
+  
+  const [shipments, setShipments] = useState([
+    { id: 1, tracking: 'STP-2026-10481', cust: 'Acme Retail', origin: 'Mumbai DC', dest: 'Pune Business Park', stat: 'In Transit', eta: 'Today, 2:30 PM' },
+    { id: 2, tracking: 'STP-2026-10482', cust: 'Nova Electronics', origin: 'Delhi Hub', dest: 'Gurgaon', stat: 'Delivered', eta: '-' },
+    { id: 3, tracking: 'STP-2026-10483', cust: 'UrbanCart', origin: 'Bangalore', dest: 'Chennai', stat: 'Delayed', eta: 'Tomorrow, 10:00 AM' },
+    { id: 4, tracking: 'STP-2026-10484', cust: 'FreshFoods', origin: 'Hyderabad', dest: 'Pune Business Park', stat: 'Delivered', eta: '-' },
+    { id: 5, tracking: 'STP-2026-10485', cust: 'Acme Retail', origin: 'Mumbai DC', dest: 'Surat', stat: 'In Transit', eta: 'Today, 6:15 PM' },
+  ]);
+
+  const handleCancelShipment = (id: number) => {
+    setShipments(shipments.filter(s => s.id !== id));
+  };
 
   return (
     <div className="space-y-6">
@@ -59,21 +72,33 @@ export function ShipmentList() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-                <TableRow key={i}>
+              {shipments.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center py-8 text-navy-500">No shipments found.</TableCell>
+                </TableRow>
+              )}
+              {shipments.map((s) => (
+                <TableRow key={s.id}>
                   <TableCell><input type="checkbox" className="rounded border-navy-300" /></TableCell>
                   <TableCell>
-                    <Link to={`/shipments/STP-2026-1048${i}`} className="font-medium text-primary-600 hover:underline">
-                      STP-2026-1048{i}
+                    <Link to={`/shipments/${s.tracking}`} className="font-medium text-primary-600 hover:underline">
+                      {s.tracking}
                     </Link>
                   </TableCell>
-                  <TableCell>Acme Retail</TableCell>
-                  <TableCell>Mumbai DC</TableCell>
-                  <TableCell>Pune Business Park</TableCell>
-                  <TableCell><Badge variant={i % 3 === 0 ? 'warning' : i % 2 === 0 ? 'success' : 'info'}>{i % 3 === 0 ? 'Delayed' : i % 2 === 0 ? 'Delivered' : 'In Transit'}</Badge></TableCell>
-                  <TableCell>{i % 2 === 0 ? '-' : 'Today, 2:30 PM'}</TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4 text-navy-500" /></Button>
+                  <TableCell>{s.cust}</TableCell>
+                  <TableCell>{s.origin}</TableCell>
+                  <TableCell>{s.dest}</TableCell>
+                  <TableCell>
+                    <Badge variant={s.stat === 'Delayed' ? 'warning' : s.stat === 'Delivered' ? 'success' : 'info'}>
+                      {s.stat}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>{s.eta}</TableCell>
+                  <TableCell className="text-right flex justify-end space-x-2">
+                    <Button variant="ghost" size="sm" onClick={() => navigate(`/tracking/${s.tracking}`)}>Track</Button>
+                    <Button variant="ghost" size="sm" className="text-danger-600 hover:text-danger-700 hover:bg-danger-50" onClick={() => handleCancelShipment(s.id)} title="Cancel Shipment">
+                      <XCircle className="h-4 w-4" />
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}
@@ -81,13 +106,11 @@ export function ShipmentList() {
           </Table>
           
           <div className="p-4 border-t border-navy-200 flex items-center justify-between">
-            <span className="text-sm text-navy-500">Showing 1 to 8 of 1,248 entries</span>
+            <span className="text-sm text-navy-500">Showing 1 to {shipments.length} of {shipments.length} entries</span>
             <div className="flex space-x-1">
               <Button variant="outline" size="sm" disabled>Previous</Button>
               <Button variant="outline" size="sm" className="bg-primary-50 text-primary-700 border-primary-200">1</Button>
-              <Button variant="outline" size="sm">2</Button>
-              <Button variant="outline" size="sm">3</Button>
-              <Button variant="outline" size="sm">Next</Button>
+              <Button variant="outline" size="sm" disabled>Next</Button>
             </div>
           </div>
         </CardContent>

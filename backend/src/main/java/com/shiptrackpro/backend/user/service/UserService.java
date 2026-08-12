@@ -39,9 +39,7 @@ public class UserService {
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
                 .email(user.getEmail())
-                .companyName(user.getCompany() != null ? user.getCompany().getCompanyName() : null)
                 .isActive(user.getIsActive())
-                .lastLogin(user.getLastLogin())
                 .role(user.getRole())
                 .build();
     }

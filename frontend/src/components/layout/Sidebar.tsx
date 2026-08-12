@@ -18,8 +18,6 @@ export function Sidebar() {
         return [
           { name: 'Dashboard', path: '/', icon: LayoutDashboard },
           { name: 'My Shipments', path: '/shipments', icon: Package },
-          { name: 'Track Shipment', path: '/tracking/demo', icon: Map },
-          { name: 'Live Tracking', path: '/operations', icon: Truck },
           { name: 'Notifications', path: '/notifications', icon: Bell },
         ];
       case 'BusinessClient':
@@ -27,8 +25,6 @@ export function Sidebar() {
           { name: 'Dashboard', path: '/', icon: LayoutDashboard },
           { name: 'Shipments', path: '/shipments', icon: Package },
           { name: 'Create Shipment', path: '/shipments/create', icon: PlusIcon },
-          { name: 'Tracking', path: '/tracking/demo', icon: Map },
-          { name: 'Live Deliveries', path: '/operations', icon: Truck },
           { name: 'Routes', path: '/routes/planner', icon: Route },
           { name: 'ETA Prediction', path: '/intelligence/eta', icon: BarChart3 },
           { name: 'Analytics', path: '/analytics', icon: BarChart3 },
@@ -41,9 +37,7 @@ export function Sidebar() {
           { name: 'Operations Dashboard', path: '/', icon: LayoutDashboard },
           { name: 'Shipments', path: '/shipments', icon: Package },
           { name: 'Create Shipment', path: '/shipments/create', icon: PlusIcon },
-          { name: 'Tracking', path: '/tracking/demo', icon: Map },
           { name: 'Active Deliveries', path: '/operations', icon: Truck },
-          { name: 'Fleet', path: '/fleet', icon: Truck },
           { name: 'Drivers', path: '/drivers', icon: Users },
           { name: 'Routes', path: '/routes/planner', icon: Route },
           { name: 'Geo-fences', path: '/routes/geofencing', icon: Map },
@@ -67,8 +61,6 @@ export function Sidebar() {
           { name: 'Users', path: '/users', icon: Users },
           { name: 'Roles & Permissions', path: '/roles', icon: ShieldAlert },
           { name: 'Shipments', path: '/shipments', icon: Package },
-          { name: 'Tracking', path: '/tracking/demo', icon: Map },
-          { name: 'Fleet', path: '/fleet', icon: Truck },
           { name: 'Drivers', path: '/drivers', icon: Users },
           { name: 'Routes', path: '/routes/planner', icon: Route },
           { name: 'Geo-fences', path: '/routes/geofencing', icon: Map },

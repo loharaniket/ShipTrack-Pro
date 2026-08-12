@@ -5,8 +5,6 @@ import lombok.Data;
 
 @Data
 public class UpdateShipmentRequest {
-    private String receiverName;
-    private String receiverPhone;
-    private AddressDto receiverAddress;
+    private String destination;
     private ShipmentPriority priority;
 }

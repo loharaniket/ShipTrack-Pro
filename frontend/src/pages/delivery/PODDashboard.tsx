@@ -1,12 +1,38 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { FileCheck, AlertTriangle, Eye, Check, X } from 'lucide-react';
-import { Link } from 'react-router-dom';
 
 export function PODDashboard() {
+  const [submissions, setSubmissions] = useState([
+    { id: 'STP-10482', rec: 'Ramesh Singh', t: '10 mins ago', d: 'Rahul Sharma', stat: 'Pending' },
+    { id: 'STP-10483', rec: 'Priya Patel', t: '25 mins ago', d: 'Arjun Mehta', stat: 'Verified' },
+    { id: 'STP-10484', rec: 'Unknown', t: '1 hour ago', d: 'Neha Kapoor', stat: 'Rejected' },
+    { id: 'STP-10485', rec: 'Vikram Gupta', t: '2 hours ago', d: 'Sanjay Mishra', stat: 'Verified' },
+  ]);
+
+  const pendingList = submissions.filter(s => s.stat === 'Pending');
+  const [selectedPreview, setSelectedPreview] = useState(pendingList.length > 0 ? pendingList[0] : null);
+
+  const handleUpdateStatus = (id: string, newStat: string) => {
+    const updated = submissions.map(s => s.id === id ? { ...s, stat: newStat } : s);
+    setSubmissions(updated);
+    
+    // Auto-select next pending if current was selected
+    if (selectedPreview && selectedPreview.id === id) {
+      const nextPending = updated.find(s => s.stat === 'Pending');
+      setSelectedPreview(nextPending || null);
+    }
+  };
+
+  const pendingCount = submissions.filter(s => s.stat === 'Pending').length;
+  const verifiedCount = submissions.filter(s => s.stat === 'Verified').length;
+  const rejectedCount = submissions.filter(s => s.stat === 'Rejected').length;
+  const totalProcessed = verifiedCount + rejectedCount;
+  const verifyRate = totalProcessed > 0 ? ((verifiedCount / totalProcessed) * 100).toFixed(1) : '0.0';
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -20,25 +46,25 @@ export function PODDashboard() {
         <Card>
           <CardContent className="p-4 flex flex-col justify-center h-24">
             <p className="text-sm font-medium text-navy-500">Pending Verification</p>
-            <p className="text-2xl font-bold mt-1 text-warning-600">42</p>
+            <p className="text-2xl font-bold mt-1 text-warning-600">{pendingCount}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 flex flex-col justify-center h-24">
             <p className="text-sm font-medium text-navy-500">Verified Today</p>
-            <p className="text-2xl font-bold mt-1 text-success-600">284</p>
+            <p className="text-2xl font-bold mt-1 text-success-600">{verifiedCount}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 flex flex-col justify-center h-24">
             <p className="text-sm font-medium text-navy-500">Rejected / Missing</p>
-            <p className="text-2xl font-bold mt-1 text-danger-600">3</p>
+            <p className="text-2xl font-bold mt-1 text-danger-600">{rejectedCount}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 flex flex-col justify-center h-24">
             <p className="text-sm font-medium text-navy-500">Verification Rate</p>
-            <p className="text-2xl font-bold mt-1 text-navy-900">98.9%</p>
+            <p className="text-2xl font-bold mt-1 text-navy-900">{verifyRate}%</p>
           </CardContent>
         </Card>
       </div>
@@ -61,13 +87,13 @@ export function PODDashboard() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {[
-                  { id: 'STP-10482', rec: 'Ramesh Singh', t: '10 mins ago', d: 'Rahul Sharma', stat: 'Pending' },
-                  { id: 'STP-10483', rec: 'Priya Patel', t: '25 mins ago', d: 'Arjun Mehta', stat: 'Verified' },
-                  { id: 'STP-10484', rec: 'Unknown', t: '1 hour ago', d: 'Neha Kapoor', stat: 'Rejected' },
-                  { id: 'STP-10485', rec: 'Vikram Gupta', t: '2 hours ago', d: 'Sanjay Mishra', stat: 'Verified' },
-                ].map((row, i) => (
-                  <TableRow key={i}>
+                {submissions.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-4 text-navy-500">No submissions found.</TableCell>
+                  </TableRow>
+                )}
+                {submissions.map((row) => (
+                  <TableRow key={row.id} className={selectedPreview?.id === row.id ? 'bg-navy-50' : ''}>
                     <TableCell className="font-medium text-primary-600">{row.id}</TableCell>
                     <TableCell>{row.rec}</TableCell>
                     <TableCell className="text-navy-500">{row.t}</TableCell>
@@ -78,9 +104,9 @@ export function PODDashboard() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Link to={`/pod/${row.id}`}>
-                        <Button variant="ghost" size="sm">Review</Button>
-                      </Link>
+                      <Button variant="ghost" size="sm" onClick={() => setSelectedPreview(row)}>
+                        Review
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -91,28 +117,47 @@ export function PODDashboard() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Pending Verification Preview</CardTitle>
+            <CardTitle>Preview</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="bg-navy-50 p-3 rounded text-sm text-navy-700">
-              <span className="font-semibold text-navy-900">STP-10482</span> • Delivered at 2:30 PM
-            </div>
-            <div>
-              <p className="text-sm font-medium text-navy-500 mb-1">Signature</p>
-              <div className="border border-navy-200 bg-white rounded p-4 h-24 flex items-center justify-center">
-                <span className="font-[cursive] text-2xl text-navy-900">Ramesh Singh</span>
+            {selectedPreview ? (
+              <>
+                <div className="bg-navy-50 p-3 rounded text-sm text-navy-700">
+                  <span className="font-semibold text-navy-900">{selectedPreview.id}</span> • Submitted {selectedPreview.t}
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-navy-500 mb-1">Signature</p>
+                  <div className="border border-navy-200 bg-white rounded p-4 h-24 flex items-center justify-center">
+                    <span className="font-[cursive] text-2xl text-navy-900">{selectedPreview.rec !== 'Unknown' ? selectedPreview.rec : 'No Signature'}</span>
+                  </div>
+                </div>
+                <div>
+                   <p className="text-sm font-medium text-navy-500 mb-1">Delivery Photo</p>
+                   <div className="bg-navy-200 h-32 rounded flex items-center justify-center overflow-hidden">
+                     <FileCheck className="h-8 w-8 text-navy-400" />
+                   </div>
+                </div>
+                {selectedPreview.stat === 'Pending' ? (
+                  <div className="flex gap-2 pt-2">
+                    <Button className="flex-1 bg-success-600 hover:bg-success-700 border-0" onClick={() => handleUpdateStatus(selectedPreview.id, 'Verified')}>
+                      <Check className="h-4 w-4 mr-1"/> Verify
+                    </Button>
+                    <Button className="flex-1 bg-danger-600 hover:bg-danger-700 border-0" onClick={() => handleUpdateStatus(selectedPreview.id, 'Rejected')}>
+                      <X className="h-4 w-4 mr-1"/> Reject
+                    </Button>
+                  </div>
+                ) : (
+                  <div className={`p-3 rounded text-center text-sm font-medium ${selectedPreview.stat === 'Verified' ? 'bg-success-50 text-success-700' : 'bg-danger-50 text-danger-700'}`}>
+                    This submission has been {selectedPreview.stat.toLowerCase()}.
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-48 text-navy-400">
+                <FileCheck className="h-8 w-8 mb-2" />
+                <p>Select a submission to preview</p>
               </div>
-            </div>
-            <div>
-               <p className="text-sm font-medium text-navy-500 mb-1">Delivery Photo</p>
-               <div className="bg-navy-200 h-32 rounded flex items-center justify-center">
-                 <FileCheck className="h-8 w-8 text-navy-400" />
-               </div>
-            </div>
-            <div className="flex gap-2 pt-2">
-              <Button className="flex-1 bg-success-600 hover:bg-success-700 border-0"><Check className="h-4 w-4 mr-1"/> Verify</Button>
-              <Button className="flex-1 bg-danger-600 hover:bg-danger-700 border-0"><X className="h-4 w-4 mr-1"/> Reject</Button>
-            </div>
+            )}
           </CardContent>
         </Card>
       </div>

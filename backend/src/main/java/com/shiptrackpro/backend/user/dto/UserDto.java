@@ -15,7 +15,5 @@ public class UserDto {
     private String firstName;
     private String lastName;
     private AppRole role;
-    private String companyName;
     private Boolean isActive;
-    private ZonedDateTime lastLogin;
 }

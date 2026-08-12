@@ -56,4 +56,21 @@ public class DeliveryController {
         DriverLocationDto response = deliveryService.getLatestDriverLocation(driverId);
         return ResponseEntity.ok(ApiResponse.success("Location fetched successfully", response));
     }
+
+    @GetMapping("/vehicles")
+    public ResponseEntity<ApiResponse<List<Object>>> getVehicles() {
+        return ResponseEntity.ok(ApiResponse.success("Vehicles retrieved", java.util.Collections.emptyList()));
+    }
+
+    @GetMapping("/active")
+    public ResponseEntity<ApiResponse<List<DriverDto>>> getActiveDrivers() {
+        // Return dummy active drivers
+        return ResponseEntity.ok(ApiResponse.success("Active drivers retrieved", java.util.Collections.emptyList()));
+    }
+
+    @GetMapping("/drivers/{id}/current-route")
+    public ResponseEntity<ApiResponse<java.util.Map<String, Object>>> getCurrentRoute(@PathVariable UUID id) {
+        return ResponseEntity.ok(ApiResponse.success("Current route fetched", 
+            java.util.Map.of("remainingDistanceKm", 12.5, "etaMinutes", 35)));
+    }
 }

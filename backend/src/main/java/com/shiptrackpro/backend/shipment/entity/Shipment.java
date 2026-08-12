@@ -26,24 +26,10 @@ public class Shipment {
     private Company company;
 
     @Column(nullable = false)
-    private String senderName;
+    private String origin;
 
     @Column(nullable = false)
-    private String senderPhone;
-
-    @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-    @JoinColumn(name = "sender_address_id", nullable = false)
-    private Address senderAddress;
-
-    @Column(nullable = false)
-    private String receiverName;
-
-    @Column(nullable = false)
-    private String receiverPhone;
-
-    @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-    @JoinColumn(name = "receiver_address_id", nullable = false)
-    private Address receiverAddress;
+    private String destination;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

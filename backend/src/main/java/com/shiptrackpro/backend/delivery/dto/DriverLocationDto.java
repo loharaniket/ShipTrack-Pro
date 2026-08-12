@@ -10,7 +10,7 @@ import java.util.UUID;
 @Builder
 public class DriverLocationDto {
     private UUID driverId;
-    private Double latitude;
-    private Double longitude;
-    private ZonedDateTime recordedAt;
+    private Double lat;
+    private Double lng;
+    private Double speed;
 }
