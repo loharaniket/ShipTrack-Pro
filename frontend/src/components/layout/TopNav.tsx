@@ -4,13 +4,17 @@ import { Link } from 'react-router-dom';
 import { Input } from '@/components/ui/Input';
 import { useAuth } from '@/context/AuthContext';
 
-export function TopNav() {
+export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
   const { user, logout } = useAuth();
 
   return (
     <header className="h-16 bg-white border-b border-navy-200 flex items-center justify-between px-4 lg:px-6">
       <div className="flex items-center flex-1">
-        <button className="md:hidden p-2 -ml-2 text-navy-500 hover:text-navy-700">
+        <button 
+          className="md:hidden p-2 -ml-2 text-navy-500 hover:text-navy-700 focus:outline-none focus:ring-2 focus:ring-primary-500 rounded-md"
+          onClick={onMenuClick}
+          aria-label="Open mobile menu"
+        >
           <Menu className="h-6 w-6" />
         </button>
         <div className="hidden md:flex items-center text-sm text-navy-500">
@@ -21,11 +25,15 @@ export function TopNav() {
       </div>
       
       <div className="flex-1 flex justify-center max-w-lg px-4">
-        <Input 
-          placeholder="Search Tracking ID, Order ID..." 
-          icon={<Search className="h-4 w-4" />}
-          className="h-9 w-full bg-navy-50"
-        />
+        <button 
+          onClick={() => {
+            document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true, ctrlKey: true }));
+          }}
+          className="h-9 w-full bg-navy-50 text-navy-500 rounded-md border border-navy-200 flex items-center px-3 hover:bg-navy-100 transition-colors"
+        >
+          <Search className="h-4 w-4 mr-2" />
+          <span className="text-sm">Search (Press Ctrl+K)</span>
+        </button>
       </div>
 
       <div className="flex items-center flex-1 justify-end space-x-4">

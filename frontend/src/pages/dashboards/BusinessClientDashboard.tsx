@@ -20,6 +20,8 @@ export function BusinessClientDashboard() {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newShipment, setNewShipment] = useState({ dest: '', eta: 'Pending' });
+  const [shipmentToCancel, setShipmentToCancel] = useState<number | null>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const handleAddShipment = () => {
     if (!newShipment.dest) return;
@@ -35,22 +37,38 @@ export function BusinessClientDashboard() {
     setNewShipment({ dest: '', eta: 'Pending' });
   };
 
-  const handleCancel = (id: number) => {
-    setShipments(shipments.filter(s => s.id !== id));
+  const confirmCancel = () => {
+    if (shipmentToCancel !== null) {
+      setShipments(shipments.filter(s => s.id !== shipmentToCancel));
+      setShipmentToCancel(null);
+    }
+  };
+
+  const handleDownload = () => {
+    setIsDownloading(true);
+    setTimeout(() => {
+      setIsDownloading(false);
+      // Mock successful download
+    }, 1500);
   };
 
   const activeShipmentsCount = shipments.filter(s => s.stat !== 'Delivered').length;
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-navy-900">Operations Overview</h1>
           <p className="text-navy-500 mt-1">Monitor your enterprise shipments and KPIs</p>
         </div>
-        <div className="flex space-x-3">
-          <Button variant="outline"><FileDown className="h-4 w-4 mr-2" /> Download Report</Button>
-          <Button onClick={() => setIsModalOpen(true)}><Plus className="h-4 w-4 mr-2" /> Create Shipment</Button>
+        <div className="flex space-x-3 w-full sm:w-auto">
+          <Button variant="outline" onClick={handleDownload} disabled={isDownloading} className="flex-1 sm:flex-none">
+            <FileDown className={`h-4 w-4 mr-2 ${isDownloading ? 'animate-bounce' : ''}`} /> 
+            {isDownloading ? 'Downloading...' : 'Download Report'}
+          </Button>
+          <Button onClick={() => setIsModalOpen(true)} className="flex-1 sm:flex-none">
+            <Plus className="h-4 w-4 mr-2" /> Create Shipment
+          </Button>
         </div>
       </div>
 
@@ -101,8 +119,8 @@ export function BusinessClientDashboard() {
         <CardHeader>
           <CardTitle>Recent Shipments</CardTitle>
         </CardHeader>
-        <CardContent>
-          <Table>
+        <CardContent className="p-0 sm:p-6 sm:pt-0 overflow-x-auto">
+          <Table className="min-w-[600px]">
             <TableHeader>
               <TableRow>
                 <TableHead>Tracking ID</TableHead>
@@ -116,7 +134,9 @@ export function BusinessClientDashboard() {
             <TableBody>
               {shipments.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-4 text-navy-500">No shipments found.</TableCell>
+                  <TableCell colSpan={6} className="text-center py-8 text-navy-500">
+                    No shipments found. Create a new one to get started.
+                  </TableCell>
                 </TableRow>
               )}
               {shipments.map((s) => (
@@ -132,7 +152,14 @@ export function BusinessClientDashboard() {
                   <TableCell>{s.eta}</TableCell>
                   <TableCell className="text-right flex justify-end space-x-2">
                     <Button variant="ghost" size="sm" onClick={() => navigate(`/tracking/${s.tracking}`)}>Track</Button>
-                    <Button variant="ghost" size="sm" className="text-danger-600 hover:text-danger-700 hover:bg-danger-50" onClick={() => handleCancel(s.id)}>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="text-danger-600 hover:text-danger-700 hover:bg-danger-50" 
+                      onClick={() => setShipmentToCancel(s.id)}
+                      disabled={s.stat === 'Delivered'}
+                      title={s.stat === 'Delivered' ? "Cannot cancel delivered shipments" : "Cancel Shipment"}
+                    >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </TableCell>
@@ -152,7 +179,17 @@ export function BusinessClientDashboard() {
           />
           <div className="pt-4 flex justify-end space-x-2">
             <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-            <Button onClick={handleAddShipment}>Create Shipment</Button>
+            <Button onClick={handleAddShipment} disabled={!newShipment.dest.trim()}>Create Shipment</Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal isOpen={shipmentToCancel !== null} onClose={() => setShipmentToCancel(null)} title="Cancel Shipment">
+        <div className="space-y-4">
+          <p className="text-navy-600">Are you sure you want to cancel this shipment? This action cannot be undone.</p>
+          <div className="pt-4 flex justify-end space-x-2">
+            <Button variant="outline" onClick={() => setShipmentToCancel(null)}>Keep Shipment</Button>
+            <Button className="bg-danger-600 hover:bg-danger-700 text-white" onClick={confirmCancel}>Yes, Cancel</Button>
           </div>
         </div>
       </Modal>

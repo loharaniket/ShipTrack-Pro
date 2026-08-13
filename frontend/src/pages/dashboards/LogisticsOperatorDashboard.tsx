@@ -32,16 +32,20 @@ export function LogisticsOperatorDashboard() {
       {/* KPI Strip */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-2">
         {[
-          { label: 'Active Shipments', value: '1,248', icon: Truck },
-          { label: 'Out for Delivery', value: '432', icon: Truck },
-          { label: 'Drivers Active', value: '380', icon: Users },
-          { label: 'Vehicles Active', value: '395', icon: Truck },
+          { label: 'Active Shipments', value: '1,248', icon: Truck, link: '/shipments' },
+          { label: 'Out for Delivery', value: '432', icon: Truck, link: '/operations' },
+          { label: 'Drivers Active', value: '380', icon: Users, link: '/drivers' },
+          { label: 'Vehicles Active', value: '395', icon: Truck, link: '/drivers' },
           { label: 'Delayed', value: '23', icon: AlertTriangle, alert: true },
           { label: 'At Risk', value: '14', icon: AlertTriangle, alert: true },
           { label: 'Failed Deliveries', value: '3', icon: AlertTriangle, alert: true },
           { label: 'Deliveries Today', value: '2,840', icon: CheckCircle2 },
         ].map((kpi, idx) => (
-          <Card key={idx} className={kpi.alert ? 'border-warning-300 bg-warning-50' : ''}>
+          <Card 
+            key={idx} 
+            className={`${kpi.alert ? 'border-warning-300 bg-warning-50' : ''} ${kpi.link ? 'cursor-pointer hover:shadow-md transition-shadow' : ''}`}
+            onClick={() => kpi.link && (window.location.href = kpi.link)}
+          >
             <CardContent className="p-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-navy-500 font-medium truncate pr-2">{kpi.label}</span>

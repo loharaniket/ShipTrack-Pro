@@ -41,18 +41,33 @@ export function SupportAgentDashboard() {
 
   const openCases = exceptions.length + 39; // Base fake number + current active mock cases
 
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredExceptions = exceptions.filter(e => 
+    e.trackingId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    e.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    e.desc.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-navy-900">Support Dashboard</h1>
           <p className="text-navy-500 mt-1">Manage customer escalations and shipment issues</p>
         </div>
-        <div className="flex space-x-3 items-center">
-          <div className="w-64">
-            <Input placeholder="Search tracking ID..." className="bg-white" />
+        <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3 items-center w-full sm:w-auto">
+          <div className="w-full sm:w-64">
+            <Input 
+              placeholder="Search tracking ID or issue..." 
+              className="bg-white w-full" 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
           </div>
-          <Button onClick={() => setIsModalOpen(true)}><Plus className="h-4 w-4 mr-2" /> Log Issue</Button>
+          <Button onClick={() => setIsModalOpen(true)} className="w-full sm:w-auto">
+            <Plus className="h-4 w-4 mr-2" /> Log Issue
+          </Button>
         </div>
       </div>
 
@@ -107,8 +122,8 @@ export function SupportAgentDashboard() {
         <CardHeader>
           <CardTitle>Active Exceptions</CardTitle>
         </CardHeader>
-        <CardContent>
-          <Table>
+        <CardContent className="p-0 sm:p-6 sm:pt-0 overflow-x-auto">
+          <Table className="min-w-[700px]">
             <TableHeader>
               <TableRow>
                 <TableHead>Severity</TableHead>
@@ -121,17 +136,26 @@ export function SupportAgentDashboard() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {exceptions.length === 0 && (
+              {filteredExceptions.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-4 text-navy-500">No active exceptions.</TableCell>
+                  <TableCell colSpan={7} className="text-center py-8 text-navy-500">
+                    {searchQuery ? 'No exceptions match your search.' : 'No active exceptions.'}
+                  </TableCell>
                 </TableRow>
               )}
-              {exceptions.map((row) => (
+              {filteredExceptions.map((row) => (
                 <TableRow key={row.id}>
                   <TableCell><Badge variant={row.s === 'Critical' ? 'danger' : row.s === 'High' ? 'warning' : 'info'}>{row.s}</Badge></TableCell>
-                  <TableCell className="font-medium text-primary-600">{row.trackingId}</TableCell>
+                  <TableCell>
+                    <button 
+                      onClick={() => navigate(`/shipments/${row.trackingId}`)}
+                      className="font-medium text-primary-600 hover:underline hover:text-primary-800"
+                    >
+                      {row.trackingId}
+                    </button>
+                  </TableCell>
                   <TableCell>{row.type}</TableCell>
-                  <TableCell className="text-navy-500 max-w-xs truncate">{row.desc}</TableCell>
+                  <TableCell className="text-navy-500 max-w-xs truncate" title={row.desc}>{row.desc}</TableCell>
                   <TableCell>{row.t}</TableCell>
                   <TableCell>{row.stat}</TableCell>
                   <TableCell className="text-right">

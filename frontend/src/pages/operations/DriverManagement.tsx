@@ -3,11 +3,13 @@ import { Card, CardContent } from '@/components/ui/Card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { Plus, Download, Trash2, Ban } from 'lucide-react';
+import { Plus, Download, Trash2, Ban, MapPin } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
+import { useNavigate } from 'react-router-dom';
 
 export function DriverManagement() {
+  const navigate = useNavigate();
   const [drivers, setDrivers] = useState([
     { id: 1, dId: 'DRV-1001', name: 'Rahul Sharma', initial: 'RS', phone: '+91 98765 43211', stat: 'Delivering', veh: 'MH-12-AB-4821', today: 7, perf: 87 },
     { id: 2, dId: 'DRV-1002', name: 'Priya Nair', initial: 'PN', phone: '+91 98765 43212', stat: 'Delivering', veh: 'MH-12-AB-4822', today: 9, perf: 89 },
@@ -107,6 +109,9 @@ export function DriverManagement() {
                     <span className="text-xs text-navy-500 mt-1 block">{d.perf}% On-time</span>
                   </TableCell>
                   <TableCell className="text-right flex justify-end space-x-2">
+                    <Button variant="ghost" size="sm" onClick={() => navigate(`/tracking/${d.dId}`)} title="Track Driver">
+                      <MapPin className="h-4 w-4" />
+                    </Button>
                     <Button variant="ghost" size="sm" onClick={() => handleToggleSuspend(d.id)} title="Suspend/Activate">
                       <Ban className="h-4 w-4" />
                     </Button>

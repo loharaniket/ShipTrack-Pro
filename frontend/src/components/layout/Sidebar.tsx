@@ -6,7 +6,7 @@ import {
   BarChart3, FileText, AlertTriangle, Database, ShieldAlert, Key, Route
 } from 'lucide-react';
 
-export function Sidebar() {
+export function Sidebar({ isMobileOpen, closeMobile }: { isMobileOpen?: boolean; closeMobile?: () => void }) {
   const { user, login } = useAuth();
   
   if (!user) return null;
@@ -83,7 +83,9 @@ export function Sidebar() {
   const navItems = getNavItems();
 
   return (
-    <div className="w-64 bg-navy-900 text-white flex flex-col hidden md:flex">
+    <div className={`w-64 bg-navy-900 text-white flex flex-col fixed md:relative inset-y-0 left-0 z-50 transform transition-transform duration-300 ease-in-out ${
+      isMobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+    }`}>
       <div className="h-16 flex items-center px-6 font-bold text-xl tracking-tight border-b border-navy-800">
         ShipTrack <span className="text-primary-500 ml-1">Pro</span>
       </div>
@@ -98,6 +100,7 @@ export function Sidebar() {
           <NavLink
             key={item.name}
             to={item.path}
+            onClick={closeMobile}
             className={({ isActive }) =>
               `flex items-center px-3 py-2.5 rounded-lg transition-colors ${
                 isActive 

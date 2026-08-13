@@ -1,10 +1,22 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Save } from 'lucide-react';
+import { Save, Check } from 'lucide-react';
 
 export function SystemSettings() {
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+
+  const handleSave = () => {
+    setIsSaving(true);
+    setTimeout(() => {
+      setIsSaving(false);
+      setIsSaved(true);
+      setTimeout(() => setIsSaved(false), 2000);
+    }, 1000);
+  };
+
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
@@ -12,7 +24,9 @@ export function SystemSettings() {
           <h1 className="text-2xl font-semibold text-navy-900">System Settings</h1>
           <p className="text-navy-500 mt-1">Configure global platform behavior and integrations</p>
         </div>
-        <Button><Save className="h-4 w-4 mr-2"/> Save Changes</Button>
+        <Button onClick={handleSave} disabled={isSaving || isSaved}>
+          {isSaving ? 'Saving...' : isSaved ? <><Check className="h-4 w-4 mr-2"/> Saved</> : <><Save className="h-4 w-4 mr-2"/> Save Changes</>}
+        </Button>
       </div>
 
       <div className="grid md:grid-cols-4 gap-6">

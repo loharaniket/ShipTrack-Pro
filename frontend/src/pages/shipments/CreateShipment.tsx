@@ -9,6 +9,15 @@ export function CreateShipment() {
   const [step, setStep] = useState(1);
   const navigate = useNavigate();
 
+  const [customerName, setCustomerName] = useState('');
+  const [shipmentType, setShipmentType] = useState('Standard Delivery (3-5 Days)');
+  const [priority, setPriority] = useState('Standard');
+  const [recipientName, setRecipientName] = useState('');
+  const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+
   const [packages, setPackages] = useState([
     { id: 1, description: '', weight: '', fragile: false }
   ]);
@@ -34,15 +43,33 @@ export function CreateShipment() {
     setPackages(packages.map(p => p.id === id ? { ...p, [field]: value } : p));
   };
 
+  const handleCreate = () => {
+    setIsSubmitting(true);
+    setTimeout(() => {
+      setIsSubmitting(false);
+      setIsSuccess(true);
+      setTimeout(() => navigate('/shipments'), 2000);
+    }, 1500);
+  };
+
   const renderStep = () => {
     switch (step) {
       case 1:
         return (
           <div className="space-y-4 max-w-md">
-            <Input label="Customer Name" placeholder="e.g. Acme Corp" />
+            <Input 
+              label="Customer Name" 
+              placeholder="e.g. Acme Corp" 
+              value={customerName}
+              onChange={e => setCustomerName(e.target.value)}
+            />
             <div>
               <label className="block text-sm font-medium text-navy-700 mb-1">Shipment Type</label>
-              <select className="w-full h-10 px-3 py-2 border border-navy-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm">
+              <select 
+                className="w-full h-10 px-3 py-2 border border-navy-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                value={shipmentType}
+                onChange={e => setShipmentType(e.target.value)}
+              >
                 <option>Standard Delivery (3-5 Days)</option>
                 <option>Express Delivery (1-2 Days)</option>
                 <option>Same Day Delivery</option>
@@ -50,7 +77,11 @@ export function CreateShipment() {
             </div>
             <div>
               <label className="block text-sm font-medium text-navy-700 mb-1">Priority</label>
-              <select className="w-full h-10 px-3 py-2 border border-navy-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm">
+              <select 
+                className="w-full h-10 px-3 py-2 border border-navy-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                value={priority}
+                onChange={e => setPriority(e.target.value)}
+              >
                 <option>Standard</option>
                 <option>High</option>
                 <option>Urgent</option>
@@ -107,9 +138,24 @@ export function CreateShipment() {
       case 3:
         return (
           <div className="space-y-4 max-w-md">
-            <Input label="Recipient Name" placeholder="Full Name" />
-            <Input label="Delivery Address" placeholder="Street, City, Zip Code" />
-            <Input label="Phone Number" placeholder="+91 XXXXX XXXXX" />
+            <Input 
+              label="Recipient Name" 
+              placeholder="Full Name" 
+              value={recipientName}
+              onChange={e => setRecipientName(e.target.value)}
+            />
+            <Input 
+              label="Delivery Address" 
+              placeholder="Street, City, Zip Code" 
+              value={deliveryAddress}
+              onChange={e => setDeliveryAddress(e.target.value)}
+            />
+            <Input 
+              label="Phone Number" 
+              placeholder="+91 XXXXX XXXXX" 
+              value={phoneNumber}
+              onChange={e => setPhoneNumber(e.target.value)}
+            />
           </div>
         );
       case 4:
@@ -123,7 +169,7 @@ export function CreateShipment() {
               </div>
               <div className="flex justify-between border-b border-navy-100 pb-2">
                 <span className="text-navy-500">Customer:</span>
-                <span className="font-medium">Acme Corp</span>
+                <span className="font-medium">{customerName || 'Not provided'}</span>
               </div>
               <div className="flex justify-between border-b border-navy-100 pb-2">
                 <span className="text-navy-500">Total Packages:</span>
@@ -131,11 +177,15 @@ export function CreateShipment() {
               </div>
               <div className="flex justify-between border-b border-navy-100 pb-2">
                 <span className="text-navy-500">Type:</span>
-                <span className="font-medium">Express Delivery</span>
+                <span className="font-medium">{shipmentType}</span>
+              </div>
+              <div className="flex justify-between border-b border-navy-100 pb-2">
+                <span className="text-navy-500">Destination:</span>
+                <span className="font-medium text-right max-w-xs">{deliveryAddress || 'Not provided'}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-navy-500">Destination:</span>
-                <span className="font-medium text-right">Pune Business Park</span>
+                <span className="text-navy-500">Recipient:</span>
+                <span className="font-medium text-right max-w-xs">{recipientName || 'Not provided'}</span>
               </div>
             </div>
           </div>
@@ -144,6 +194,25 @@ export function CreateShipment() {
         return null;
     }
   };
+
+  if (isSuccess) {
+    return (
+      <div className="max-w-3xl mx-auto flex items-center justify-center min-h-[60vh]">
+        <Card className="border-0 shadow-xl w-full max-w-md">
+          <CardContent className="p-8 text-center space-y-6">
+            <div className="mx-auto w-16 h-16 bg-success-100 rounded-full flex items-center justify-center text-success-600">
+              <Check className="h-8 w-8" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-navy-900 mb-2">Shipment Created!</h2>
+              <p className="text-navy-500">Tracking ID: <span className="font-medium text-primary-600">STP-{Date.now().toString().slice(-6)}</span></p>
+            </div>
+            <p className="text-sm text-navy-400">Redirecting to shipments...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -175,14 +244,14 @@ export function CreateShipment() {
           {renderStep()}
           
           <div className="mt-8 pt-4 border-t border-navy-100 flex justify-between items-center">
-            <Button variant="outline" disabled={step === 1} onClick={() => setStep(s => Math.max(1, s - 1))}>
+            <Button variant="outline" disabled={step === 1 || isSubmitting} onClick={() => setStep(s => Math.max(1, s - 1))}>
               Back
             </Button>
-            <Button size="lg" className="px-8" onClick={() => {
+            <Button size="lg" className="px-8" disabled={isSubmitting} onClick={() => {
               if (step < 4) setStep(s => s + 1);
-              else navigate('/shipments');
+              else handleCreate();
             }}>
-              {step === 4 ? 'Confirm & Create' : 'Next Step'}
+              {isSubmitting ? 'Creating...' : step === 4 ? 'Confirm & Create' : 'Next Step'}
             </Button>
           </div>
         </CardContent>

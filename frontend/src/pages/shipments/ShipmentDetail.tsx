@@ -8,36 +8,44 @@ import { MapPin, Navigation, Truck, User, Calendar, Map, CheckCircle2, AlertTria
 export function ShipmentDetail() {
   const { id } = useParams();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [priority, setPriority] = useState('High');
   const [weight, setWeight] = useState('12.5');
   const [description, setDescription] = useState('Electronics');
   const [isFragile, setIsFragile] = useState(true);
   const [instructions, setInstructions] = useState('Leave at front desk');
+  const [currentStatus, setCurrentStatus] = useState('In Transit');
+  const [assignedDriver, setAssignedDriver] = useState('Rahul Sharma');
 
   const [editedPriority, setEditedPriority] = useState(priority);
   const [editedWeight, setEditedWeight] = useState(weight);
   const [editedDescription, setEditedDescription] = useState(description);
   const [editedIsFragile, setEditedIsFragile] = useState(isFragile);
   const [editedInstructions, setEditedInstructions] = useState(instructions);
+  
+  const [newStatus, setNewStatus] = useState(currentStatus);
+  const [newDriver, setNewDriver] = useState(assignedDriver);
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center space-x-4">
           <h1 className="text-2xl font-bold text-navy-900">{id}</h1>
-          <Badge variant="info">In Transit</Badge>
+          <Badge variant={currentStatus === 'Delivered' ? 'success' : currentStatus === 'Delayed' ? 'warning' : 'info'}>{currentStatus}</Badge>
           <Badge variant={priority === 'Urgent' ? 'danger' : priority === 'High' ? 'warning' : 'primary'}>{priority} Priority</Badge>
         </div>
         <div className="flex space-x-2">
-          <Button variant="outline">Assign Fleet Unit</Button>
+          <Button variant="outline" onClick={() => setIsAssignModalOpen(true)}>Assign Fleet Unit</Button>
           <Link to={`/tracking/${id}`}>
             <Button variant="outline"><Map className="h-4 w-4 mr-2" /> Live Tracking</Button>
           </Link>
           <Button variant="outline" onClick={() => setIsEditModalOpen(true)}>Edit Details</Button>
-          <Button>Update Status</Button>
+          <Button onClick={() => setIsStatusModalOpen(true)}>Update Status</Button>
         </div>
       </div>
 
+      {/* Edit Details Modal */}
       {isEditModalOpen && (
         <div className="fixed inset-0 bg-navy-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden max-h-[90vh] flex flex-col">
@@ -112,6 +120,82 @@ export function ShipmentDetail() {
                 setInstructions(editedInstructions);
                 setIsEditModalOpen(false);
               }}>Save Changes</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Update Status Modal */}
+      {isStatusModalOpen && (
+        <div className="fixed inset-0 bg-navy-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden flex flex-col">
+            <div className="px-6 py-4 border-b border-navy-100 flex justify-between items-center">
+              <h3 className="text-lg font-semibold text-navy-900">Update Status</h3>
+              <button onClick={() => setIsStatusModalOpen(false)} className="text-navy-400 hover:text-navy-600">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-navy-700 mb-1">New Status</label>
+                <select 
+                  className="w-full h-10 px-3 py-2 border border-navy-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                  value={newStatus}
+                  onChange={(e) => setNewStatus(e.target.value)}
+                >
+                  <option value="Processing">Processing</option>
+                  <option value="In Transit">In Transit</option>
+                  <option value="Delayed">Delayed</option>
+                  <option value="Delivered">Delivered</option>
+                  <option value="Failed">Failed</option>
+                </select>
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-navy-100 bg-navy-50 flex justify-end space-x-3">
+              <Button variant="outline" onClick={() => setIsStatusModalOpen(false)}>Cancel</Button>
+              <Button onClick={() => {
+                setCurrentStatus(newStatus);
+                setIsStatusModalOpen(false);
+              }}>Confirm</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Assign Fleet Unit Modal */}
+      {isAssignModalOpen && (
+        <div className="fixed inset-0 bg-navy-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden flex flex-col">
+            <div className="px-6 py-4 border-b border-navy-100 flex justify-between items-center">
+              <h3 className="text-lg font-semibold text-navy-900">Assign Fleet Unit</h3>
+              <button onClick={() => setIsAssignModalOpen(false)} className="text-navy-400 hover:text-navy-600">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-navy-700 mb-1">Select Driver (Vehicle auto-assigned)</label>
+                <select 
+                  className="w-full h-10 px-3 py-2 border border-navy-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                  value={newDriver}
+                  onChange={(e) => setNewDriver(e.target.value)}
+                >
+                  <option value="Rahul Sharma">Rahul Sharma (MH-12-AB-4821)</option>
+                  <option value="Amit Singh">Amit Singh (MH-14-XY-9922)</option>
+                  <option value="Suresh Kumar">Suresh Kumar (MH-01-AB-1234)</option>
+                </select>
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-navy-100 bg-navy-50 flex justify-end space-x-3">
+              <Button variant="outline" onClick={() => setIsAssignModalOpen(false)}>Cancel</Button>
+              <Button onClick={() => {
+                setAssignedDriver(newDriver);
+                setIsAssignModalOpen(false);
+              }}>Assign</Button>
             </div>
           </div>
         </div>
@@ -204,7 +288,7 @@ export function ShipmentDetail() {
                   <User className="h-5 w-5 text-navy-600" />
                 </div>
                 <div className="ml-3">
-                  <p className="text-sm font-medium text-navy-900">Rahul Sharma</p>
+                  <p className="text-sm font-medium text-navy-900">{assignedDriver.split(' (')[0]}</p>
                   <p className="text-xs text-navy-500">+91 98765 43210</p>
                 </div>
               </div>
@@ -213,7 +297,7 @@ export function ShipmentDetail() {
                   <Truck className="h-5 w-5 text-navy-600" />
                 </div>
                 <div className="ml-3">
-                  <p className="text-sm font-medium text-navy-900">MH-12-AB-4821</p>
+                  <p className="text-sm font-medium text-navy-900">{assignedDriver.includes('(') ? assignedDriver.split('(')[1].replace(')', '') : 'MH-12-AB-4821'}</p>
                   <p className="text-xs text-navy-500">Heavy Truck (Refrigerated)</p>
                 </div>
               </div>

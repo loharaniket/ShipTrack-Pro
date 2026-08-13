@@ -10,6 +10,10 @@ import { Link, useNavigate } from 'react-router-dom';
 export function ShipmentList() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState('All Statuses');
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [isExporting, setIsExporting] = useState(false);
+  const [shipmentToCancel, setShipmentToCancel] = useState<number | null>(null);
   
   const [shipments, setShipments] = useState([
     { id: 1, tracking: 'STP-2026-10481', cust: 'Acme Retail', origin: 'Mumbai DC', dest: 'Pune Business Park', stat: 'In Transit', eta: 'Today, 2:30 PM' },
@@ -19,8 +23,42 @@ export function ShipmentList() {
     { id: 5, tracking: 'STP-2026-10485', cust: 'Acme Retail', origin: 'Mumbai DC', dest: 'Surat', stat: 'In Transit', eta: 'Today, 6:15 PM' },
   ]);
 
-  const handleCancelShipment = (id: number) => {
-    setShipments(shipments.filter(s => s.id !== id));
+  const confirmCancel = () => {
+    if (shipmentToCancel !== null) {
+      setShipments(shipments.filter(s => s.id !== shipmentToCancel));
+      setSelectedIds(selectedIds.filter(id => id !== shipmentToCancel));
+      setShipmentToCancel(null);
+    }
+  };
+
+  const handleExport = () => {
+    setIsExporting(true);
+    setTimeout(() => {
+      setIsExporting(false);
+    }, 1500);
+  };
+
+  const filteredShipments = shipments.filter(s => {
+    const matchesSearch = s.tracking.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          s.cust.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = filterStatus === 'All Statuses' || s.stat === filterStatus;
+    return matchesSearch && matchesStatus;
+  });
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === filteredShipments.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filteredShipments.map(s => s.id));
+    }
+  };
+
+  const toggleSelect = (id: number) => {
+    if (selectedIds.includes(id)) {
+      setSelectedIds(selectedIds.filter(selectedId => selectedId !== id));
+    } else {
+      setSelectedIds([...selectedIds, id]);
+    }
   };
 
   return (
@@ -31,7 +69,10 @@ export function ShipmentList() {
           <p className="text-navy-500 mt-1">Manage and track all enterprise shipments</p>
         </div>
         <div className="flex items-center space-x-3">
-          <Button variant="outline"><Download className="h-4 w-4 mr-2" /> Export</Button>
+          <Button variant="outline" onClick={handleExport} disabled={isExporting}>
+            <Download className={`h-4 w-4 mr-2 ${isExporting ? 'animate-bounce' : ''}`} /> 
+            {isExporting ? 'Exporting...' : 'Export'}
+          </Button>
           <Link to="/shipments/create">
             <Button><Plus className="h-4 w-4 mr-2" /> Create Shipment</Button>
           </Link>
@@ -48,8 +89,12 @@ export function ShipmentList() {
             />
           </div>
           <div className="flex items-center space-x-2">
-            <Button variant="outline"><Filter className="h-4 w-4 mr-2" /> Filters</Button>
-            <select className="h-10 rounded-md border border-navy-300 bg-white px-3 py-2 text-sm text-navy-900 focus:outline-none focus:ring-2 focus:ring-primary-500">
+            <Button variant="outline" className="hidden sm:flex"><Filter className="h-4 w-4 mr-2" /> Filters</Button>
+            <select 
+              className="h-10 rounded-md border border-navy-300 bg-white px-3 py-2 text-sm text-navy-900 focus:outline-none focus:ring-2 focus:ring-primary-500"
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+            >
               <option>All Statuses</option>
               <option>In Transit</option>
               <option>Delivered</option>
@@ -57,11 +102,18 @@ export function ShipmentList() {
             </select>
           </div>
         </div>
-        <CardContent className="p-0">
-          <Table>
+        <CardContent className="p-0 overflow-x-auto">
+          <Table className="min-w-[800px]">
             <TableHeader>
               <TableRow>
-                <TableHead className="w-12"><input type="checkbox" className="rounded border-navy-300" /></TableHead>
+                <TableHead className="w-12">
+                  <input 
+                    type="checkbox" 
+                    className="rounded border-navy-300 cursor-pointer" 
+                    checked={filteredShipments.length > 0 && selectedIds.length === filteredShipments.length}
+                    onChange={toggleSelectAll}
+                  />
+                </TableHead>
                 <TableHead>Tracking ID</TableHead>
                 <TableHead>Customer</TableHead>
                 <TableHead>Origin</TableHead>
@@ -72,14 +124,23 @@ export function ShipmentList() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {shipments.length === 0 && (
+              {filteredShipments.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-navy-500">No shipments found.</TableCell>
+                  <TableCell colSpan={8} className="text-center py-8 text-navy-500">
+                    No shipments found matching your criteria.
+                  </TableCell>
                 </TableRow>
               )}
-              {shipments.map((s) => (
-                <TableRow key={s.id}>
-                  <TableCell><input type="checkbox" className="rounded border-navy-300" /></TableCell>
+              {filteredShipments.map((s) => (
+                <TableRow key={s.id} className={selectedIds.includes(s.id) ? 'bg-primary-50/50' : ''}>
+                  <TableCell>
+                    <input 
+                      type="checkbox" 
+                      className="rounded border-navy-300 cursor-pointer" 
+                      checked={selectedIds.includes(s.id)}
+                      onChange={() => toggleSelect(s.id)}
+                    />
+                  </TableCell>
                   <TableCell>
                     <Link to={`/shipments/${s.tracking}`} className="font-medium text-primary-600 hover:underline">
                       {s.tracking}
@@ -96,7 +157,14 @@ export function ShipmentList() {
                   <TableCell>{s.eta}</TableCell>
                   <TableCell className="text-right flex justify-end space-x-2">
                     <Button variant="ghost" size="sm" onClick={() => navigate(`/tracking/${s.tracking}`)}>Track</Button>
-                    <Button variant="ghost" size="sm" className="text-danger-600 hover:text-danger-700 hover:bg-danger-50" onClick={() => handleCancelShipment(s.id)} title="Cancel Shipment">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="text-danger-600 hover:text-danger-700 hover:bg-danger-50" 
+                      onClick={() => setShipmentToCancel(s.id)} 
+                      title={s.stat === 'Delivered' ? "Cannot cancel delivered shipments" : "Cancel Shipment"}
+                      disabled={s.stat === 'Delivered'}
+                    >
                       <XCircle className="h-4 w-4" />
                     </Button>
                   </TableCell>
@@ -106,7 +174,10 @@ export function ShipmentList() {
           </Table>
           
           <div className="p-4 border-t border-navy-200 flex items-center justify-between">
-            <span className="text-sm text-navy-500">Showing 1 to {shipments.length} of {shipments.length} entries</span>
+            <span className="text-sm text-navy-500">
+              Showing {filteredShipments.length > 0 ? 1 : 0} to {filteredShipments.length} of {shipments.length} entries
+              {selectedIds.length > 0 && <span className="ml-2 font-medium text-primary-600">({selectedIds.length} selected)</span>}
+            </span>
             <div className="flex space-x-1">
               <Button variant="outline" size="sm" disabled>Previous</Button>
               <Button variant="outline" size="sm" className="bg-primary-50 text-primary-700 border-primary-200">1</Button>
@@ -115,6 +186,17 @@ export function ShipmentList() {
           </div>
         </CardContent>
       </Card>
+
+      <div className={`fixed inset-0 z-50 flex items-center justify-center bg-navy-900/50 backdrop-blur-sm transition-opacity ${shipmentToCancel !== null ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+        <div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full m-4">
+          <h3 className="text-lg font-bold text-navy-900 mb-2">Cancel Shipment</h3>
+          <p className="text-navy-600 mb-6">Are you sure you want to cancel this shipment? This action cannot be undone.</p>
+          <div className="flex justify-end space-x-3">
+            <Button variant="outline" onClick={() => setShipmentToCancel(null)}>Keep Shipment</Button>
+            <Button className="bg-danger-600 hover:bg-danger-700 text-white" onClick={confirmCancel}>Yes, Cancel</Button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

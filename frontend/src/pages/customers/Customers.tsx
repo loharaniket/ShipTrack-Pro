@@ -15,6 +15,7 @@ export function Customers() {
   ]);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const [newCustomer, setNewCustomer] = useState({ c: '', comp: '', e: '', as: 0, sla: '100%', stat: 'Active' });
 
   const handleAddCustomer = () => {
@@ -28,13 +29,22 @@ export function Customers() {
     setCustomers(customers.filter(c => c.id !== id));
   };
 
+  const filteredCustomers = customers.filter(c => 
+    c.c.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    c.comp.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-navy-900">Customer Directory</h1>
         <div className="flex gap-4">
           <div className="w-64">
-             <Input placeholder="Search customers..." icon={<Search className="h-4 w-4" />} />
+             <Input 
+               placeholder="Search customers..." 
+               value={searchTerm}
+               onChange={(e) => setSearchTerm(e.target.value)}
+             />
           </div>
           <Button onClick={() => setIsModalOpen(true)}><Plus className="h-4 w-4 mr-2" /> Add Customer</Button>
         </div>
@@ -55,12 +65,12 @@ export function Customers() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {customers.length === 0 && (
+              {filteredCustomers.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-8 text-navy-500">No customers found.</TableCell>
                 </TableRow>
               )}
-              {customers.map((r) => (
+              {filteredCustomers.map((r) => (
                 <TableRow key={r.id}>
                   <TableCell className="font-medium">{r.c}</TableCell>
                   <TableCell>{r.comp}</TableCell>
@@ -85,24 +95,27 @@ export function Customers() {
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Add New Customer">
         <div className="space-y-4">
           <Input 
-            placeholder="Contact Name" 
+            label="Contact Name"
+            placeholder="e.g. Ramesh Singh" 
             value={newCustomer.c} 
             onChange={(e) => setNewCustomer({...newCustomer, c: e.target.value})} 
           />
           <Input 
-            placeholder="Company Name" 
+            label="Company Name"
+            placeholder="e.g. Acme Retail" 
             value={newCustomer.comp} 
             onChange={(e) => setNewCustomer({...newCustomer, comp: e.target.value})} 
           />
           <Input 
-            placeholder="Email Address" 
+            label="Email Address"
+            placeholder="ramesh@acme.com" 
             type="email"
             value={newCustomer.e} 
             onChange={(e) => setNewCustomer({...newCustomer, e: e.target.value})} 
           />
           <div className="pt-4 flex justify-end space-x-2">
             <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-            <Button onClick={handleAddCustomer}>Add Customer</Button>
+            <Button onClick={handleAddCustomer} disabled={!newCustomer.c || !newCustomer.comp || !newCustomer.e}>Add Customer</Button>
           </div>
         </div>
       </Modal>

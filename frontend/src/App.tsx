@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import { AuthProvider } from '@/context/AuthContext';
 import { DashboardLayout } from '@/layouts/DashboardLayout';
 import { AuthLayout } from '@/layouts/AuthLayout';
@@ -12,7 +12,6 @@ import { CreateShipment } from '@/pages/shipments/CreateShipment';
 import { ShipmentDetail } from '@/pages/shipments/ShipmentDetail';
 import { TrackingPage } from '@/pages/shipments/TrackingPage';
 import { LiveDelivery } from '@/pages/operations/LiveDelivery';
-import { FleetManagement } from '@/pages/operations/FleetManagement';
 import { DriverManagement } from '@/pages/operations/DriverManagement';
 import { DriverApp } from '@/pages/mobile/DriverApp';
 import { RoutePlanner } from '@/pages/routes/RoutePlanner';
@@ -32,6 +31,7 @@ import { AuditLogs } from '@/pages/admin/AuditLogs';
 import { SystemHealth } from '@/pages/admin/SystemHealth';
 import { Customers } from '@/pages/customers/Customers';
 import { Profile } from '@/pages/auth/Profile';
+import { NotFound } from '@/pages/NotFound';
 
 function App() {
   return (
@@ -73,7 +73,6 @@ function App() {
             {/* Logistics / Admin Only */}
             <Route element={<ProtectedRoute allowedRoles={['LogisticsOperator', 'Administrator']} />}>
               <Route path="/operations" element={<LiveDelivery />} />
-              <Route path="/fleet" element={<FleetManagement />} />
               <Route path="/drivers" element={<DriverManagement />} />
               <Route path="/routes/geofencing" element={<Geofencing />} />
               <Route path="/intelligence/eta" element={<ETAPrediction />} />
@@ -101,7 +100,7 @@ function App() {
           </Route>
         </Route>
         
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </AuthProvider>
   );

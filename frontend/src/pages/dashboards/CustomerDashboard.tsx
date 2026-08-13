@@ -11,6 +11,14 @@ export function CustomerDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
+  const [trackingInput, setTrackingInput] = React.useState('');
+
+  const handleTrack = () => {
+    if (trackingInput.trim()) {
+      navigate(`/tracking/${trackingInput.trim()}`);
+    }
+  };
+
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
       <div>
@@ -40,7 +48,7 @@ export function CustomerDashboard() {
       </div>
 
       <Card className="border-0 shadow-lg relative overflow-hidden bg-primary-50">
-        <div className="absolute top-0 right-0 p-8 opacity-10">
+        <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
           <Search className="w-32 h-32 text-primary-900" />
         </div>
         <CardContent className="p-8 relative z-10">
@@ -50,8 +58,11 @@ export function CustomerDashboard() {
             <Input 
               placeholder="e.g. STP-2026-10482" 
               className="h-12 bg-white flex-1 text-lg"
+              value={trackingInput}
+              onChange={(e) => setTrackingInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleTrack()}
             />
-            <Button size="lg" className="h-12 px-8 text-lg" onClick={() => navigate('/tracking/STP-2026-10482')}>
+            <Button size="lg" className="h-12 px-8 text-lg" onClick={handleTrack} disabled={!trackingInput.trim()}>
               Track Shipment
             </Button>
           </div>
