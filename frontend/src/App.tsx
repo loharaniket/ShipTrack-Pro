@@ -52,26 +52,26 @@ function App() {
             <Route path="/shipments/:id" element={<ShipmentDetail />} />
             <Route path="/tracking/:id" element={<TrackingPage />} />
             
-            {/* Business / Logistics / Support / Admin Only */}
-            <Route element={<ProtectedRoute allowedRoles={['BusinessClient', 'LogisticsOperator', 'SupportAgent', 'Administrator']} />}>
+            {/* Business / Admin Only */}
+            <Route element={<ProtectedRoute allowedRoles={['BusinessClient', 'Administrator']} />}>
               <Route path="/customers" element={<Customers />} />
               <Route path="/reports" element={<Reports />} />
             </Route>
             
-            {/* Customer / Business / Logistics / Admin Only */}
-            <Route element={<ProtectedRoute allowedRoles={['Customer', 'BusinessClient', 'LogisticsOperator', 'Administrator']} />}>
+            {/* Customer / Business / Admin Only */}
+            <Route element={<ProtectedRoute allowedRoles={['Customer', 'BusinessClient', 'Administrator']} />}>
               <Route path="/shipments/create" element={<CreateShipment />} />
             </Route>
             
-            {/* Business / Logistics / Admin Only */}
-            <Route element={<ProtectedRoute allowedRoles={['BusinessClient', 'LogisticsOperator', 'Administrator']} />}>
+            {/* Business / Admin Only */}
+            <Route element={<ProtectedRoute allowedRoles={['BusinessClient', 'Administrator']} />}>
               <Route path="/routes/planner" element={<RoutePlanner />} />
               <Route path="/routes/optimization" element={<RouteOptimization />} />
               <Route path="/analytics" element={<ExecutiveAnalytics />} />
             </Route>
 
-            {/* Logistics / Admin Only */}
-            <Route element={<ProtectedRoute allowedRoles={['LogisticsOperator', 'Administrator']} />}>
+            {/* Admin Only - Operational Control is now just Admin */}
+            <Route element={<ProtectedRoute allowedRoles={['Administrator']} />}>
               <Route path="/operations" element={<LiveDelivery />} />
               <Route path="/drivers" element={<DriverManagement />} />
               <Route path="/routes/geofencing" element={<Geofencing />} />

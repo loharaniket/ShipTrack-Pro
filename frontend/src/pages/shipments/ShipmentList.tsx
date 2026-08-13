@@ -6,9 +6,11 @@ import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Input';
 import { Plus, Filter, Download, XCircle } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
 
 export function ShipmentList() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('All Statuses');
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -16,11 +18,11 @@ export function ShipmentList() {
   const [shipmentToCancel, setShipmentToCancel] = useState<number | null>(null);
   
   const [shipments, setShipments] = useState([
-    { id: 1, tracking: 'STP-2026-10481', cust: 'Acme Retail', origin: 'Mumbai DC', dest: 'Pune Business Park', stat: 'In Transit', eta: 'Today, 2:30 PM' },
-    { id: 2, tracking: 'STP-2026-10482', cust: 'Nova Electronics', origin: 'Delhi Hub', dest: 'Gurgaon', stat: 'Delivered', eta: '-' },
-    { id: 3, tracking: 'STP-2026-10483', cust: 'UrbanCart', origin: 'Bangalore', dest: 'Chennai', stat: 'Delayed', eta: 'Tomorrow, 10:00 AM' },
-    { id: 4, tracking: 'STP-2026-10484', cust: 'FreshFoods', origin: 'Hyderabad', dest: 'Pune Business Park', stat: 'Delivered', eta: '-' },
-    { id: 5, tracking: 'STP-2026-10485', cust: 'Acme Retail', origin: 'Mumbai DC', dest: 'Surat', stat: 'In Transit', eta: 'Today, 6:15 PM' },
+    { id: 1, tracking: 'STP-2026-10481', cust: 'Acme Retail', origin: 'Mumbai DC', dest: 'Pune Business Park', stat: 'In Transit', eta: 'Today, 2:30 PM', driverAssigned: 'Rahul Sharma' },
+    { id: 2, tracking: 'STP-2026-10482', cust: 'Nova Electronics', origin: 'Delhi Hub', dest: 'Gurgaon', stat: 'Delivered', eta: '-', driverAssigned: 'Amit Singh' },
+    { id: 3, tracking: 'STP-2026-10483', cust: 'UrbanCart', origin: 'Bangalore', dest: 'Chennai', stat: 'Delayed', eta: 'Tomorrow, 10:00 AM', driverAssigned: 'Rahul Sharma' },
+    { id: 4, tracking: 'STP-2026-10484', cust: 'FreshFoods', origin: 'Hyderabad', dest: 'Pune Business Park', stat: 'Delivered', eta: '-', driverAssigned: 'Suresh Kumar' },
+    { id: 5, tracking: 'STP-2026-10485', cust: 'Acme Retail', origin: 'Mumbai DC', dest: 'Surat', stat: 'In Transit', eta: 'Today, 6:15 PM', driverAssigned: 'Unassigned' },
   ]);
 
   const confirmCancel = () => {
@@ -38,7 +40,14 @@ export function ShipmentList() {
     }, 1500);
   };
 
-  const filteredShipments = shipments.filter(s => {
+  const isDriver = user?.role === 'Driver';
+  
+  // Base list depending on role
+  const viewableShipments = isDriver 
+    ? shipments.filter(s => s.driverAssigned === 'Rahul Sharma') // Mock match for logged in driver
+    : shipments;
+
+  const filteredShipments = viewableShipments.filter(s => {
     const matchesSearch = s.tracking.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           s.cust.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === 'All Statuses' || s.stat === filterStatus;
@@ -65,17 +74,19 @@ export function ShipmentList() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-navy-900">Shipment Management</h1>
-          <p className="text-navy-500 mt-1">Manage and track all enterprise shipments</p>
+          <h1 className="text-2xl font-semibold text-navy-900">{isDriver ? 'My Assigned Shipments' : 'Shipment Management'}</h1>
+          <p className="text-navy-500 mt-1">{isDriver ? 'View and track your assigned deliveries' : 'Manage and track all enterprise shipments'}</p>
         </div>
         <div className="flex items-center space-x-3">
           <Button variant="outline" onClick={handleExport} disabled={isExporting}>
             <Download className={`h-4 w-4 mr-2 ${isExporting ? 'animate-bounce' : ''}`} /> 
             {isExporting ? 'Exporting...' : 'Export'}
           </Button>
-          <Link to="/shipments/create">
-            <Button><Plus className="h-4 w-4 mr-2" /> Create Shipment</Button>
-          </Link>
+          {!isDriver && (
+            <Link to="/shipments/create">
+              <Button><Plus className="h-4 w-4 mr-2" /> Create Shipment</Button>
+            </Link>
+          )}
         </div>
       </div>
 
@@ -157,16 +168,18 @@ export function ShipmentList() {
                   <TableCell>{s.eta}</TableCell>
                   <TableCell className="text-right flex justify-end space-x-2">
                     <Button variant="ghost" size="sm" onClick={() => navigate(`/tracking/${s.tracking}`)}>Track</Button>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="text-danger-600 hover:text-danger-700 hover:bg-danger-50" 
-                      onClick={() => setShipmentToCancel(s.id)} 
-                      title={s.stat === 'Delivered' ? "Cannot cancel delivered shipments" : "Cancel Shipment"}
-                      disabled={s.stat === 'Delivered'}
-                    >
-                      <XCircle className="h-4 w-4" />
-                    </Button>
+                    {!isDriver && (
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-danger-600 hover:text-danger-700 hover:bg-danger-50" 
+                        onClick={() => setShipmentToCancel(s.id)} 
+                        title={s.stat === 'Delivered' ? "Cannot cancel delivered shipments" : "Cancel Shipment"}
+                        disabled={s.stat === 'Delivered'}
+                      >
+                        <XCircle className="h-4 w-4" />
+                      </Button>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}

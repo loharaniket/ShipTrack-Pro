@@ -10,18 +10,18 @@ import { Input } from '@/components/ui/Input';
 export function Users() {
   const [users, setUsers] = useState([
     { id: 1, u: 'Aniket Lohar', e: 'admin@shiptrack.pro', r: 'Administrator', o: 'ShipTrack', m: 'Enabled', s: 'Active' },
-    { id: 2, u: 'Support Team', e: 'support@shiptrack.pro', r: 'SupportAgent', o: 'ShipTrack', m: 'Enabled', s: 'Active' },
-    { id: 3, u: 'Logistics Ops', e: 'operator@shiptrack.pro', r: 'LogisticsOperator', o: 'Mumbai Hub', m: 'Disabled', s: 'Active' },
+    { id: 2, u: 'Rahul Sharma', e: 'driver@shiptrack.pro', r: 'Driver', o: 'ShipTrack', m: 'Enabled', s: 'Active' },
+    { id: 3, u: 'Business User', e: 'business@shiptrack.pro', r: 'BusinessClient', o: 'Acme Corp', m: 'Disabled', s: 'Active' },
   ]);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [newUser, setNewUser] = useState({ u: '', e: '', r: 'SupportAgent', o: 'ShipTrack', m: 'Disabled', s: 'Active' });
+  const [newUser, setNewUser] = useState({ u: '', e: '', r: 'Driver', o: 'ShipTrack', m: 'Disabled', s: 'Active' });
 
   const handleAddUser = () => {
     if (!newUser.u || !newUser.e) return;
     setUsers([...users, { ...newUser, id: Date.now() }]);
     setIsModalOpen(false);
-    setNewUser({ u: '', e: '', r: 'SupportAgent', o: 'ShipTrack', m: 'Disabled', s: 'Active' });
+    setNewUser({ u: '', e: '', r: 'Driver', o: 'ShipTrack', m: 'Disabled', s: 'Active' });
   };
 
   const handleDelete = (id: number) => {
@@ -102,8 +102,6 @@ export function Users() {
             onChange={(e) => setNewUser({...newUser, r: e.target.value})}
           >
             <option value="Administrator">Administrator</option>
-            <option value="LogisticsOperator">Logistics Operator</option>
-            <option value="SupportAgent">Support Agent</option>
             <option value="Driver">Driver</option>
             <option value="BusinessClient">Business Client</option>
             <option value="Customer">Customer</option>

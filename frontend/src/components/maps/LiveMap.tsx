@@ -25,17 +25,21 @@ interface LiveMapProps {
 }
 
 export function LiveMap({ route, driverName = 'Driver', showVehicle = true }: LiveMapProps) {
-  const [currentPosition, setCurrentPosition] = useState<[number, number]>(route[0]);
+  const [currentPosition, setCurrentPosition] = useState<[number, number] | undefined>(route && route.length > 0 ? route[0] : undefined);
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
     // Reset progress when the route changes
-    setProgress(0);
-    setCurrentPosition(route[0]);
+    if (route && route.length > 0) {
+      setProgress(0);
+      setCurrentPosition(route[0]);
+    } else {
+      setCurrentPosition(undefined);
+    }
   }, [route]);
 
   useEffect(() => {
-    if (!showVehicle) return;
+    if (!showVehicle || !route || route.length < 2) return;
     // Animate the bike along the route
     const interval = setInterval(() => {
       setProgress((prev) => {
@@ -46,9 +50,10 @@ export function LiveMap({ route, driverName = 'Driver', showVehicle = true }: Li
     }, 100);
 
     return () => clearInterval(interval);
-  }, [route]);
+  }, [route, showVehicle]);
 
   useEffect(() => {
+    if (!route || route.length < 2) return;
     // Calculate the interpolated position based on progress (0 to 1)
     const totalSegments = route.length - 1;
     const scaledProgress = progress * totalSegments;
@@ -72,7 +77,7 @@ export function LiveMap({ route, driverName = 'Driver', showVehicle = true }: Li
   return (
     <div className="h-96 w-full rounded-xl overflow-hidden border border-navy-200 shadow-sm relative z-0">
       <MapContainer 
-        center={[18.85, 73.2]} 
+        center={route && route.length > 0 ? route[0] : [18.85, 73.2]} 
         zoom={9} 
         scrollWheelZoom={false} 
         className="h-full w-full"
@@ -82,24 +87,28 @@ export function LiveMap({ route, driverName = 'Driver', showVehicle = true }: Li
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         
-        {/* Draw the full route */}
-        <Polyline positions={route} color="#0ea5e9" weight={4} opacity={0.6} dashArray="10, 10" />
+        {route && route.length > 0 && (
+          <>
+            {/* Draw the full route */}
+            <Polyline positions={route} color="#0ea5e9" weight={4} opacity={0.6} dashArray="10, 10" />
 
-        {/* Origin Marker */}
-        <Marker position={route[0]}>
-          <Popup>Origin</Popup>
-        </Marker>
+            {/* Origin Marker */}
+            <Marker position={route[0]}>
+              <Popup>Origin</Popup>
+            </Marker>
 
-        {/* Destination Marker */}
-        <Marker position={route[route.length - 1]}>
-          <Popup>Destination</Popup>
-        </Marker>
+            {/* Destination Marker */}
+            <Marker position={route[route.length - 1]}>
+              <Popup>Destination</Popup>
+            </Marker>
 
-        {/* Moving Bike Marker */}
-        {showVehicle && (
-          <Marker position={currentPosition} icon={vehicleIcon}>
-            <Popup>{driverName} is currently here.</Popup>
-          </Marker>
+            {/* Moving Bike Marker */}
+            {showVehicle && currentPosition && (
+              <Marker position={currentPosition} icon={vehicleIcon}>
+                <Popup>{driverName} is currently here.</Popup>
+              </Marker>
+            )}
+          </>
         )}
       </MapContainer>
     </div>

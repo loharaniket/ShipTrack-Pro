@@ -2,8 +2,7 @@ import React from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { CustomerDashboard } from './dashboards/CustomerDashboard';
 import { BusinessClientDashboard } from './dashboards/BusinessClientDashboard';
-import { LogisticsOperatorDashboard } from './dashboards/LogisticsOperatorDashboard';
-import { SupportAgentDashboard } from './dashboards/SupportAgentDashboard';
+import { DriverDashboard } from './dashboards/DriverDashboard';
 import { AdministratorDashboard } from './dashboards/AdministratorDashboard';
 
 export function Dashboard() {
@@ -16,10 +15,8 @@ export function Dashboard() {
       return <CustomerDashboard />;
     case 'BusinessClient':
       return <BusinessClientDashboard />;
-    case 'LogisticsOperator':
-      return <LogisticsOperatorDashboard />;
-    case 'SupportAgent':
-      return <SupportAgentDashboard />;
+    case 'Driver':
+      return <DriverDashboard />;
     case 'Administrator':
       return <AdministratorDashboard />;
     default:

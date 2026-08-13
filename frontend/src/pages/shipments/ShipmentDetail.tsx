@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
-import { MapPin, Navigation, Truck, User, Calendar, Map, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { MapPin, Navigation, Truck, User, Calendar, Map, CheckCircle2, AlertTriangle, Play, FileText, CheckCircle } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 
 export function ShipmentDetail() {
   const { id } = useParams();
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
@@ -27,6 +30,9 @@ export function ShipmentDetail() {
   const [newStatus, setNewStatus] = useState(currentStatus);
   const [newDriver, setNewDriver] = useState(assignedDriver);
 
+  const isAdmin = user?.role === 'Administrator';
+  const isDriver = user?.role === 'Driver';
+
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
       <div className="flex items-center justify-between flex-wrap gap-4">
@@ -36,12 +42,31 @@ export function ShipmentDetail() {
           <Badge variant={priority === 'Urgent' ? 'danger' : priority === 'High' ? 'warning' : 'primary'}>{priority} Priority</Badge>
         </div>
         <div className="flex space-x-2">
-          <Button variant="outline" onClick={() => setIsAssignModalOpen(true)}>Assign Fleet Unit</Button>
+          {isAdmin && (
+            <>
+              <Button variant="outline" onClick={() => setIsAssignModalOpen(true)}>Assign Fleet Unit</Button>
+              <Button variant="outline" onClick={() => setIsEditModalOpen(true)}>Edit Details</Button>
+              <Button onClick={() => setIsStatusModalOpen(true)}>Update Status</Button>
+            </>
+          )}
+          
+          {isDriver && (
+            <>
+               {currentStatus === 'Processing' && (
+                 <Button onClick={() => setCurrentStatus('In Transit')}><Play className="h-4 w-4 mr-2" /> Start Pickup</Button>
+               )}
+               {currentStatus === 'In Transit' && (
+                 <Button onClick={() => navigate('/pod/signature')}><CheckCircle className="h-4 w-4 mr-2" /> Mark Delivered</Button>
+               )}
+               {currentStatus === 'Delivered' && (
+                 <Button variant="outline"><FileText className="h-4 w-4 mr-2" /> View POD</Button>
+               )}
+            </>
+          )}
+          
           <Link to={`/tracking/${id}`}>
             <Button variant="outline"><Map className="h-4 w-4 mr-2" /> Live Tracking</Button>
           </Link>
-          <Button variant="outline" onClick={() => setIsEditModalOpen(true)}>Edit Details</Button>
-          <Button onClick={() => setIsStatusModalOpen(true)}>Update Status</Button>
         </div>
       </div>
 

@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/Input';
 export function Roles() {
   const permissions = ['View Shipments', 'Create Shipments', 'Edit Shipments', 'Delete Shipments', 'Manage Users', 'Manage Roles', 'View Analytics'];
 
-  const [roles, setRoles] = useState(['Administrator', 'LogisticsOperator', 'SupportAgent', 'BusinessClient', 'Customer', 'Driver']);
+  const [roles, setRoles] = useState(['Administrator', 'BusinessClient', 'Customer', 'Driver']);
   
   // Matrix state: matrix[role][permission] = boolean
   const [matrix, setMatrix] = useState<Record<string, Record<string, boolean>>>(() => {
@@ -18,8 +18,6 @@ export function Roles() {
       initialMatrix[r] = {};
       permissions.forEach(p => {
         initialMatrix[r][p] = (r === 'Administrator') || 
-                              (r === 'LogisticsOperator' && !p.includes('Manage')) ||
-                              (r === 'SupportAgent' && !p.includes('Manage') && !p.includes('Delete')) ||
                               (r === 'BusinessClient' && (p === 'View Shipments' || p === 'Create Shipments' || p === 'View Analytics')) ||
                               (r === 'Customer' && p === 'View Shipments') ||
                               (r === 'Driver' && p === 'View Shipments');

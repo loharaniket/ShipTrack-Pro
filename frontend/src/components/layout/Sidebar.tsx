@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { 
   LayoutDashboard, Package, Map, Truck, Users, Settings, Bell, 
@@ -8,6 +8,7 @@ import {
 
 export function Sidebar({ isMobileOpen, closeMobile }: { isMobileOpen?: boolean; closeMobile?: () => void }) {
   const { user, login } = useAuth();
+  const navigate = useNavigate();
   
   if (!user) return null;
 
@@ -32,28 +33,6 @@ export function Sidebar({ isMobileOpen, closeMobile }: { isMobileOpen?: boolean;
           { name: 'Notifications', path: '/notifications', icon: Bell },
           { name: 'Customers', path: '/customers', icon: Users },
         ];
-      case 'LogisticsOperator':
-        return [
-          { name: 'Operations Dashboard', path: '/', icon: LayoutDashboard },
-          { name: 'Shipments', path: '/shipments', icon: Package },
-          { name: 'Create Shipment', path: '/shipments/create', icon: PlusIcon },
-          { name: 'Active Deliveries', path: '/operations', icon: Truck },
-          { name: 'Drivers', path: '/drivers', icon: Users },
-          { name: 'Routes', path: '/routes/planner', icon: Route },
-          { name: 'Geo-fences', path: '/routes/geofencing', icon: Map },
-          { name: 'ETA Prediction', path: '/intelligence/eta', icon: BarChart3 },
-          { name: 'Proof of Delivery', path: '/pod', icon: FileText },
-          { name: 'Notifications', path: '/notifications', icon: Bell },
-        ];
-      case 'SupportAgent':
-        return [
-          { name: 'Support Dashboard', path: '/', icon: LayoutDashboard },
-          { name: 'Shipments', path: '/shipments', icon: Package },
-          { name: 'Customers', path: '/customers', icon: Users },
-          { name: 'Communication', path: '/communications/logs', icon: Bell },
-          { name: 'Notifications', path: '/notifications', icon: Bell },
-          { name: 'Reports', path: '/reports', icon: FileText },
-        ];
       case 'Administrator':
         return [
           { name: 'Admin Dashboard', path: '/', icon: LayoutDashboard },
@@ -72,7 +51,10 @@ export function Sidebar({ isMobileOpen, closeMobile }: { isMobileOpen?: boolean;
         ];
       case 'Driver':
         return [
-          { name: 'Driver Dashboard', path: '/driver-app', icon: LayoutDashboard },
+          { name: 'Dashboard', path: '/driver-app', icon: LayoutDashboard },
+          { name: 'My Shipments', path: '/shipments', icon: Package },
+          { name: 'My Route', path: '/driver-app', icon: Route },
+          { name: 'Proof of Delivery', path: '/pod/signature', icon: FileText },
           { name: 'Notifications', path: '/notifications', icon: Bell },
         ];
       default:
@@ -124,14 +106,12 @@ export function Sidebar({ isMobileOpen, closeMobile }: { isMobileOpen?: boolean;
           onChange={(e) => {
             const role = e.target.value as any;
             login({ ...user, role });
-            window.location.href = '/';
+            navigate('/');
           }}
         >
           <option value="Customer">Customer Demo</option>
           <option value="BusinessClient">Business Client Demo</option>
-          <option value="LogisticsOperator">Logistics Operator Demo</option>
           <option value="Driver">Driver Demo</option>
-          <option value="SupportAgent">Support Agent Demo</option>
           <option value="Administrator">Administrator Demo</option>
         </select>
       </div>

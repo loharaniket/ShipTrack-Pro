@@ -16,13 +16,12 @@ export function Login() {
     setIsLoading(true);
     
     // Determine role based on email prefix for demo purposes
-    let role: 'Customer' | 'BusinessClient' | 'LogisticsOperator' | 'SupportAgent' | 'Administrator' = 'Customer';
+    let role: 'Customer' | 'BusinessClient' | 'Driver' | 'Administrator' = 'Customer';
     let name = 'Demo User';
     
     if (email.includes('admin')) { role = 'Administrator'; name = 'Admin User'; }
     else if (email.includes('business')) { role = 'BusinessClient'; name = 'Business User'; }
-    else if (email.includes('operator')) { role = 'LogisticsOperator'; name = 'Logistics Operator'; }
-    else if (email.includes('support')) { role = 'SupportAgent'; name = 'Support Agent'; }
+    else if (email.includes('driver')) { role = 'Driver'; name = 'Driver User'; }
     else if (email.includes('customer')) { role = 'Customer'; name = 'Customer User'; }
 
     // Simulate API call
@@ -43,7 +42,7 @@ export function Login() {
         <h3 className="text-lg font-medium text-navy-900 text-center mb-1">Sign in to your account</h3>
         <p className="text-xs text-navy-500 text-center">
           Test different dashboards using these emails (any password):<br/>
-          <span className="font-medium text-primary-600">admin@</span>, <span className="font-medium text-primary-600">business@</span>, <span className="font-medium text-primary-600">operator@</span>, <span className="font-medium text-primary-600">support@</span>, <span className="font-medium text-primary-600">customer@</span>
+          <span className="font-medium text-primary-600">admin@</span>, <span className="font-medium text-primary-600">business@</span>, <span className="font-medium text-primary-600">driver@</span>, <span className="font-medium text-primary-600">customer@</span>
         </p>
       </div>
       <form className="space-y-4" onSubmit={handleSubmit}>

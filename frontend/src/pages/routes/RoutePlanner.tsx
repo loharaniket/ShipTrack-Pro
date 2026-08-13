@@ -2,17 +2,32 @@ import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Map, Plus, GripVertical, Navigation, Trash2, CheckCircle } from 'lucide-react';
 import { LiveMap } from '@/components/maps/LiveMap';
+import { ShipmentPlanningCard, ShipmentData } from './components/ShipmentPlanningCard';
+import { ShipmentSelectionPanel } from './components/ShipmentSelectionPanel';
+import { SelectedShipmentList } from './components/SelectedShipmentList';
+import { RouteSummaryPanel } from './components/RouteSummaryPanel';
+import { CheckCircle } from 'lucide-react';
+
+const MOCK_SHIPMENTS: ShipmentData[] = [
+  { id: 'SHP-10025', customer: 'ABC Company', pickup: 'Mumbai Warehouse', delivery: 'Pune', distance: '145 km', priority: 'High', deadline: 'Today 18:00', status: 'Available', packageCount: 25 },
+  { id: 'SHP-10026', customer: 'Nova Electronics', pickup: 'Mumbai South', delivery: 'Navi Mumbai', distance: '32 km', priority: 'Urgent', deadline: 'Today 14:00', status: 'Available', packageCount: 5 },
+  { id: 'SHP-10027', customer: 'UrbanCart', pickup: 'Thane', delivery: 'Kalyan', distance: '28 km', priority: 'Standard', deadline: 'Tomorrow 10:00', status: 'Already Planned', assignedTo: 'R-102', packageCount: 12 },
+  { id: 'SHP-10028', customer: 'Acme Retail', pickup: 'Andheri', delivery: 'Bandra', distance: '12 km', priority: 'Standard', deadline: 'Today 20:00', status: 'Available', packageCount: 8 },
+  { id: 'SHP-10029', customer: 'Global Supply', pickup: 'Mumbai Airport', delivery: 'Vashi', distance: '22 km', priority: 'High', deadline: 'Tomorrow 12:00', status: 'Assigned', assignedTo: 'John', packageCount: 40 },
+  { id: 'SHP-10030', customer: 'Local Mart', pickup: 'Dadar', delivery: 'Worli', distance: '5 km', priority: 'Standard', deadline: 'Today 16:00', status: 'Completed', packageCount: 2 },
+];
 
 export function RoutePlanner() {
-  const [stops, setStops] = useState([
-    { id: 1, name: 'Warehouse A (Pickup)' },
-    { id: 2, name: 'Client B (Dropoff)' },
-    { id: 3, name: 'Facility C (Pickup)' },
-  ]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [currentStep, setCurrentStep] = useState(1);
+  const totalSteps = 4;
+  
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [isOptimized, setIsOptimized] = useState(false);
+  const [assignedDriver, setAssignedDriver] = useState<string | null>(null);
+  
+  const [isRouteCreated, setIsRouteCreated] = useState(false);
 
   // A generic coordinate list representing the planned route
   const routeCoords: [number, number][] = [
@@ -23,123 +38,166 @@ export function RoutePlanner() {
     [18.5913, 73.7389],
   ];
 
-  const handleAddStop = () => {
-    setStops([...stops, { id: Date.now(), name: `New Stop ${stops.length + 1}` }]);
+  const handleToggleShipment = (id: string) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
     setIsOptimized(false);
   };
 
-  const handleRemoveStop = (id: number) => {
-    setStops(stops.filter(s => s.id !== id));
+  const handleReorderShipment = (startIndex: number, endIndex: number) => {
+    setSelectedIds(prev => {
+      const result = Array.from(prev);
+      const [removed] = result.splice(startIndex, 1);
+      result.splice(endIndex, 0, removed);
+      return result;
+    });
     setIsOptimized(false);
   };
 
   const handleOptimize = () => {
     setIsOptimizing(true);
-    // Simulate API call for route optimization
     setTimeout(() => {
       setIsOptimizing(false);
       setIsOptimized(true);
-      // In a real app, this would reorder the stops array based on the API response.
+    }, 1500);
+  };
+
+  const handleCreateRoute = () => {
+    setIsRouteCreated(true);
+    // Real implementation would POST to backend and reset or navigate
+    setTimeout(() => {
+      setIsRouteCreated(false);
+      setSelectedIds([]);
+      setCurrentStep(1);
+      setAssignedDriver(null);
+      setIsOptimized(false);
+      // alert("Route Created");
     }, 2000);
   };
 
+  // Reorder MOCK_SHIPMENTS to match selectedIds order for the SelectedShipmentList
+  const selectedShipments = selectedIds.map(id => MOCK_SHIPMENTS.find(s => s.id === id)).filter(Boolean) as ShipmentData[];
+
   return (
     <div className="flex h-[calc(100vh-5rem)] -m-4 lg:-m-6 overflow-hidden bg-navy-50">
-      {/* Left Panel - Planner */}
-      <div className="w-96 bg-white border-r border-navy-200 flex flex-col z-10 shadow-xl">
-        <div className="p-4 border-b border-navy-200">
-          <h2 className="text-xl font-semibold text-navy-900">Route Planner</h2>
-          <p className="text-sm text-navy-500">Plan and optimize delivery sequences</p>
-        </div>
-        
-        <div className="flex-1 overflow-y-auto p-4 space-y-6">
-          <div className="space-y-4">
-            <Input label="Origin" defaultValue="Mumbai Distribution Center" />
-            
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-navy-700">Stops</label>
-              {stops.map((stop, index) => (
-                <div key={stop.id} className="flex items-center space-x-2 bg-navy-50 p-2 rounded border border-navy-200 group">
-                  <GripVertical className="h-4 w-4 text-navy-400 cursor-move shrink-0" />
-                  <div className="flex-1 text-sm font-medium truncate">{index + 1}. {stop.name}</div>
-                  <button 
-                    onClick={() => handleRemoveStop(stop.id)}
-                    className="opacity-0 group-hover:opacity-100 text-navy-400 hover:text-danger-500 transition-opacity"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-              ))}
-              <Button variant="outline" className="w-full mt-2" size="sm" onClick={handleAddStop}>
-                <Plus className="h-4 w-4 mr-2" /> Add Stop
-              </Button>
-            </div>
-            
-            <Input label="Destination" defaultValue="Pune Business Park" />
-          </div>
+      
+      {/* Left Panel - Dynamic Steps */}
+      {currentStep === 1 && (
+        <ShipmentSelectionPanel 
+          shipments={MOCK_SHIPMENTS} 
+          selectedIds={selectedIds} 
+          onToggleShipment={handleToggleShipment} 
+        />
+      )}
 
-          <div className="pt-4 border-t border-navy-200 space-y-4">
+      {currentStep === 2 && (
+        <div className="flex flex-col h-full bg-white border-r border-navy-200 shadow-sm z-10 w-96 shrink-0">
+          <div className="p-4 border-b border-navy-200">
+            <h2 className="text-xl font-semibold text-navy-900">Step 2: Sequence Route</h2>
+            <p className="text-sm text-navy-500 mb-4">Review and reorder the selected stops</p>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4 bg-navy-50">
+            <SelectedShipmentList 
+              selectedShipments={selectedShipments}
+              onRemove={handleToggleShipment}
+              onReorder={handleReorderShipment}
+            />
+          </div>
+        </div>
+      )}
+
+      {currentStep === 3 && (
+        <div className="flex flex-col h-full bg-white border-r border-navy-200 shadow-sm z-10 w-96 shrink-0">
+          <div className="p-4 border-b border-navy-200">
+            <h2 className="text-xl font-semibold text-navy-900">Step 3: Assign Fleet Unit</h2>
+            <p className="text-sm text-navy-500 mb-4">Select the vehicle and driver for this route</p>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4 bg-navy-50 space-y-6">
             <div>
               <label className="block text-sm font-medium text-navy-700 mb-1">Assign Fleet Unit (Vehicle + Driver)</label>
-              <select className="w-full h-10 px-3 py-2 border border-navy-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm">
-                <option value="">Select a vehicle...</option>
-                <option value="v1">MH-12-AB-4821 (Driver: Rahul Sharma)</option>
-                <option value="v2">DL-4C-AF-2938 (Driver: Amit Patel)</option>
-                <option value="v3">KA-01-MJ-9912 (Driver: Suresh Kumar)</option>
+              <select 
+                className="w-full h-10 px-3 py-2 border border-navy-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                value={assignedDriver || ''}
+                onChange={(e) => setAssignedDriver(e.target.value)}
+              >
+                <option value="" disabled>Select a vehicle...</option>
+                <option value="Rahul Sharma (MH-12-AB-4821)">MH-12-AB-4821 (Driver: Rahul Sharma)</option>
+                <option value="Amit Patel (DL-4C-AF-2938)">DL-4C-AF-2938 (Driver: Amit Patel)</option>
+                <option value="Suresh Kumar (KA-01-MJ-9912)">KA-01-MJ-9912 (Driver: Suresh Kumar)</option>
               </select>
-              <p className="text-xs text-navy-500 mt-1">Assigning a vehicle automatically assigns its permanently linked driver.</p>
+              <p className="text-xs text-navy-500 mt-2">Assigning a vehicle automatically assigns its permanently linked driver. Do not assign them separately.</p>
             </div>
           </div>
         </div>
-        
-        <div className="p-4 border-t border-navy-200 bg-navy-50 space-y-2">
-          {isOptimized && (
-            <div className="bg-success-50 text-success-700 text-sm p-2 rounded border border-success-200 flex items-center mb-2">
-              <CheckCircle className="h-4 w-4 mr-2 shrink-0" /> Route optimized successfully! Saving 12km.
+      )}
+      
+      {currentStep === 4 && (
+        <div className="flex flex-col h-full bg-white border-r border-navy-200 shadow-sm z-10 w-96 shrink-0">
+          <div className="p-4 border-b border-navy-200">
+            <h2 className="text-xl font-semibold text-navy-900">Step 4: Confirm</h2>
+            <p className="text-sm text-navy-500 mb-4">Final review of the drafted route</p>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4 bg-navy-50 flex items-center justify-center">
+             <div className="text-center space-y-4">
+                <div className="w-16 h-16 bg-primary-100 text-primary-600 rounded-full flex items-center justify-center mx-auto">
+                   <CheckCircle className="w-8 h-8" />
+                </div>
+                <h3 className="text-lg font-semibold text-navy-900">Route Ready</h3>
+                <p className="text-sm text-navy-600">The route is ready to be dispatched to {assignedDriver ? assignedDriver.split('(')[0] : 'the driver'}.</p>
+             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Center - Map */}
+      <div className="flex-1 relative flex flex-col hidden lg:flex">
+        {isRouteCreated && (
+          <div className="absolute inset-0 z-50 bg-white/80 backdrop-blur-sm flex items-center justify-center">
+            <div className="bg-white p-6 rounded-xl shadow-2xl flex flex-col items-center">
+              <CheckCircle className="w-12 h-12 text-success-500 mb-4" />
+              <h2 className="text-xl font-bold text-navy-900">Route Created</h2>
+              <p className="text-navy-500 mt-2">The driver has been notified.</p>
             </div>
-          )}
-          <Button 
-            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white border-0"
-            onClick={handleOptimize}
-            disabled={isOptimizing}
-          >
-            {isOptimizing ? (
-              <span className="flex items-center"><span className="animate-spin mr-2">⏳</span> Optimizing...</span>
-            ) : (
-              <span className="flex items-center"><Navigation className="h-4 w-4 mr-2" /> Optimize Route</span>
-            )}
-          </Button>
-          <Button variant="outline" className="w-full">Save Route</Button>
+          </div>
+        )}
+        <div className="w-full flex-1">
+          <LiveMap route={selectedIds.length > 0 ? routeCoords : []} showVehicle={false} />
         </div>
       </div>
 
-      {/* Center - Map */}
-      <div className="flex-1 relative flex flex-col">
-        <div className="absolute top-4 right-4 z-[400] w-64 pointer-events-none">
-          <Card className="shadow-lg border-0 bg-white/95 backdrop-blur pointer-events-auto">
-            <CardContent className="p-4 space-y-2">
-              <h3 className="font-semibold text-navy-900 border-b border-navy-100 pb-2">Route Summary</h3>
-              <div className="flex justify-between text-sm">
-                <span className="text-navy-500">Total Distance</span>
-                <span className={`font-medium ${isOptimized ? 'text-success-600' : ''}`}>
-                  {isOptimized ? '130.5 km' : '142.5 km'}
-                </span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-navy-500">Est. Duration</span>
-                <span className={`font-medium ${isOptimized ? 'text-success-600' : ''}`}>
-                  {isOptimized ? '3h 15m' : '3h 45m'}
-                </span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-navy-500">Stops</span>
-                <span className="font-medium">{stops.length}</span>
-              </div>
-            </CardContent>
-          </Card>
+      {/* Right Panel - Summary */}
+      <div className="hidden md:block">
+        <RouteSummaryPanel 
+          selectedShipments={selectedShipments}
+          onOptimize={handleOptimize}
+          onCreateRoute={handleCreateRoute}
+          isOptimizing={isOptimizing}
+          isOptimized={isOptimized}
+          assignedDriver={assignedDriver}
+          currentStep={currentStep}
+          totalSteps={totalSteps}
+          onNextStep={() => setCurrentStep(prev => Math.min(totalSteps, prev + 1))}
+          onPrevStep={() => setCurrentStep(prev => Math.max(1, prev - 1))}
+          onAssignDriver={() => setCurrentStep(3)}
+        />
+      </div>
+      
+      {/* Mobile Footer Overlay */}
+      <div className="md:hidden absolute bottom-0 inset-x-0 p-4 bg-white border-t border-navy-200 z-50">
+        <div className="flex justify-between items-center mb-4">
+          <span className="text-sm font-semibold text-navy-900">{selectedIds.length} Shipments</span>
+          <span className="text-sm text-navy-500">Step {currentStep} of {totalSteps}</span>
         </div>
-        <div className="w-full flex-1">
-          <LiveMap route={routeCoords} showVehicle={false} />
+        <div className="flex space-x-2">
+           {currentStep > 1 && (
+             <Button variant="outline" onClick={() => setCurrentStep(prev => prev - 1)}>Back</Button>
+           )}
+           {currentStep < totalSteps ? (
+             <Button className="flex-1" onClick={() => setCurrentStep(prev => prev + 1)} disabled={selectedIds.length === 0}>Continue</Button>
+           ) : (
+             <Button className="flex-1" onClick={handleCreateRoute} disabled={!assignedDriver}>Create Route</Button>
+           )}
         </div>
       </div>
     </div>
