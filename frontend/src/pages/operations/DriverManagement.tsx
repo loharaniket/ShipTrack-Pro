@@ -7,46 +7,29 @@ import { Plus, Download, Trash2, Ban, MapPin } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
 import { useNavigate } from 'react-router-dom';
+import { useDomain } from '@/context/DomainContext';
 
 export function DriverManagement() {
   const navigate = useNavigate();
-  const [drivers, setDrivers] = useState([
-    { id: 1, dId: 'DRV-1001', name: 'Rahul Sharma', initial: 'RS', phone: '+91 98765 43211', stat: 'Delivering', veh: 'MH-12-AB-4821', today: 7, perf: 87 },
-    { id: 2, dId: 'DRV-1002', name: 'Priya Nair', initial: 'PN', phone: '+91 98765 43212', stat: 'Delivering', veh: 'MH-12-AB-4822', today: 9, perf: 89 },
-    { id: 3, dId: 'DRV-1003', name: 'Arjun Mehta', initial: 'AM', phone: '+91 98765 43213', stat: 'On Break', veh: 'MH-12-AB-4823', today: 11, perf: 91 },
-    { id: 4, dId: 'DRV-1004', name: 'Neha Kapoor', initial: 'NK', phone: '+91 98765 43214', stat: 'Delivering', veh: 'MH-12-AB-4824', today: 13, perf: 93 },
-    { id: 5, dId: 'DRV-1005', name: 'Sanjay Mishra', initial: 'SM', phone: '+91 98765 43215', stat: 'Suspended', veh: 'MH-12-AB-4825', today: 15, perf: 95 },
-  ]);
+  const { drivers, vehicles, assignFleetToDriver } = useDomain();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [newDriver, setNewDriver] = useState({ name: '', phone: '', vehPlate: '', vehType: '' });
+  const [selectedDriverId, setSelectedDriverId] = useState<string | null>(null);
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string>('');
 
-  const handleAddDriver = () => {
-    if (!newDriver.name || !newDriver.phone || !newDriver.vehPlate || !newDriver.vehType) return;
-    const initial = newDriver.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'D';
-    setDrivers([...drivers, {
-      id: Date.now(),
-      dId: `DRV-${1000 + drivers.length + 1}`,
-      name: newDriver.name,
-      initial,
-      phone: newDriver.phone,
-      stat: 'Available',
-      veh: `${newDriver.vehPlate} (${newDriver.vehType})`,
-      today: 0,
-      perf: 100
-    }]);
-    setIsModalOpen(false);
-    setNewDriver({ name: '', phone: '', vehPlate: '', vehType: '' });
+  const handleAssignVehicle = () => {
+    if (selectedDriverId && selectedVehicleId) {
+      assignFleetToDriver(selectedDriverId, selectedVehicleId);
+      setIsModalOpen(false);
+      setSelectedDriverId(null);
+      setSelectedVehicleId('');
+    }
   };
 
-  const handleToggleSuspend = (id: number) => {
-    setDrivers(drivers.map(d => 
-      d.id === id ? { ...d, stat: d.stat === 'Suspended' ? 'Available' : 'Suspended' } : d
-    ));
-  };
-
-  const handleDelete = (id: number) => {
-    setDrivers(drivers.filter(d => d.id !== id));
+  const getVehicleDisplay = (vehicleId: string | null | undefined) => {
+    if (!vehicleId) return <span className="text-navy-400">Not Assigned</span>;
+    const v = vehicles.find(v => v.id === vehicleId);
+    return v ? `${v.registration} (${v.type})` : vehicleId;
   };
 
   return (
@@ -58,7 +41,6 @@ export function DriverManagement() {
         </div>
         <div className="flex items-center space-x-3">
           <Button variant="outline"><Download className="h-4 w-4 mr-2" /> Export</Button>
-          <Button onClick={() => setIsModalOpen(true)}><Plus className="h-4 w-4 mr-2" /> Add Driver</Button>
         </div>
       </div>
 
@@ -71,9 +53,7 @@ export function DriverManagement() {
                 <TableHead>Name</TableHead>
                 <TableHead>Phone</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Vehicle</TableHead>
-                <TableHead>Deliveries</TableHead>
-                <TableHead>Performance</TableHead>
+                <TableHead>Assigned Vehicle</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -85,38 +65,36 @@ export function DriverManagement() {
               )}
               {drivers.map((d) => (
                 <TableRow key={d.id}>
-                  <TableCell className="font-medium">{d.dId}</TableCell>
+                  <TableCell className="font-medium">{d.id}</TableCell>
                   <TableCell>
                     <div className="flex items-center">
                       <div className="h-8 w-8 rounded-full bg-navy-100 flex items-center justify-center mr-3 text-sm font-semibold text-navy-700">
-                        {d.initial}
+                        {d.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
                       </div>
                       {d.name}
                     </div>
                   </TableCell>
                   <TableCell>{d.phone}</TableCell>
                   <TableCell>
-                    <Badge variant={d.stat === 'Suspended' ? 'danger' : d.stat === 'On Break' ? 'warning' : 'success'}>
-                      {d.stat}
+                    <Badge variant={d.status === 'Inactive' ? 'danger' : d.status === 'On Leave' ? 'warning' : 'success'}>
+                      {d.status}
                     </Badge>
                   </TableCell>
-                  <TableCell>{d.veh}</TableCell>
-                  <TableCell>{d.today} Today</TableCell>
                   <TableCell>
-                    <div className="w-20 h-2 bg-navy-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-success-500" style={{ width: `${d.perf}%` }} />
-                    </div>
-                    <span className="text-xs text-navy-500 mt-1 block">{d.perf}% On-time</span>
+                    {getVehicleDisplay(d.vehicleId)}
                   </TableCell>
                   <TableCell className="text-right flex justify-end space-x-2">
-                    <Button variant="ghost" size="sm" onClick={() => navigate(`/tracking/${d.dId}`)} title="Track Driver">
-                      <MapPin className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleToggleSuspend(d.id)} title="Suspend/Activate">
-                      <Ban className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="sm" className="text-danger-600 hover:text-danger-700 hover:bg-danger-50" onClick={() => handleDelete(d.id)}>
-                      <Trash2 className="h-4 w-4" />
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="text-primary-600 hover:text-primary-700 hover:bg-primary-50"
+                      onClick={() => {
+                        setSelectedDriverId(d.id);
+                        setSelectedVehicleId(d.vehicleId || '');
+                        setIsModalOpen(true);
+                      }}
+                    >
+                      Assign Vehicle
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -126,46 +104,33 @@ export function DriverManagement() {
         </CardContent>
       </Card>
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Register Fleet Unit (Driver & Vehicle)">
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Assign Vehicle to Driver">
         <div className="space-y-4">
           <div className="space-y-2">
             <h4 className="text-sm font-semibold text-navy-900 border-b border-navy-100 pb-1">Driver Details</h4>
-            <Input 
-              placeholder="Driver Full Name" 
-              value={newDriver.name} 
-              onChange={(e) => setNewDriver({...newDriver, name: e.target.value})} 
-            />
-            <Input 
-              placeholder="Phone Number" 
-              value={newDriver.phone} 
-              onChange={(e) => setNewDriver({...newDriver, phone: e.target.value})} 
-            />
+            <p className="text-sm text-navy-600 font-medium">
+              {drivers.find(d => d.id === selectedDriverId)?.name || 'Unknown Driver'}
+            </p>
           </div>
 
           <div className="space-y-2 mt-4">
-            <h4 className="text-sm font-semibold text-navy-900 border-b border-navy-100 pb-1">Vehicle Registration</h4>
-            <Input 
-              placeholder="License Plate (e.g. MH-12-AB-1234)" 
-              value={newDriver.vehPlate} 
-              onChange={(e) => setNewDriver({...newDriver, vehPlate: e.target.value})} 
-            />
+            <h4 className="text-sm font-semibold text-navy-900 border-b border-navy-100 pb-1">Select Vehicle</h4>
             <select 
               className="w-full h-10 px-3 py-2 border border-navy-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
-              value={newDriver.vehType}
-              onChange={(e) => setNewDriver({...newDriver, vehType: e.target.value})}
+              value={selectedVehicleId}
+              onChange={(e) => setSelectedVehicleId(e.target.value)}
             >
-              <option value="" disabled>Select Vehicle Type</option>
-              <option value="Bike">Motorcycle / Bike</option>
-              <option value="Van">Cargo Van</option>
-              <option value="Truck">Heavy Truck</option>
-              <option value="Refrigerated">Refrigerated Truck</option>
+              <option value="" disabled>Select Vehicle</option>
+              {vehicles.map(v => (
+                <option key={v.id} value={v.id}>{v.registration} ({v.type}) - Cap: {v.capacityKg}kg</option>
+              ))}
             </select>
-            <p className="text-xs text-navy-500">Creating this profile automatically links the driver and vehicle permanently.</p>
+            <p className="text-xs text-navy-500">Creating this assignment automatically links the driver and vehicle for all route planning.</p>
           </div>
 
           <div className="pt-4 flex justify-end space-x-2">
             <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-            <Button onClick={handleAddDriver} disabled={!newDriver.name || !newDriver.vehPlate || !newDriver.vehType}>Register Unit</Button>
+            <Button onClick={handleAssignVehicle} disabled={!selectedVehicleId}>Assign Vehicle</Button>
           </div>
         </div>
       </Modal>

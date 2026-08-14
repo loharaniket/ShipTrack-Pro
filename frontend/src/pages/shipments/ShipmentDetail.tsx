@@ -5,16 +5,16 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { MapPin, Navigation, Truck, User, Calendar, Map, CheckCircle2, AlertTriangle, FileText, CheckCircle, FastForward } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { useShipments } from '@/context/ShipmentContext';
+import { useDomain } from '@/context/DomainContext';
 
 export function ShipmentDetail() {
   const { id } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
   
-  const { shipments, drivers, vehicles, updateShipmentStatus, addTimelineEvent, assignFleet } = useShipments();
+  const { shipments, drivers, vehicles, updateShipmentStatus, assignFleetToDriver } = useDomain();
   
-  const shipment = shipments.find(s => s.id === id || s.tracking === id);
+  const shipment = shipments.find(s => s.id === id || s.trackingNumber === id);
   
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
@@ -25,6 +25,12 @@ export function ShipmentDetail() {
   const [newDriver, setNewDriver] = useState(shipment?.driverId || '');
   const [newTimelineTitle, setNewTimelineTitle] = useState('');
   const [newTimelineLoc, setNewTimelineLoc] = useState('');
+
+  const [editedPriority, setEditedPriority] = useState(shipment?.priority || 'Standard');
+  const [editedWeight, setEditedWeight] = useState((shipment?.weightKg || 0).toString());
+  const [editedDescription, setEditedDescription] = useState(shipment?.description || '');
+  const [editedIsFragile, setEditedIsFragile] = useState(shipment?.isFragile || false);
+  const [editedInstructions, setEditedInstructions] = useState(shipment?.deliveryInstructions || '');
 
   // Derived Info
   const driver = drivers.find(d => d.id === shipment?.driverId);
@@ -53,7 +59,7 @@ export function ShipmentDetail() {
     else if (shipment.status === 'In Transit') nextStatus = 'Out for Delivery';
     
     if (nextStatus) {
-      updateShipmentStatus(shipment.id, nextStatus, 'Advanced from detail view');
+      updateShipmentStatus(shipment.id, nextStatus, user?.id || 'sys', 'Detail view');
     }
   };
 
@@ -61,8 +67,8 @@ export function ShipmentDetail() {
     <div className="space-y-6 max-w-6xl mx-auto">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center space-x-4">
-          <h1 className="text-2xl font-bold text-navy-900">{shipment.tracking}</h1>
-          <Badge variant={shipment.status === 'Delivered' ? 'success' : shipment.status === 'Exceptions' ? 'warning' : 'info'}>{shipment.status}</Badge>
+          <h1 className="text-2xl font-bold text-navy-900">{shipment.trackingNumber}</h1>
+          <Badge variant={shipment.status === 'Delivered' ? 'success' : shipment.status === 'Failed' ? 'warning' : 'info'}>{shipment.status}</Badge>
           <Badge variant={shipment.priority === 'Urgent' ? 'danger' : shipment.priority === 'High' ? 'warning' : 'primary'}>{shipment.priority} Priority</Badge>
         </div>
         <div className="flex space-x-2">
@@ -162,11 +168,7 @@ export function ShipmentDetail() {
             <div className="px-6 py-4 border-t border-navy-100 bg-navy-50 flex justify-end space-x-3">
               <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>Cancel</Button>
               <Button onClick={() => {
-                setPriority(editedPriority);
-                setWeight(editedWeight);
-                setDescription(editedDescription);
-                setIsFragile(editedIsFragile);
-                setInstructions(editedInstructions);
+                // In a real app we'd dispatch an update here
                 setIsEditModalOpen(false);
               }}>Save Changes</Button>
             </div>
@@ -205,7 +207,7 @@ export function ShipmentDetail() {
             <div className="px-6 py-4 border-t border-navy-100 bg-navy-50 flex justify-end space-x-3">
               <Button variant="outline" onClick={() => setIsStatusModalOpen(false)}>Cancel</Button>
               <Button onClick={() => {
-                updateShipmentStatus(shipment.id, newStatus as any, 'Status manually overridden');
+                updateShipmentStatus(shipment.id, newStatus as any, user?.id || 'sys', 'Manual Override');
                 setIsStatusModalOpen(false);
               }}>Confirm</Button>
             </div>
@@ -246,7 +248,8 @@ export function ShipmentDetail() {
               <Button onClick={() => {
                 const derivedVehicle = drivers.find(d => d.id === newDriver)?.vehicleId;
                 if (derivedVehicle) {
-                  assignFleet([shipment.id], newDriver, derivedVehicle);
+                  // Actually creating a route is standard flow, but for manual override:
+                  assignFleetToDriver(newDriver, derivedVehicle);
                 }
                 setIsAssignModalOpen(false);
               }}>Assign</Button>
@@ -293,7 +296,7 @@ export function ShipmentDetail() {
               <Button variant="outline" onClick={() => setIsTimelineModalOpen(false)}>Cancel</Button>
               <Button onClick={() => {
                 if (newTimelineTitle) {
-                  addTimelineEvent(shipment.id, newTimelineTitle, newTimelineLoc || 'In Route');
+                  updateShipmentStatus(shipment.id, shipment.status, user?.id || 'sys', newTimelineLoc || 'In Route', newTimelineTitle);
                   setNewTimelineTitle('');
                   setNewTimelineLoc('');
                   setIsTimelineModalOpen(false);
@@ -317,9 +320,9 @@ export function ShipmentDetail() {
                   <div className="flex items-start">
                     <MapPin className="h-5 w-5 text-navy-400 mr-2 mt-0.5" />
                     <div>
-                      <p className="font-medium text-navy-900">{shipment.customer}</p>
-                      <p className="text-sm text-navy-600">{shipment.origin}</p>
-                      <p className="text-xs text-navy-400 mt-1">Contact: +91 98765 12345</p>
+                      <p className="font-medium text-navy-900">{shipment.customerId}</p>
+                      <p className="text-sm text-navy-600">{shipment.originAddress}</p>
+                      <p className="text-xs text-navy-400 mt-1">Contact Details on File</p>
                     </div>
                   </div>
                 </div>
@@ -328,9 +331,9 @@ export function ShipmentDetail() {
                   <div className="flex items-start">
                     <Navigation className="h-5 w-5 text-navy-400 mr-2 mt-0.5" />
                     <div>
-                      <p className="font-medium text-navy-900">Tech Solutions Ltd.</p>
-                      <p className="text-sm text-navy-600">{shipment.destination}</p>
-                      <p className="text-xs text-navy-400 mt-1">Contact: +91 99887 76655</p>
+                      <p className="font-medium text-navy-900">Destination Facility</p>
+                      <p className="text-sm text-navy-600">{shipment.destinationAddress}</p>
+                      <p className="text-xs text-navy-400 mt-1">Contact Details on File</p>
                     </div>
                   </div>
                 </div>
@@ -339,10 +342,10 @@ export function ShipmentDetail() {
               <div className="mt-8 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="font-medium text-navy-900">Delivery Progress</span>
-                  <span className="font-medium text-primary-600">{shipment.progress}%</span>
+                  <span className="font-medium text-primary-600">{shipment.progressPercentage}%</span>
                 </div>
                 <div className="h-2 bg-navy-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-primary-500" style={{ width: `${shipment.progress}%` }} />
+                  <div className="h-full bg-primary-500" style={{ width: `${shipment.progressPercentage}%` }} />
                 </div>
                 <div className="flex justify-between text-xs text-navy-500 mt-2">
                   <span>Picked up</span>
@@ -416,14 +419,14 @@ export function ShipmentDetail() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-xs text-navy-500">Contents</p>
-                  <p className="text-sm font-medium text-navy-900">General Goods</p>
+                  <p className="text-sm font-medium text-navy-900">{shipment.description || 'General Goods'}</p>
                 </div>
                 <div>
                   <p className="text-xs text-navy-500">Weight</p>
-                  <p className="text-sm font-medium text-navy-900">12.5 kg</p>
+                  <p className="text-sm font-medium text-navy-900">{shipment.weightKg} kg</p>
                 </div>
               </div>
-              {false && (
+              {shipment.isFragile && (
                 <div className="flex items-center text-danger-600 bg-danger-50 p-2 rounded text-sm font-medium">
                   <AlertTriangle className="h-4 w-4 mr-2" />
                   Fragile Content
@@ -432,7 +435,7 @@ export function ShipmentDetail() {
               <div>
                 <p className="text-xs text-navy-500">Delivery Instructions</p>
                 <p className="text-sm font-medium text-navy-900 bg-navy-50 p-2 rounded mt-1">
-                  Leave at front desk
+                  {shipment.deliveryInstructions || 'None'}
                 </p>
               </div>
             </CardContent>

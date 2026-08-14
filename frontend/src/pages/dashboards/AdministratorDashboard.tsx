@@ -3,29 +3,24 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table';
 import { Package, Truck, AlertTriangle, Route, Users, MapPin, CheckCircle, Clock } from 'lucide-react';
-import { MOCK_SHIPMENTS } from '@/services/mockData';
+import { useDomain } from '@/context/DomainContext';
 
 export function AdministratorDashboard() {
-  const totalShipments = MOCK_SHIPMENTS.length;
-  const readyForPlan = MOCK_SHIPMENTS.filter(s => s.status === 'Ready for Planning').length;
-  const assigned = MOCK_SHIPMENTS.filter(s => s.status === 'Assigned').length;
-  const inTransit = MOCK_SHIPMENTS.filter(s => ['Picked Up', 'In Transit', 'Out for Delivery'].includes(s.status)).length;
-  const delivered = MOCK_SHIPMENTS.filter(s => s.status === 'Delivered').length;
-  const exceptions = MOCK_SHIPMENTS.filter(s => s.status === 'Exceptions').length;
+  const { shipments, exceptions: domainExceptions, routes, drivers } = useDomain();
   
-  // Calculate active routes based on unique routes for shipments not delivered/cancelled
-  const activeRoutes = new Set(
-    MOCK_SHIPMENTS
-      .filter(s => s.route && !['Delivered', 'Cancelled', 'Exceptions'].includes(s.status))
-      .map(s => s.route)
-  ).size;
+  const totalShipments = shipments.length;
+  const readyForPlan = shipments.filter(s => s.status === 'Ready for Planning').length;
+  const assigned = shipments.filter(s => s.status === 'Assigned').length;
+  const inTransit = shipments.filter(s => ['Picked Up', 'In Transit', 'Out for Delivery'].includes(s.status)).length;
+  const delivered = shipments.filter(s => s.status === 'Delivered').length;
+  
+  // Real exceptions from Domain Context
+  const exceptions = domainExceptions.length;
+  
+  // Active routes from domain context
+  const activeRoutes = routes.filter(r => !['Completed', 'Cancelled', 'Draft'].includes(r.status)).length;
 
-  const mockDrivers = [
-    { id: 1, name: 'Rahul Sharma', status: 'On Route', location: 'Pune Highway', vehicle: 'MH-12-AB-4821' },
-    { id: 2, name: 'Amit Singh', status: 'Available', location: 'Mumbai DC', vehicle: 'MH-14-XY-9922' },
-    { id: 3, name: 'Vijay Singh', status: 'Available', location: 'Kolkata Port', vehicle: 'MH-01-AB-1234' },
-    { id: 4, name: 'Suresh Kumar', status: 'On Route', location: 'Navi Mumbai', vehicle: 'MH-43-XY-5544' },
-  ];
+  const mockDrivers = drivers;
   
   const availableDrivers = mockDrivers.filter(d => d.status === 'Available').length;
 
@@ -106,23 +101,25 @@ export function AdministratorDashboard() {
                 <TableRow>
                   <TableHead>Shipment ID</TableHead>
                   <TableHead>Customer</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Driver</TableHead>
                   <TableHead>Route</TableHead>
+                  <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {MOCK_SHIPMENTS.slice(0, 5).map(s => (
+                {shipments.slice(0, 5).map((s) => (
                   <TableRow key={s.id}>
-                    <TableCell className="font-medium">{s.tracking}</TableCell>
-                    <TableCell>{s.customer}</TableCell>
+                    <TableCell className="font-medium">{s.trackingNumber}</TableCell>
+                    <TableCell>{s.customerId}</TableCell>
+                    <TableCell>{s.originAddress} → {s.destinationAddress}</TableCell>
                     <TableCell>
-                      <Badge variant={s.status === 'Delivered' ? 'success' : s.status === 'Exceptions' ? 'danger' : s.status === 'Ready for Planning' || s.status === 'Draft' ? 'warning' : 'info'}>
+                      <Badge variant={
+                        s.status === 'Delivered' ? 'success' : 
+                        s.status === 'Failed' ? 'danger' : 
+                        s.status === 'Ready for Planning' ? 'warning' : 'info'
+                      }>
                         {s.status}
                       </Badge>
                     </TableCell>
-                    <TableCell className={!s.driver ? "text-navy-400" : ""}>{s.driver || 'Unassigned'}</TableCell>
-                    <TableCell className={!s.route ? "text-navy-400" : ""}>{s.route || '-'}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -147,14 +144,21 @@ export function AdministratorDashboard() {
               <TableBody>
                 {mockDrivers.map(d => (
                   <TableRow key={d.id}>
-                    <TableCell className="font-medium">{d.name}</TableCell>
                     <TableCell>
-                      <Badge variant={d.status === 'Available' ? 'success' : 'primary'}>
+                      <div className="flex items-center">
+                        <div className="h-8 w-8 rounded-full bg-navy-100 flex items-center justify-center mr-3 text-sm font-semibold text-navy-700">
+                          {d.name.substring(0, 2).toUpperCase()}
+                        </div>
+                        {d.name}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={d.status === 'Available' ? 'success' : 'info'}>
                         {d.status}
                       </Badge>
                     </TableCell>
-                    <TableCell>{d.location}</TableCell>
-                    <TableCell>{d.vehicle}</TableCell>
+                    <TableCell className="text-navy-500">Not Tracked</TableCell>
+                    <TableCell>{d.vehicleId || 'N/A'}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -184,14 +188,14 @@ export function AdministratorDashboard() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {MOCK_SHIPMENTS.filter(s => s.status === 'Exceptions').map(s => (
+                {shipments.filter(s => s.status === 'Failed').map(s => (
                   <TableRow key={s.id}>
-                    <TableCell className="font-medium text-danger-700">{s.tracking}</TableCell>
-                    <TableCell>{s.customer}</TableCell>
-                    <TableCell>{s.driver || '-'}</TableCell>
+                    <TableCell className="font-medium text-danger-700">{s.trackingNumber}</TableCell>
+                    <TableCell>{s.customerId}</TableCell>
+                    <TableCell>{s.driverId || '-'}</TableCell>
                     <TableCell className="font-medium">Delivery Delayed / Address Issue</TableCell>
                     <TableCell className="flex items-center text-navy-500">
-                      <Clock className="h-3 w-3 mr-1" /> {s.lastUpdated}
+                      <Clock className="h-3 w-3 mr-1" /> {s.statusHistory?.[0]?.timestamp || 'N/A'}
                     </TableCell>
                   </TableRow>
                 ))}

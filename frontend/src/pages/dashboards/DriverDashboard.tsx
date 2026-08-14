@@ -5,15 +5,15 @@ import { Navigation, CheckCircle, Package, Truck, AlertTriangle, Play, FastForwa
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/Badge';
 import { useAuth } from '@/context/AuthContext';
-import { useShipments } from '@/context/ShipmentContext';
+import { useDomain } from '@/context/DomainContext';
 
 export function DriverDashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { shipments, drivers, updateShipmentStatus } = useShipments();
+  const { shipments, drivers, updateShipmentStatus } = useDomain();
   
   // For demo, find the driver record that matches the user name or default to DRV-001
-  const driverRecord = drivers.find(d => d.name === user?.name) || drivers[0];
+  const driverRecord = drivers.find(d => d.email === user?.email) || drivers.find(d => d.name === user?.name) || drivers[0];
   const driverName = driverRecord.name;
   
   const handleNextStatus = (id: string, currentStatus: string) => {
@@ -23,7 +23,7 @@ export function DriverDashboard() {
     else if (currentStatus === 'In Transit') nextStatus = 'Out for Delivery';
     
     if (nextStatus) {
-      updateShipmentStatus(id, nextStatus, 'Status updated from Driver Dashboard');
+      updateShipmentStatus(id, nextStatus, driverRecord.id, 'Driver App');
     }
   };
 
@@ -31,7 +31,7 @@ export function DriverDashboard() {
   const assignedCount = driverShipments.filter(s => ['Assigned', 'Picked Up', 'In Transit', 'Out for Delivery'].includes(s.status)).length;
   const inProgressCount = driverShipments.filter(s => ['Picked Up', 'In Transit', 'Out for Delivery'].includes(s.status)).length;
   const completedCount = driverShipments.filter(s => s.status === 'Delivered').length;
-  const exceptionCount = driverShipments.filter(s => s.status === 'Exceptions').length;
+  const exceptionCount = driverShipments.filter(s => s.status === 'Failed').length;
 
   const activeShipment = driverShipments.find(s => ['Picked Up', 'In Transit', 'Out for Delivery'].includes(s.status));
   const upcomingStops = driverShipments.filter(s => s.status === 'Assigned' || s.status === 'Ready for Planning' || s.status === 'Planned');
@@ -103,9 +103,11 @@ export function DriverDashboard() {
               <CardContent className="p-6">
                 <div className="flex justify-between items-start mb-4">
                   <div>
-                    <span className="inline-block px-2 py-1 bg-primary-100 text-primary-700 text-xs font-semibold rounded mb-2 uppercase">{activeShipment.status}</span>
-                    <h3 className="text-xl font-bold text-navy-900">{activeShipment.tracking}</h3>
-                    <p className="text-navy-500">Customer: {activeShipment.customer}</p>
+                    <h3 className="text-xl font-bold text-navy-900">{activeShipment.trackingNumber}</h3>
+                    <Badge variant="info" className="ml-2 bg-info-100 text-info-700 hover:bg-info-200">
+                      {activeShipment.status}
+                    </Badge>
+                    <p className="text-sm text-navy-600 mt-1">{activeShipment.customerId}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-medium text-navy-500">ETA</p>
@@ -113,16 +115,12 @@ export function DriverDashboard() {
                   </div>
                 </div>
                 
-                <div className="flex items-center text-sm text-navy-700 bg-navy-50 p-4 rounded-lg mb-6">
-                  <div className="flex flex-col flex-1 relative">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="w-3 h-3 rounded-full bg-navy-400 shrink-0" />
-                      <span className="font-medium text-navy-900">{activeShipment.origin}</span>
-                    </div>
-                    <div className="w-0.5 h-6 bg-navy-200 ml-1.5 absolute top-3" />
-                    <div className="flex items-center gap-3 mt-4">
-                      <div className="w-3 h-3 rounded-full bg-primary-500 shrink-0" />
-                      <span className="font-medium text-navy-900">{activeShipment.destination}</span>
+                <div className="bg-navy-50 rounded-lg p-4 mb-6">
+                  <div className="flex items-start">
+                    <Navigation className="h-5 w-5 text-primary-500 mr-3 mt-0.5" />
+                    <div>
+                      <p className="text-xs font-semibold text-navy-500 uppercase tracking-wide">Delivery Address</p>
+                      <p className="text-sm font-medium text-navy-900 mt-1">{activeShipment.destinationAddress}</p>
                     </div>
                   </div>
                 </div>
@@ -160,11 +158,11 @@ export function DriverDashboard() {
                 upcomingStops.map((stop, i) => (
                   <div key={stop.id} className="p-4 hover:bg-navy-50 transition-colors">
                     <div className="flex justify-between items-center mb-1">
-                      <span className="font-bold text-navy-900">{stop.tracking}</span>
+                      <span className="font-bold text-navy-900">{stop.trackingNumber}</span>
                       <span className="text-xs font-medium text-navy-500">Stop {i + 1}</span>
                     </div>
-                    <p className="text-sm text-navy-600 truncate">{stop.destination}</p>
-                    <p className="text-xs text-navy-400 mt-1">{stop.customer}</p>
+                    <p className="text-sm text-navy-600 truncate">{stop.destinationAddress}</p>
+                    <p className="text-xs text-navy-400 mt-1">{stop.customerId}</p>
                     <div className="mt-2">
                       <Button size="sm" variant="outline" className="w-full text-xs py-1 h-7" onClick={() => handleNextStatus(stop.id, stop.status)}>
                         <Play className="h-3 w-3 mr-1" /> Start Pickup
@@ -201,11 +199,11 @@ export function DriverDashboard() {
                 ) : (
                   driverShipments.map(s => (
                     <tr key={s.id} className="hover:bg-navy-50 transition-colors">
-                      <td className="px-6 py-4 font-bold text-primary-600">{s.tracking}</td>
-                      <td className="px-6 py-4">{s.customer}</td>
-                      <td className="px-6 py-4">{s.destination}</td>
+                      <td className="px-6 py-4 font-bold text-primary-600">{s.trackingNumber}</td>
+                      <td className="px-6 py-4">{s.customerId}</td>
+                      <td className="px-6 py-4">{s.destinationAddress}</td>
                       <td className="px-6 py-4">
-                        <Badge variant={s.status === 'Exceptions' ? 'danger' : s.status === 'Delivered' ? 'success' : (s.status === 'Assigned' || s.status === 'Ready for Planning' || s.status === 'Planned') ? 'warning' : 'info'}>
+                        <Badge variant={s.status === 'Failed' ? 'danger' : s.status === 'Delivered' ? 'success' : (s.status === 'Assigned' || s.status === 'Ready for Planning' || s.status === 'Planned') ? 'warning' : 'info'}>
                           {s.status}
                         </Badge>
                       </td>
@@ -216,7 +214,7 @@ export function DriverDashboard() {
                         {(s.status === 'Out for Delivery') && (
                           <Button size="sm" className="bg-success-600 hover:bg-success-700 text-white" onClick={() => navigate('/pod/signature')}>Deliver</Button>
                         )}
-                        <Button variant="ghost" size="sm" onClick={() => navigate(`/shipments/${s.tracking}`)}>View</Button>
+                        <Button variant="ghost" size="sm" onClick={() => navigate(`/shipments/${s.trackingNumber}`)}>View</Button>
                       </td>
                     </tr>
                   ))

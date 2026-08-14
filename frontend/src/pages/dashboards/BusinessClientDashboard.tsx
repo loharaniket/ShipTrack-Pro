@@ -7,13 +7,13 @@ import { Package, Truck, CheckCircle2, Clock, FileDown, Plus, Trash2 } from 'luc
 import { useNavigate } from 'react-router-dom';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
-import { ShipmentData } from '@/services/mockData';
+import { Shipment } from '@/types/domain';
 import { useAuth } from '@/context/AuthContext';
-import { useShipments } from '@/context/ShipmentContext';
+import { useDomain } from '@/context/DomainContext';
 
 export function BusinessClientDashboard() {
   const { user } = useAuth();
-  const { shipments, addShipment, updateShipmentStatus } = useShipments();
+  const { shipments, addShipment, updateShipmentStatus } = useDomain();
   const navigate = useNavigate();
   
   // Real security filtering

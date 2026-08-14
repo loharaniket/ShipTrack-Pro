@@ -2,15 +2,23 @@ import React, { useRef, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Eraser, CheckCircle, UploadCloud, Camera } from 'lucide-react';
+import { Eraser, CheckCircle, UploadCloud, Camera, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
+import { useDomain } from '@/context/DomainContext';
 
 export function DigitalSignature() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { shipments, drivers, submitPOD } = useDomain();
+
   const [isSigned, setIsSigned] = useState(false);
   const [receiverName, setReceiverName] = useState('');
   const [notes, setNotes] = useState('');
+
+  const driverRecord = drivers.find(d => d.email === user?.email) || drivers.find(d => d.name === user?.name) || drivers[0];
+  const activeShipment = shipments.find(s => s.driverId === driverRecord.id && s.status === 'Out for Delivery');
 
   const clearSignature = () => {
     const canvas = canvasRef.current;
@@ -26,17 +34,35 @@ export function DigitalSignature() {
   };
 
   const handleSubmit = () => {
-    // In a real app, this would upload the POD data
-    alert('POD Captured successfully!');
+    if (!activeShipment) return;
+    
+    submitPOD({
+      id: `POD-${Date.now()}`,
+      shipmentId: activeShipment.id,
+      recipientName: receiverName,
+      deliveryNotes: notes,
+      timestamp: new Date().toISOString()
+    });
+    
     navigate('/my-route');
   };
+
+  if (!activeShipment) {
+    return (
+      <div className="max-w-4xl mx-auto space-y-6 text-center py-12">
+        <h1 className="text-2xl font-bold text-navy-900">No Active Delivery</h1>
+        <p className="text-navy-500">You do not have any shipments currently out for delivery.</p>
+        <Button onClick={() => navigate('/my-route')}><ArrowLeft className="mr-2 h-4 w-4" /> Back to Route</Button>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-navy-900">Proof of Delivery</h1>
-          <p className="text-navy-500 mt-1">Complete delivery for Shipment SHP-10025</p>
+          <p className="text-navy-500 mt-1">Complete delivery for {activeShipment.trackingNumber}</p>
         </div>
       </div>
 
@@ -49,19 +75,17 @@ export function DigitalSignature() {
             <CardContent className="p-6 space-y-4 text-sm">
               <div>
                 <p className="text-navy-500 mb-1">Customer</p>
-                <p className="font-bold text-navy-900">ABC Retail</p>
+                <p className="font-bold text-navy-900">{activeShipment.customerId}</p>
               </div>
               <div>
                 <p className="text-navy-500 mb-1">Delivery Address</p>
                 <p className="font-medium text-navy-900">
-                  Pune Business Park,<br />
-                  Hinjewadi Phase 1,<br />
-                  Pune, Maharashtra 411057
+                  {activeShipment.destinationAddress}
                 </p>
               </div>
               <div>
                 <p className="text-navy-500 mb-1">Contact</p>
-                <p className="font-medium text-navy-900">+91 98765 43210</p>
+                <p className="font-medium text-navy-900">Contact details pending</p>
               </div>
             </CardContent>
           </Card>

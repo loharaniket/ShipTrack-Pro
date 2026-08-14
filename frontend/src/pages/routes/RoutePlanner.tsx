@@ -4,17 +4,17 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { LiveMap } from '@/components/maps/LiveMap';
 import { ShipmentPlanningCard } from './components/ShipmentPlanningCard';
-import { ShipmentData } from '@/services/mockData';
+import { Shipment } from '@/types/domain';
 import { ShipmentSelectionPanel } from './components/ShipmentSelectionPanel';
 import { SelectedShipmentList } from './components/SelectedShipmentList';
 import { RouteSummaryPanel } from './components/RouteSummaryPanel';
 import { CheckCircle } from 'lucide-react';
-import { useShipments } from '@/context/ShipmentContext';
+import { useDomain } from '@/context/DomainContext';
 
 
 
 export function RoutePlanner() {
-  const { shipments, drivers, vehicles, assignFleet } = useShipments();
+  const { shipments, drivers, vehicles, createRoute } = useDomain();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   
   const [isOptimizing, setIsOptimizing] = useState(false);
@@ -63,7 +63,34 @@ export function RoutePlanner() {
   const handleCreateRoute = () => {
     if (!assignedDriverId || !derivedVehicle) return;
     setIsRouteCreated(true);
-    assignFleet(selectedIds, assignedDriverId, derivedVehicle.id);
+    
+    const routeId = `RT-${Date.now()}`;
+    const newRoute = {
+      id: routeId,
+      name: `Route ${routeId}`,
+      driverId: assignedDriverId,
+      vehicleId: derivedVehicle.id,
+      status: 'Planned' as const,
+      origin: 'DC Default',
+      destination: 'Multiple Stops',
+      estimatedDistanceKm: selectedIds.length * 15.5,
+      estimatedDurationMins: selectedIds.length * 25,
+      stops: [] // will populate below
+    };
+
+    const newStops = selectedIds.map((shipmentId, index) => ({
+      id: `STP-${Date.now()}-${index}`,
+      routeId,
+      shipmentId,
+      sequence: index + 1,
+      status: 'Pending' as const,
+      eta: 'TBD'
+    }));
+    
+    newRoute.stops = newStops.map(s => s.id);
+
+    createRoute(newRoute, newStops);
+    
     setTimeout(() => {
       setIsRouteCreated(false);
       setSelectedIds([]);
@@ -72,7 +99,7 @@ export function RoutePlanner() {
     }, 2000);
   };
 
-  const selectedShipments = selectedIds.map(id => shipments.find(s => s.id === id)).filter(Boolean) as ShipmentData[];
+  const selectedShipments = selectedIds.map(id => shipments.find(s => s.id === id)).filter(Boolean) as Shipment[];
 
   return (
     <div className="flex h-[calc(100vh-5rem)] -m-4 lg:-m-6 overflow-hidden bg-navy-50">

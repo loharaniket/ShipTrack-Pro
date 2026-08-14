@@ -2,10 +2,10 @@ import React, { useState, useMemo } from 'react';
 import { Input } from '@/components/ui/Input';
 import { Search } from 'lucide-react';
 import { ShipmentPlanningCard } from './ShipmentPlanningCard';
-import { ShipmentData } from '@/services/mockData';
+import { Shipment } from '@/types/domain';
 
 interface ShipmentSelectionPanelProps {
-  shipments: ShipmentData[];
+  shipments: Shipment[];
   selectedIds: string[];
   onToggleShipment: (id: string) => void;
 }
@@ -18,8 +18,8 @@ export function ShipmentSelectionPanel({ shipments, selectedIds, onToggleShipmen
     return shipments.filter(s => {
       const matchesSearch = 
         s.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        s.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        s.delivery.toLowerCase().includes(searchTerm.toLowerCase());
+        s.trackingNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        s.destinationAddress.toLowerCase().includes(searchTerm.toLowerCase());
       
       const matchesStatus = filterStatus === 'All' || s.status === filterStatus;
       
@@ -45,9 +45,9 @@ export function ShipmentSelectionPanel({ shipments, selectedIds, onToggleShipmen
             onChange={(e) => setFilterStatus(e.target.value)}
           >
             <option value="All">All Statuses</option>
-            <option value="Available">Available</option>
-            <option value="Already Planned">Already Planned</option>
-            <option value="Completed">Completed</option>
+            <option value="Ready for Planning">Ready for Planning</option>
+            <option value="Planned">Planned</option>
+            <option value="In Transit">In Transit</option>
           </select>
         </div>
       </div>

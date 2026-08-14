@@ -5,32 +5,37 @@ import { Badge } from '@/components/ui/Badge';
 import { CheckCircle, Navigation, FastForward } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { useShipments } from '@/context/ShipmentContext';
+import { useDomain } from '@/context/DomainContext';
 
 export function MyRoute() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { shipments, drivers, vehicles, updateShipmentStatus } = useShipments();
+  const { routes, routeStops, shipments, drivers, vehicles, updateShipmentStatus } = useDomain();
   
-  const driverRecord = drivers.find(d => d.name === user?.name) || drivers[0];
+  const driverRecord = drivers.find(d => d.email === user?.email) || drivers.find(d => d.name === user?.name) || drivers[0];
   
   const handleNextStatus = (id: string, currentStatus: string) => {
     let nextStatus: any = null;
-    if (currentStatus === 'Assigned') nextStatus = 'Picked Up';
+    if (currentStatus === 'Assigned' || currentStatus === 'Planned') nextStatus = 'Picked Up';
     else if (currentStatus === 'Picked Up') nextStatus = 'In Transit';
     else if (currentStatus === 'In Transit') nextStatus = 'Out for Delivery';
     
     if (nextStatus) {
-      updateShipmentStatus(id, nextStatus, 'Status updated from My Route');
+      updateShipmentStatus(id, nextStatus, driverRecord.id, 'Driver App');
     }
   };
   
-  // Filter shipments assigned to the current driver
-  const routeShipments = shipments.filter(s => s.driverId === driverRecord.id && (s.routeId || s.status !== 'Draft'));
-  const routeId = routeShipments.length > 0 ? (routeShipments[0].routeId || 'N/A') : 'N/A';
+  // Get active route for driver
+  const activeRoute = routes.find(r => r.driverId === driverRecord.id && r.status !== 'Completed');
+  const routeId = activeRoute ? activeRoute.id : 'N/A';
   
-  const vehicleObj = routeShipments.length > 0 ? vehicles.find(v => v.id === routeShipments[0].vehicleId) : null;
-  const vehicle = vehicleObj ? vehicleObj.registration : 'N/A';
+  // Get shipments in order of route stops
+  const routeShipments = activeRoute 
+    ? routeStops.filter(s => s.routeId === activeRoute.id).sort((a,b) => a.sequence - b.sequence).map(stop => shipments.find(s => s.id === stop.shipmentId)).filter(Boolean) as any[]
+    : [];
+  
+  const vehicleObj = activeRoute ? vehicles.find(v => v.id === activeRoute.vehicleId) : null;
+  const vehicle = vehicleObj ? `${vehicleObj.registration} (${vehicleObj.type})` : 'N/A';
   
   const totalStops = routeShipments.length;
   const completedStops = routeShipments.filter(s => s.status === 'Delivered').length;
@@ -131,13 +136,13 @@ export function MyRoute() {
                         <div className="flex justify-between items-start mb-1">
                           <div>
                             {isCurrent && <Badge className="mb-2" variant="info">Current Stop</Badge>}
-                            <h4 className="font-bold text-navy-900">{shipment.customer} ({shipment.tracking})</h4>
+                            <h4 className="font-bold text-navy-900">{shipment.customerId} ({shipment.trackingNumber})</h4>
                           </div>
                           <Badge variant={isCompleted ? 'success' : isCurrent ? 'default' : 'outline'}>
                             {isCompleted ? 'Completed' : isUpcoming ? 'Upcoming' : shipment.status}
                           </Badge>
                         </div>
-                        <p className="text-sm text-navy-600 mb-3">{shipment.destination}</p>
+                        <p className="text-sm text-navy-600 mb-3">{shipment.destinationAddress}</p>
                         
                         {(isCurrent || isUpcoming) && (
                           <div className="flex space-x-3 mt-4">
@@ -151,7 +156,7 @@ export function MyRoute() {
                                 <CheckCircle className="h-4 w-4 mr-2" /> Deliver
                               </Button>
                             )}
-                            <Button variant="outline" size="sm" onClick={() => navigate(`/shipments/${shipment.tracking}`)}>
+                            <Button variant="outline" size="sm" onClick={() => navigate(`/shipments/${shipment.trackingNumber}`)}>
                               View Details
                             </Button>
                           </div>

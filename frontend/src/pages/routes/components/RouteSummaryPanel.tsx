@@ -3,11 +3,11 @@ import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Navigation, Users, CheckCircle, Car, AlertTriangle } from 'lucide-react';
-import { ShipmentData } from '@/services/mockData';
+import { Shipment } from '@/types/domain';
 import { SelectedShipmentList } from './SelectedShipmentList';
 
 interface RouteSummaryPanelProps {
-  selectedShipments: ShipmentData[];
+  selectedShipments: Shipment[];
   onRemoveShipment: (id: string) => void;
   onReorderShipment: (start: number, end: number) => void;
   onOptimize: () => void;
@@ -44,8 +44,8 @@ export function RouteSummaryPanel({
     return `${h}h ${m}m`;
   };
 
-  const totalLoad = selectedShipments.reduce((sum, s) => sum + (s.packageCount || 0), 0);
-  const isCapacityExceeded = derivedVehicle ? totalLoad > (derivedVehicle.capacity / 10) : false; // Dummy conversion for packages to capacity
+  const totalLoad = selectedShipments.reduce((sum, s) => sum + (s.weightKg || 0), 0);
+  const isCapacityExceeded = derivedVehicle ? totalLoad > derivedVehicle.capacityKg : false;
 
   return (
     <div className="flex flex-col h-full bg-white border-l border-navy-200 shadow-sm z-10 w-full">
@@ -120,7 +120,7 @@ export function RouteSummaryPanel({
                     <div className="mt-2 text-xs flex justify-between items-center border-t border-navy-200 pt-2">
                       <span className="text-navy-500">Route Load:</span>
                       <span className={`font-semibold ${isCapacityExceeded ? 'text-danger-600' : 'text-success-600'}`}>
-                        {totalLoad} / {derivedVehicle.capacity / 10} pkgs
+                        {totalLoad} / {derivedVehicle.capacityKg} kg
                       </span>
                     </div>
                   </div>

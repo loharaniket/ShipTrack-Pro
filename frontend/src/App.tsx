@@ -1,7 +1,7 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { AuthProvider } from '@/context/AuthContext';
-import { ShipmentProvider } from '@/context/ShipmentContext';
+import { DomainProvider } from '@/context/DomainContext';
 import { DashboardLayout } from '@/layouts/DashboardLayout';
 import { AuthLayout } from '@/layouts/AuthLayout';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
@@ -37,7 +37,7 @@ import { NotFound } from '@/pages/NotFound';
 function App() {
   return (
     <AuthProvider>
-      <ShipmentProvider>
+      <DomainProvider>
         <Routes>
           <Route path="/auth" element={<AuthLayout />}>
             <Route path="login" element={<Login />} />
@@ -108,7 +108,7 @@ function App() {
         
         <Route path="*" element={<NotFound />} />
         </Routes>
-      </ShipmentProvider>
+      </DomainProvider>
     </AuthProvider>
   );
 }

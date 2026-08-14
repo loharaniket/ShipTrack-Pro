@@ -1,10 +1,10 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
-import { ShipmentData } from '@/services/mockData';
+import { Shipment } from '@/types/domain';
 
 interface ShipmentPlanningCardProps {
-  shipment: ShipmentData;
+  shipment: Shipment;
   isSelected: boolean;
   onToggle: (id: string) => void;
 }
@@ -17,9 +17,9 @@ export function ShipmentPlanningCard({ shipment, isSelected, onToggle }: Shipmen
       case 'Ready for Planning':
         return 'Ready for route planning';
       case 'Planned':
-        return `Assigned to Route ${shipment.route || 'Pending'}`;
+        return `Assigned to Route ${shipment.routeId || 'Pending'}`;
       case 'Assigned':
-        return `Assigned to Driver ${shipment.driver}`;
+        return `Assigned to Driver ${shipment.driverId}`;
       case 'Delivered':
         return 'Delivered shipments cannot be planned';
       case 'Cancelled':
@@ -42,7 +42,7 @@ export function ShipmentPlanningCard({ shipment, isSelected, onToggle }: Shipmen
       case 'Delivered':
         return 'bg-navy-50 border-navy-200 text-navy-500';
       case 'Cancelled':
-      case 'Exceptions':
+      case 'Failed':
         return 'bg-danger-50 border-danger-200 text-danger-700';
       default:
         return 'bg-navy-50 border-navy-200 text-navy-500';
@@ -62,7 +62,7 @@ export function ShipmentPlanningCard({ shipment, isSelected, onToggle }: Shipmen
       <CardContent className="p-4">
         <div className="flex justify-between items-start mb-2">
           <div className="flex items-center space-x-2">
-            <span className="font-semibold text-navy-900">{shipment.tracking}</span>
+            <span className="font-semibold text-navy-900">{shipment.trackingNumber}</span>
             <Badge variant={getPriorityVariant()}>{shipment.priority}</Badge>
           </div>
           <div className="flex items-center">
@@ -84,26 +84,26 @@ export function ShipmentPlanningCard({ shipment, isSelected, onToggle }: Shipmen
 
         <div className="space-y-2 mb-4">
           <div>
-            <p className="text-sm font-medium text-navy-900">{shipment.customer}</p>
-            <p className="text-xs text-navy-500">{shipment.packageCount || 1} Package(s) • {shipment.distance || 'Unknown distance'}</p>
+            <p className="text-sm font-medium text-navy-900">{shipment.customerId}</p>
+            <p className="text-xs text-navy-500">{shipment.weightKg} kg</p>
           </div>
           
           <div className="flex items-center text-sm text-navy-700 bg-navy-50 p-2 rounded-md">
             <div className="flex flex-col flex-1 relative">
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-navy-400 shrink-0" />
-                <span className="truncate">{shipment.origin}</span>
+                <span className="truncate">{shipment.originAddress}</span>
               </div>
               <div className="w-0.5 h-3 bg-navy-200 ml-1 my-0.5" />
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-primary-500 shrink-0" />
-                <span className="truncate">{shipment.destination}</span>
+                <span className="truncate">{shipment.destinationAddress}</span>
               </div>
             </div>
           </div>
 
           <div>
-             <p className="text-xs text-navy-500">Deadline: <span className="font-medium text-navy-700">{shipment.deadline}</span></p>
+             <p className="text-xs text-navy-500">ETA: <span className="font-medium text-navy-700">{shipment.eta}</span></p>
           </div>
         </div>
 

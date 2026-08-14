@@ -7,40 +7,34 @@ import { Input } from '@/components/ui/Input';
 import { Plus, Filter, Download, XCircle } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { MOCK_SHIPMENTS, ShipmentData } from '@/services/mockData';
+import { useDomain } from '@/context/DomainContext';
+import { Shipment } from '@/types/domain';
 
 export function ShipmentList() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { shipments: domainShipments, updateShipmentStatus, drivers } = useDomain();
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('All Statuses');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isExporting, setIsExporting] = useState(false);
   const [shipmentToCancel, setShipmentToCancel] = useState<string | null>(null);
-  
-  const [shipments, setShipments] = useState<ShipmentData[]>([]);
 
-  useEffect(() => {
-    // Role-based filtering of the central mock data
-    let filteredData = [...MOCK_SHIPMENTS];
+  // Role-based filtering of the central data
+  let visibleShipments = [...domainShipments];
+  if (user?.role === 'Driver') {
+    const driverRecord = drivers.find(d => d.email === user?.email) || drivers.find(d => d.name === user?.name) || drivers[0];
+    visibleShipments = visibleShipments.filter(s => s.driverId === driverRecord.id);
+  } else if (user?.role === 'BusinessClient') {
+    visibleShipments = visibleShipments.filter(s => s.customerId === 'CUST-002'); // Example
+  } else if (user?.role === 'Customer') {
+    visibleShipments = visibleShipments.filter(s => s.customerId === (user?.organizationId || 'CUST-002'));
+  }
     
-    if (user?.role === 'Driver') {
-      filteredData = filteredData.filter(s => s.driver === 'Rahul Sharma');
-    } else if (user?.role === 'BusinessClient') {
-      filteredData = filteredData.filter(s => s.customer === 'Acme Retail');
-    } else if (user?.role === 'Customer') {
-      filteredData = filteredData.filter(s => s.customer === 'Nova Electronics');
-    }
-    // Administrator sees all
-    
-    setShipments(filteredData);
-  }, [user?.role]);
-
   const confirmCancel = () => {
     if (shipmentToCancel !== null) {
-      setShipments(shipments.map(s => 
-        s.id === shipmentToCancel ? { ...s, status: 'Cancelled' as const } : s
-      ));
+      updateShipmentStatus(shipmentToCancel, 'Cancelled', user?.id || 'sys', 'Shipment List View');
       setSelectedIds(selectedIds.filter(id => id !== shipmentToCancel));
       setShipmentToCancel(null);
     }
@@ -56,9 +50,9 @@ export function ShipmentList() {
   const isDriver = user?.role === 'Driver';
   const canCreate = ['Administrator', 'BusinessClient'].includes(user?.role || '');
   
-  const filteredShipments = shipments.filter(s => {
-    const matchesSearch = s.tracking.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          s.customer.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredShipments = visibleShipments.filter(s => {
+    const matchesSearch = s.trackingNumber.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          s.customerId.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === 'All Statuses' || s.status === filterStatus;
     return matchesSearch && matchesStatus;
   });
@@ -125,7 +119,7 @@ export function ShipmentList() {
               <option>Assigned</option>
               <option>In Transit</option>
               <option>Delivered</option>
-              <option>Exceptions</option>
+              <option>Failed</option>
               <option>Cancelled</option>
             </select>
           </div>
@@ -170,21 +164,21 @@ export function ShipmentList() {
                       />
                     </TableCell>
                     <TableCell>
-                      <Link to={`/shipments/${s.tracking}`} className="font-medium text-primary-600 hover:underline">
-                        {s.tracking}
+                      <Link to={`/shipments/${s.trackingNumber}`} className="font-medium text-primary-600 hover:underline">
+                        {s.trackingNumber}
                       </Link>
                     </TableCell>
-                    <TableCell>{s.customer}</TableCell>
-                    <TableCell>{s.origin}</TableCell>
-                    <TableCell>{s.destination}</TableCell>
+                    <TableCell>{s.customerId}</TableCell>
+                    <TableCell>{s.originAddress}</TableCell>
+                    <TableCell>{s.destinationAddress}</TableCell>
                     <TableCell>
-                      <Badge variant={s.status === 'Draft' || s.status === 'Ready for Planning' ? 'warning' : s.status === 'Exceptions' || s.status === 'Cancelled' ? 'danger' : s.status === 'Delivered' ? 'success' : 'info'}>
+                      <Badge variant={s.status === 'Draft' || s.status === 'Ready for Planning' ? 'warning' : s.status === 'Failed' || s.status === 'Cancelled' ? 'danger' : s.status === 'Delivered' ? 'success' : 'info'}>
                         {s.status}
                       </Badge>
                     </TableCell>
                     <TableCell>{s.eta}</TableCell>
                     <TableCell className="text-right flex justify-end space-x-2">
-                      <Button variant="ghost" size="sm" onClick={() => navigate(`/tracking/${s.tracking}`)}>Track</Button>
+                      <Button variant="ghost" size="sm" onClick={() => navigate(`/tracking/${s.trackingNumber}`)}>Track</Button>
                       {(!isDriver && user?.role !== 'Customer') && (
                         <Button 
                           variant="ghost" 
@@ -206,7 +200,7 @@ export function ShipmentList() {
           
           <div className="p-4 border-t border-navy-200 flex items-center justify-between">
             <span className="text-sm text-navy-500">
-              Showing {filteredShipments.length > 0 ? 1 : 0} to {filteredShipments.length} of {shipments.length} entries
+              Showing {filteredShipments.length > 0 ? 1 : 0} to {filteredShipments.length} of {visibleShipments.length} entries
               {selectedIds.length > 0 && <span className="ml-2 font-medium text-primary-600">({selectedIds.length} selected)</span>}
             </span>
             <div className="flex space-x-1">

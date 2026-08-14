@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { MOCK_USERS } from '@/services/mockData';
 
 export function Login() {
   const [email, setEmail] = useState('');
@@ -15,23 +16,14 @@ export function Login() {
     e.preventDefault();
     setIsLoading(true);
     
-    // Determine role based on email prefix for demo purposes
-    let role: 'Customer' | 'BusinessClient' | 'Driver' | 'Administrator' = 'Customer';
-    let name = 'Demo User';
-    
-    if (email.includes('admin')) { role = 'Administrator'; name = 'Admin User'; }
-    else if (email.includes('business')) { role = 'BusinessClient'; name = 'Acme Retail'; }
-    else if (email.includes('driver')) { role = 'Driver'; name = 'Rahul Sharma'; }
-    else if (email.includes('customer')) { role = 'Customer'; name = 'Nova Electronics'; }
+    // Within handleSubmit:
+    const mockUser = MOCK_USERS.find(u => 
+      email.includes(u.role.toLowerCase().replace('client', ''))
+    ) || MOCK_USERS[0];
 
     // Simulate API call
     setTimeout(() => {
-      login({
-        id: 'usr-1',
-        name,
-        email,
-        role
-      });
+      login(mockUser);
       navigate('/');
     }, 1000);
   };

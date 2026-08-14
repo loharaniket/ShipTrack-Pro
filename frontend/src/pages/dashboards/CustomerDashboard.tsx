@@ -4,20 +4,20 @@ import { Button } from '@/components/ui/Button';
 import { Search, MapPin, Navigation, Clock, Package, Truck, CheckCircle2, Box } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
 import { useAuth } from '@/context/AuthContext';
-import { useShipments } from '@/context/ShipmentContext';
+import { useDomain } from '@/context/DomainContext';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/Badge';
 
 export function CustomerDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { shipments } = useShipments();
+  const { shipments } = useDomain();
 
   const [trackingInput, setTrackingInput] = React.useState('');
   
   // Real security filtering
-  const customerName = user?.name || 'Nova Electronics';
-  const customerShipments = shipments.filter(s => s.customer === customerName);
+  const customerId = user?.organizationId || 'CUST-002'; // Nova Electronics fallback
+  const customerShipments = shipments.filter(s => s.customerId === customerId);
   
   const activeShipments = customerShipments.filter(s => s.status !== 'Delivered' && s.status !== 'Cancelled');
   const inTransitCount = customerShipments.filter(s => s.status === 'In Transit').length;
@@ -96,29 +96,29 @@ export function CustomerDashboard() {
                       <Box className="h-5 w-5 text-primary-600" />
                     </div>
                     <div>
-                      <CardTitle className="text-base font-bold text-navy-900">{s.tracking}</CardTitle>
+                      <CardTitle className="text-base font-bold text-navy-900">{s.trackingNumber}</CardTitle>
                       <p className="text-xs text-navy-500 mt-0.5 flex items-center">
-                        <Clock className="h-3 w-3 mr-1" /> Updated {s.lastUpdated}
+                        <Clock className="h-3 w-3 mr-1" /> Updated {s.statusHistory?.[0]?.timestamp || 'N/A'}
                       </p>
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent className="pt-4 space-y-4">
-                  <div className="flex justify-between items-center text-sm">
+                  <div className="flex justify-between items-center bg-navy-50 p-3 rounded-lg text-sm">
                     <div className="flex items-center text-navy-700">
-                      <MapPin className="h-4 w-4 mr-2 text-navy-400" /> {s.origin}
+                      <MapPin className="h-4 w-4 mr-2 text-primary-500" /> {s.originAddress}
                     </div>
                     <div className="flex items-center text-navy-700">
-                      <Navigation className="h-4 w-4 mr-2 text-navy-400" /> {s.destination}
+                      <Navigation className="h-4 w-4 mr-2 text-navy-400" /> {s.destinationAddress}
                     </div>
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span className="text-navy-500">Progress</span>
-                      <span className="font-medium">{s.progress}%</span>
+                      <span className="font-medium">{s.progressPercentage}%</span>
                     </div>
                     <div className="h-2 bg-navy-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-info-500" style={{ width: `${s.progress}%` }} />
+                      <div className="h-full bg-info-500" style={{ width: `${s.progressPercentage}%` }} />
                     </div>
                   </div>
                   <div className="flex items-center justify-between pt-2">
@@ -126,7 +126,7 @@ export function CustomerDashboard() {
                       <Clock className="h-4 w-4 mr-2 text-primary-500" />
                       ETA: {s.eta}
                     </div>
-                    <Button variant="outline" size="sm" onClick={() => navigate(`/shipments/${s.tracking}`)}>Track</Button>
+                    <Button variant="outline" size="sm" onClick={() => navigate(`/shipments/${s.trackingNumber}`)}>Track</Button>
                   </div>
                 </CardContent>
               </Card>
@@ -160,18 +160,18 @@ export function CustomerDashboard() {
               ) : (
                 customerShipments.map(s => (
                   <tr key={s.id} className="hover:bg-navy-50">
-                    <td className="px-6 py-4 font-medium">{s.tracking}</td>
-                    <td className="px-6 py-4">{s.origin}</td>
-                    <td className="px-6 py-4">{s.destination}</td>
+                    <td className="px-6 py-4 font-medium">{s.trackingNumber}</td>
+                    <td className="px-6 py-4">{s.originAddress}</td>
+                    <td className="px-6 py-4">{s.destinationAddress}</td>
                     <td className="px-6 py-4">
-                      <Badge variant={s.status === 'Delivered' ? 'success' : s.status === 'Exceptions' ? 'danger' : 'info'}>
+                      <Badge variant={s.status === 'Delivered' ? 'success' : s.status === 'Failed' ? 'danger' : 'info'}>
                         {s.status}
                       </Badge>
                     </td>
                     <td className="px-6 py-4">{s.eta}</td>
-                    <td className="px-6 py-4 text-navy-500">{s.lastUpdated}</td>
+                    <td className="px-6 py-4 text-navy-500">{s.statusHistory[0]?.timestamp || 'Unknown'}</td>
                     <td className="px-6 py-4 text-right">
-                      <Button variant="ghost" size="sm" onClick={() => navigate(`/tracking/${s.tracking}`)}>Track</Button>
+                      <Button variant="ghost" size="sm" onClick={() => navigate(`/tracking/${s.trackingNumber}`)}>Track</Button>
                     </td>
                   </tr>
                 ))

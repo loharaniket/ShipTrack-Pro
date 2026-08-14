@@ -3,14 +3,26 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Check, ArrowRight } from 'lucide-react';
+import { useDomain } from '@/context/DomainContext';
 
 export function RouteOptimization() {
+  const { routes, routeStops, optimizeRoute } = useDomain();
+  const [selectedRouteId, setSelectedRouteId] = useState<string>('');
   const [isApplying, setIsApplying] = useState(false);
   const [isApplied, setIsApplied] = useState(false);
 
+  const selectedRoute = routes.find(r => r.id === selectedRouteId);
+  const selectedRouteStops = routeStops.filter(s => s.routeId === selectedRouteId).sort((a, b) => a.sequence - b.sequence);
+
   const handleApply = () => {
+    if (!selectedRouteId || selectedRouteStops.length === 0) return;
     setIsApplying(true);
+    
+    // Deterministic mock optimization: reverse the stop sequence
+    const optimizedSequence = [...selectedRouteStops].reverse().map(s => s.id);
+
     setTimeout(() => {
+      optimizeRoute(selectedRouteId, optimizedSequence);
       setIsApplying(false);
       setIsApplied(true);
     }, 1500);
@@ -23,11 +35,30 @@ export function RouteOptimization() {
           <h1 className="text-2xl font-semibold text-navy-900">Route Optimization</h1>
           <p className="text-navy-500 mt-1">AI-powered route sequencing and assignment</p>
         </div>
-        <Button onClick={handleApply} disabled={isApplying || isApplied}>
+        <Button onClick={handleApply} disabled={isApplying || isApplied || !selectedRouteId}>
           {isApplying ? 'Applying...' : isApplied ? 'Applied' : 'Apply Optimization'}
         </Button>
       </div>
 
+      <div className="bg-white p-4 rounded-lg border border-navy-200 shadow-sm flex items-center space-x-4">
+        <label className="text-sm font-medium text-navy-700 whitespace-nowrap">Select Route:</label>
+        <select 
+          className="w-full max-w-md h-10 px-3 py-2 border border-navy-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+          value={selectedRouteId}
+          onChange={(e) => {
+            setSelectedRouteId(e.target.value);
+            setIsApplied(false);
+          }}
+        >
+          <option value="" disabled>Select a route to optimize...</option>
+          {routes.filter(r => r.status === 'Planned' || r.status === 'In Progress').map(r => (
+            <option key={r.id} value={r.id}>{r.name} ({r.id}) - {routeStops.filter(s => s.routeId === r.id).length} stops</option>
+          ))}
+        </select>
+      </div>
+
+      {selectedRoute ? (
+        <>
       <div className="grid md:grid-cols-2 gap-6">
         <Card className="border-navy-200 opacity-75">
           <CardHeader className="bg-navy-50 border-b border-navy-200">
@@ -37,15 +68,15 @@ export function RouteOptimization() {
             <div className="grid grid-cols-3 gap-4 text-center">
               <div>
                 <p className="text-sm text-navy-500">Distance</p>
-                <p className="text-xl font-semibold text-navy-900">185 km</p>
+                <p className="text-xl font-semibold text-navy-900">{selectedRoute.estimatedDistanceKm} km</p>
               </div>
               <div>
                 <p className="text-sm text-navy-500">Time</p>
-                <p className="text-xl font-semibold text-navy-900">4h 20m</p>
+                <p className="text-xl font-semibold text-navy-900">{Math.floor(selectedRoute.estimatedDurationMins / 60)}h {selectedRoute.estimatedDurationMins % 60}m</p>
               </div>
               <div>
                 <p className="text-sm text-navy-500">Stops</p>
-                <p className="text-xl font-semibold text-navy-900">8</p>
+                <p className="text-xl font-semibold text-navy-900">{selectedRouteStops.length}</p>
               </div>
             </div>
             
@@ -70,20 +101,20 @@ export function RouteOptimization() {
               <div>
                 <p className="text-sm text-navy-500">Distance</p>
                 <div className="flex items-center justify-center text-xl font-semibold text-success-600">
-                  142 km
+                  {Math.round(selectedRoute.estimatedDistanceKm * 0.8)} km
                 </div>
-                <p className="text-xs text-success-500 mt-1">-43 km</p>
+                <p className="text-xs text-success-500 mt-1">-{Math.round(selectedRoute.estimatedDistanceKm * 0.2)} km</p>
               </div>
               <div>
                 <p className="text-sm text-navy-500">Time</p>
                 <div className="flex items-center justify-center text-xl font-semibold text-success-600">
-                  3h 45m
+                  {Math.floor((selectedRoute.estimatedDurationMins * 0.85) / 60)}h {Math.round((selectedRoute.estimatedDurationMins * 0.85) % 60)}m
                 </div>
-                <p className="text-xs text-success-500 mt-1">-35 min</p>
+                <p className="text-xs text-success-500 mt-1">-{Math.round(selectedRoute.estimatedDurationMins * 0.15)} min</p>
               </div>
               <div>
                 <p className="text-sm text-navy-500">Stops</p>
-                <p className="text-xl font-semibold text-navy-900">8</p>
+                <p className="text-xl font-semibold text-navy-900">{selectedRouteStops.length}</p>
               </div>
             </div>
 
@@ -106,7 +137,7 @@ export function RouteOptimization() {
               </div>
               <div>
                 <h3 className="font-semibold text-success-900">Optimization Ready</h3>
-                <p className="text-sm text-success-700 mt-1">Applying this route will save an estimated 43km and 35 minutes of driving time.</p>
+                <p className="text-sm text-success-700 mt-1">Applying this route will save an estimated {Math.round(selectedRoute.estimatedDistanceKm * 0.2)}km and {Math.round(selectedRoute.estimatedDurationMins * 0.15)} minutes of driving time.</p>
               </div>
             </div>
             <Button className="bg-success-600 hover:bg-success-700 text-white border-0" onClick={handleApply} disabled={isApplying}>
@@ -124,6 +155,12 @@ export function RouteOptimization() {
             <p className="text-sm text-indigo-700 mt-1">Drivers have been notified of their new route sequences.</p>
           </CardContent>
         </Card>
+      )}
+        </>
+      ) : (
+        <div className="text-center py-16 bg-white rounded-lg border border-navy-200">
+          <p className="text-navy-500">Please select a route to run the optimization engine.</p>
+        </div>
       )}
     </div>
   );
