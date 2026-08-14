@@ -2,9 +2,33 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table';
-import { Package, Truck, AlertTriangle, Route, Users, MapPin, CheckCircle } from 'lucide-react';
+import { Package, Truck, AlertTriangle, Route, Users, MapPin, CheckCircle, Clock } from 'lucide-react';
+import { MOCK_SHIPMENTS } from '@/services/mockData';
 
 export function AdministratorDashboard() {
+  const totalShipments = MOCK_SHIPMENTS.length;
+  const readyForPlan = MOCK_SHIPMENTS.filter(s => s.status === 'Ready for Planning').length;
+  const assigned = MOCK_SHIPMENTS.filter(s => s.status === 'Assigned').length;
+  const inTransit = MOCK_SHIPMENTS.filter(s => ['Picked Up', 'In Transit', 'Out for Delivery'].includes(s.status)).length;
+  const delivered = MOCK_SHIPMENTS.filter(s => s.status === 'Delivered').length;
+  const exceptions = MOCK_SHIPMENTS.filter(s => s.status === 'Exceptions').length;
+  
+  // Calculate active routes based on unique routes for shipments not delivered/cancelled
+  const activeRoutes = new Set(
+    MOCK_SHIPMENTS
+      .filter(s => s.route && !['Delivered', 'Cancelled', 'Exceptions'].includes(s.status))
+      .map(s => s.route)
+  ).size;
+
+  const mockDrivers = [
+    { id: 1, name: 'Rahul Sharma', status: 'On Route', location: 'Pune Highway', vehicle: 'MH-12-AB-4821' },
+    { id: 2, name: 'Amit Singh', status: 'Available', location: 'Mumbai DC', vehicle: 'MH-14-XY-9922' },
+    { id: 3, name: 'Vijay Singh', status: 'Available', location: 'Kolkata Port', vehicle: 'MH-01-AB-1234' },
+    { id: 4, name: 'Suresh Kumar', status: 'On Route', location: 'Navi Mumbai', vehicle: 'MH-43-XY-5544' },
+  ];
+  
+  const availableDrivers = mockDrivers.filter(d => d.status === 'Available').length;
+
   return (
     <div className="space-y-6">
       <div>
@@ -16,56 +40,56 @@ export function AdministratorDashboard() {
         <Card className="xl:col-span-1">
           <CardContent className="p-4 flex flex-col items-center text-center">
             <Package className="h-6 w-6 text-navy-400 mb-2" />
-            <div className="text-2xl font-bold">1,245</div>
+            <div className="text-2xl font-bold">{totalShipments}</div>
             <p className="text-xs text-navy-500 text-nowrap">Total Shipments</p>
           </CardContent>
         </Card>
         <Card className="xl:col-span-1">
           <CardContent className="p-4 flex flex-col items-center text-center">
             <MapPin className="h-6 w-6 text-warning-400 mb-2" />
-            <div className="text-2xl font-bold">82</div>
+            <div className="text-2xl font-bold">{readyForPlan}</div>
             <p className="text-xs text-navy-500 text-nowrap">Ready for Plan</p>
           </CardContent>
         </Card>
         <Card className="xl:col-span-1">
           <CardContent className="p-4 flex flex-col items-center text-center">
             <Truck className="h-6 w-6 text-info-400 mb-2" />
-            <div className="text-2xl font-bold">340</div>
+            <div className="text-2xl font-bold">{assigned}</div>
             <p className="text-xs text-navy-500 text-nowrap">Assigned</p>
           </CardContent>
         </Card>
         <Card className="xl:col-span-1">
           <CardContent className="p-4 flex flex-col items-center text-center">
             <Route className="h-6 w-6 text-primary-400 mb-2" />
-            <div className="text-2xl font-bold">216</div>
+            <div className="text-2xl font-bold">{inTransit}</div>
             <p className="text-xs text-navy-500 text-nowrap">In Transit</p>
           </CardContent>
         </Card>
         <Card className="xl:col-span-1">
           <CardContent className="p-4 flex flex-col items-center text-center">
             <CheckCircle className="h-6 w-6 text-success-400 mb-2" />
-            <div className="text-2xl font-bold">589</div>
+            <div className="text-2xl font-bold">{delivered}</div>
             <p className="text-xs text-navy-500 text-nowrap">Delivered</p>
           </CardContent>
         </Card>
         <Card className="xl:col-span-1">
           <CardContent className="p-4 flex flex-col items-center text-center border-b-4 border-danger-500">
             <AlertTriangle className="h-6 w-6 text-danger-400 mb-2" />
-            <div className="text-2xl font-bold text-danger-600">18</div>
+            <div className="text-2xl font-bold text-danger-600">{exceptions}</div>
             <p className="text-xs text-navy-500 text-nowrap">Exceptions</p>
           </CardContent>
         </Card>
         <Card className="xl:col-span-1">
           <CardContent className="p-4 flex flex-col items-center text-center">
             <Route className="h-6 w-6 text-indigo-400 mb-2" />
-            <div className="text-2xl font-bold">42</div>
+            <div className="text-2xl font-bold">{activeRoutes}</div>
             <p className="text-xs text-navy-500 text-nowrap">Active Routes</p>
           </CardContent>
         </Card>
         <Card className="xl:col-span-1">
           <CardContent className="p-4 flex flex-col items-center text-center">
             <Users className="h-6 w-6 text-success-400 mb-2" />
-            <div className="text-2xl font-bold">12</div>
+            <div className="text-2xl font-bold">{availableDrivers}</div>
             <p className="text-xs text-navy-500 text-nowrap">Avail. Drivers</p>
           </CardContent>
         </Card>
@@ -88,34 +112,19 @@ export function AdministratorDashboard() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                <TableRow>
-                  <TableCell className="font-medium">SHP001</TableCell>
-                  <TableCell>ABC Ltd</TableCell>
-                  <TableCell><Badge variant="info">Assigned</Badge></TableCell>
-                  <TableCell>Rahul Sharma</TableCell>
-                  <TableCell>RT102</TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell className="font-medium">SHP002</TableCell>
-                  <TableCell>XYZ Ltd</TableCell>
-                  <TableCell><Badge variant="warning">Ready for Planning</Badge></TableCell>
-                  <TableCell className="text-navy-400">Unassigned</TableCell>
-                  <TableCell className="text-navy-400">-</TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell className="font-medium">SHP003</TableCell>
-                  <TableCell>PQR Ltd</TableCell>
-                  <TableCell><Badge variant="primary">In Transit</Badge></TableCell>
-                  <TableCell>Amit Patel</TableCell>
-                  <TableCell>RT104</TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell className="font-medium">SHP004</TableCell>
-                  <TableCell>LMN Corp</TableCell>
-                  <TableCell><Badge variant="success">Delivered</Badge></TableCell>
-                  <TableCell>Suresh Kumar</TableCell>
-                  <TableCell>RT101</TableCell>
-                </TableRow>
+                {MOCK_SHIPMENTS.slice(0, 5).map(s => (
+                  <TableRow key={s.id}>
+                    <TableCell className="font-medium">{s.tracking}</TableCell>
+                    <TableCell>{s.customer}</TableCell>
+                    <TableCell>
+                      <Badge variant={s.status === 'Delivered' ? 'success' : s.status === 'Exceptions' ? 'danger' : s.status === 'Ready for Planning' || s.status === 'Draft' ? 'warning' : 'info'}>
+                        {s.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className={!s.driver ? "text-navy-400" : ""}>{s.driver || 'Unassigned'}</TableCell>
+                    <TableCell className={!s.route ? "text-navy-400" : ""}>{s.route || '-'}</TableCell>
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
           </CardContent>
@@ -123,67 +132,74 @@ export function AdministratorDashboard() {
 
         <Card>
           <CardHeader className="border-b border-navy-100 pb-3">
-            <CardTitle className="text-lg">Active Routes</CardTitle>
+            <CardTitle className="text-lg">Driver Availability</CardTitle>
           </CardHeader>
           <CardContent className="p-0 overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Route</TableHead>
                   <TableHead>Driver</TableHead>
-                  <TableHead>Stops</TableHead>
-                  <TableHead>Progress</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Location</TableHead>
+                  <TableHead>Vehicle</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                <TableRow>
-                  <TableCell className="font-medium">RT102</TableCell>
-                  <TableCell>Rahul Sharma</TableCell>
-                  <TableCell>8</TableCell>
-                  <TableCell>
-                    <div className="flex items-center space-x-2">
-                      <div className="h-1.5 w-16 bg-navy-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-primary-500 w-[37.5%]" />
-                      </div>
-                      <span className="text-xs text-navy-500">3/8</span>
-                    </div>
-                  </TableCell>
-                  <TableCell><Badge variant="primary">In Progress</Badge></TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell className="font-medium">RT104</TableCell>
-                  <TableCell>Amit Patel</TableCell>
-                  <TableCell>12</TableCell>
-                  <TableCell>
-                    <div className="flex items-center space-x-2">
-                      <div className="h-1.5 w-16 bg-navy-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-primary-500 w-[75%]" />
-                      </div>
-                      <span className="text-xs text-navy-500">9/12</span>
-                    </div>
-                  </TableCell>
-                  <TableCell><Badge variant="primary">In Progress</Badge></TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell className="font-medium">RT105</TableCell>
-                  <TableCell>Vijay Singh</TableCell>
-                  <TableCell>5</TableCell>
-                  <TableCell>
-                    <div className="flex items-center space-x-2">
-                      <div className="h-1.5 w-16 bg-navy-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-primary-500 w-[0%]" />
-                      </div>
-                      <span className="text-xs text-navy-500">0/5</span>
-                    </div>
-                  </TableCell>
-                  <TableCell><Badge variant="info">Assigned</Badge></TableCell>
-                </TableRow>
+                {mockDrivers.map(d => (
+                  <TableRow key={d.id}>
+                    <TableCell className="font-medium">{d.name}</TableCell>
+                    <TableCell>
+                      <Badge variant={d.status === 'Available' ? 'success' : 'primary'}>
+                        {d.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{d.location}</TableCell>
+                    <TableCell>{d.vehicle}</TableCell>
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
           </CardContent>
         </Card>
       </div>
+      
+      {/* Exceptions and Alerts row */}
+      {exceptions > 0 && (
+        <Card className="border-danger-200">
+          <CardHeader className="bg-danger-50 border-b border-danger-100 pb-3">
+            <CardTitle className="text-lg text-danger-900 flex items-center">
+              <AlertTriangle className="h-5 w-5 mr-2" /> 
+              Operational Exceptions Requires Attention
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0 overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Shipment ID</TableHead>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Driver</TableHead>
+                  <TableHead>Issue</TableHead>
+                  <TableHead>Last Updated</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {MOCK_SHIPMENTS.filter(s => s.status === 'Exceptions').map(s => (
+                  <TableRow key={s.id}>
+                    <TableCell className="font-medium text-danger-700">{s.tracking}</TableCell>
+                    <TableCell>{s.customer}</TableCell>
+                    <TableCell>{s.driver || '-'}</TableCell>
+                    <TableCell className="font-medium">Delivery Delayed / Address Issue</TableCell>
+                    <TableCell className="flex items-center text-navy-500">
+                      <Clock className="h-3 w-3 mr-1" /> {s.lastUpdated}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

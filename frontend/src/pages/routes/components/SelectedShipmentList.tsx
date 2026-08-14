@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { GripVertical, Trash2 } from 'lucide-react';
-import { ShipmentData } from './ShipmentPlanningCard';
+import { ShipmentData } from '@/services/mockData';
 
 interface SelectedShipmentListProps {
   selectedShipments: ShipmentData[];

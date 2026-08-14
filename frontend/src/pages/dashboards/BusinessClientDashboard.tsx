@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table';
 import { Button } from '@/components/ui/Button';
@@ -7,39 +7,51 @@ import { Package, Truck, CheckCircle2, Clock, FileDown, Plus, Trash2 } from 'luc
 import { useNavigate } from 'react-router-dom';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
+import { MOCK_SHIPMENTS, ShipmentData } from '@/services/mockData';
 
 export function BusinessClientDashboard() {
   const navigate = useNavigate();
-  const [shipments, setShipments] = useState([
-    { id: 1, tracking: 'STP-2026-10481', origin: 'Mumbai DC', dest: 'Pune Hub', stat: 'In Transit', eta: 'Today, 4:00 PM' },
-    { id: 2, tracking: 'STP-2026-10482', origin: 'Mumbai DC', dest: 'Thane', stat: 'Delivered', eta: '-' },
-    { id: 3, tracking: 'STP-2026-10483', origin: 'Mumbai DC', dest: 'Nashik', stat: 'In Transit', eta: 'Tomorrow, 10:00 AM' },
-    { id: 4, tracking: 'STP-2026-10484', origin: 'Mumbai DC', dest: 'Pune Hub', stat: 'Delivered', eta: '-' },
-    { id: 5, tracking: 'STP-2026-10485', origin: 'Mumbai DC', dest: 'Aurangabad', stat: 'In Transit', eta: 'Today, 6:00 PM' },
-  ]);
+  const customerName = 'Acme Retail'; // Mock BusinessClient org
+  
+  // Initialize with central mock data, filtered for this business client
+  const [shipments, setShipments] = useState<ShipmentData[]>([]);
+
+  useEffect(() => {
+    setShipments(MOCK_SHIPMENTS.filter(s => s.customer === customerName));
+  }, []);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [newShipment, setNewShipment] = useState({ dest: '', eta: 'Pending' });
-  const [shipmentToCancel, setShipmentToCancel] = useState<number | null>(null);
+  const [newShipment, setNewShipment] = useState({ dest: '' });
+  const [shipmentToCancel, setShipmentToCancel] = useState<string | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
 
   const handleAddShipment = () => {
     if (!newShipment.dest) return;
-    setShipments([...shipments, {
-      id: Date.now(),
-      tracking: `STP-2026-10${480 + shipments.length + 1}`,
+    const newId = `STP-2026-10${480 + shipments.length + 1}`;
+    setShipments([{
+      id: Date.now().toString(),
+      tracking: newId,
+      customer: customerName,
       origin: 'Mumbai DC',
-      dest: newShipment.dest,
-      stat: 'Processing',
-      eta: newShipment.eta
-    }]);
+      destination: newShipment.dest,
+      status: 'Draft',
+      priority: 'Standard',
+      driver: null,
+      route: null,
+      vehicle: null,
+      eta: 'Pending',
+      lastUpdated: 'Just now',
+      progress: 0
+    }, ...shipments]);
     setIsModalOpen(false);
-    setNewShipment({ dest: '', eta: 'Pending' });
+    setNewShipment({ dest: '' });
   };
 
   const confirmCancel = () => {
     if (shipmentToCancel !== null) {
-      setShipments(shipments.filter(s => s.id !== shipmentToCancel));
+      setShipments(shipments.map(s => 
+        s.id === shipmentToCancel ? { ...s, status: 'Cancelled' as const } : s
+      ));
       setShipmentToCancel(null);
     }
   };
@@ -52,7 +64,13 @@ export function BusinessClientDashboard() {
     }, 1500);
   };
 
-  const activeShipmentsCount = shipments.filter(s => s.stat !== 'Delivered').length;
+  const totalShipments = shipments.length;
+  const activeShipmentsCount = shipments.filter(s => s.status !== 'Delivered' && s.status !== 'Cancelled').length;
+  const deliveredCount = shipments.filter(s => s.status === 'Delivered').length;
+
+  const canCancel = (status: string) => {
+    return ['Draft', 'Ready for Planning', 'Planned'].includes(status);
+  };
 
   return (
     <div className="space-y-6">
@@ -79,8 +97,7 @@ export function BusinessClientDashboard() {
             <Package className="h-4 w-4 text-navy-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{12477 + shipments.length}</div>
-            <p className="text-xs text-success-500 mt-1">+14.2% this month</p>
+            <div className="text-2xl font-bold">{totalShipments}</div>
           </CardContent>
         </Card>
         <Card>
@@ -89,28 +106,26 @@ export function BusinessClientDashboard() {
             <Truck className="h-4 w-4 text-info-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{139 + activeShipmentsCount}</div>
-            <p className="text-xs text-navy-400 mt-1">Processing included</p>
+            <div className="text-2xl font-bold">{activeShipmentsCount}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-navy-500">Delivered</CardTitle>
+            <CheckCircle2 className="h-4 w-4 text-success-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{deliveredCount}</div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-navy-500">On-Time Delivery</CardTitle>
-            <CheckCircle2 className="h-4 w-4 text-success-500" />
+            <Clock className="h-4 w-4 text-warning-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">96.4%</div>
             <p className="text-xs text-navy-400 mt-1">Target: 98.0%</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-navy-500">Avg Delivery Time</CardTitle>
-            <Clock className="h-4 w-4 text-warning-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">1.2 Days</div>
-            <p className="text-xs text-success-500 mt-1">-0.3 days from avg</p>
           </CardContent>
         </Card>
       </div>
@@ -132,39 +147,40 @@ export function BusinessClientDashboard() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {shipments.length === 0 && (
+              {shipments.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-8 text-navy-500">
                     No shipments found. Create a new one to get started.
                   </TableCell>
                 </TableRow>
+              ) : (
+                shipments.map((s) => (
+                  <TableRow key={s.id}>
+                    <TableCell className="font-medium text-primary-600">{s.tracking}</TableCell>
+                    <TableCell>{s.origin}</TableCell>
+                    <TableCell>{s.destination}</TableCell>
+                    <TableCell>
+                      <Badge variant={s.status === 'Draft' || s.status === 'Ready for Planning' ? 'warning' : s.status === 'Delivered' ? 'success' : s.status === 'Cancelled' ? 'danger' : 'info'}>
+                        {s.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{s.eta}</TableCell>
+                    <TableCell className="text-right flex justify-end space-x-2">
+                      <Button variant="ghost" size="sm" onClick={() => navigate(`/tracking/${s.tracking}`)}>Track</Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-danger-600 hover:text-danger-700 hover:bg-danger-50 disabled:opacity-30 disabled:hover:bg-transparent" 
+                        onClick={() => setShipmentToCancel(s.id)}
+                        disabled={!canCancel(s.status)}
+                        title={!canCancel(s.status) ? `Cannot cancel shipment in ${s.status} state` : "Cancel Shipment"}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
               )}
-              {shipments.map((s) => (
-                <TableRow key={s.id}>
-                  <TableCell className="font-medium text-primary-600">{s.tracking}</TableCell>
-                  <TableCell>{s.origin}</TableCell>
-                  <TableCell>{s.dest}</TableCell>
-                  <TableCell>
-                    <Badge variant={s.stat === 'Processing' ? 'warning' : s.stat === 'In Transit' ? 'info' : 'success'}>
-                      {s.stat}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{s.eta}</TableCell>
-                  <TableCell className="text-right flex justify-end space-x-2">
-                    <Button variant="ghost" size="sm" onClick={() => navigate(`/tracking/${s.tracking}`)}>Track</Button>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="text-danger-600 hover:text-danger-700 hover:bg-danger-50" 
-                      onClick={() => setShipmentToCancel(s.id)}
-                      disabled={s.stat === 'Delivered'}
-                      title={s.stat === 'Delivered' ? "Cannot cancel delivered shipments" : "Cancel Shipment"}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
             </TableBody>
           </Table>
         </CardContent>

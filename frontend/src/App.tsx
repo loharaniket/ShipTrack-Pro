@@ -65,9 +65,13 @@ function App() {
             
             {/* Business / Admin Only */}
             <Route element={<ProtectedRoute allowedRoles={['BusinessClient', 'Administrator']} />}>
+              <Route path="/analytics" element={<ExecutiveAnalytics />} />
+            </Route>
+
+            {/* Admin Only - Operational Control */}
+            <Route element={<ProtectedRoute allowedRoles={['Administrator']} />}>
               <Route path="/routes/planner" element={<RoutePlanner />} />
               <Route path="/routes/optimization" element={<RouteOptimization />} />
-              <Route path="/analytics" element={<ExecutiveAnalytics />} />
             </Route>
 
             {/* Admin Only - Operational Control is now just Admin */}

@@ -3,7 +3,7 @@ import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Navigation, Users, CheckCircle, Car } from 'lucide-react';
-import { ShipmentData } from './ShipmentPlanningCard';
+import { ShipmentData } from '@/services/mockData';
 import { SelectedShipmentList } from './SelectedShipmentList';
 
 interface RouteSummaryPanelProps {

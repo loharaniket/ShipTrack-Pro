@@ -1,19 +1,7 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
-
-export interface ShipmentData {
-  id: string;
-  customer: string;
-  pickup: string;
-  delivery: string;
-  distance: string;
-  priority: 'High' | 'Standard' | 'Urgent';
-  deadline: string;
-  status: 'Available' | 'Already Planned' | 'Assigned' | 'Completed' | 'Cancelled';
-  assignedTo?: string;
-  packageCount: number;
-}
+import { ShipmentData } from '@/services/mockData';
 
 interface ShipmentPlanningCardProps {
   shipment: ShipmentData;
@@ -22,38 +10,42 @@ interface ShipmentPlanningCardProps {
 }
 
 export function ShipmentPlanningCard({ shipment, isSelected, onToggle }: ShipmentPlanningCardProps) {
-  const isAvailable = shipment.status === 'Available';
+  const isAvailable = shipment.status === 'Ready for Planning';
 
   const getStatusMessage = () => {
     switch (shipment.status) {
-      case 'Available':
+      case 'Ready for Planning':
         return 'Ready for route planning';
-      case 'Already Planned':
-        return `Assigned to Route ${shipment.assignedTo}`;
+      case 'Planned':
+        return `Assigned to Route ${shipment.route || 'Pending'}`;
       case 'Assigned':
-        return `Assigned to Driver ${shipment.assignedTo}`;
-      case 'Completed':
+        return `Assigned to Driver ${shipment.driver}`;
+      case 'Delivered':
         return 'Delivered shipments cannot be planned';
       case 'Cancelled':
         return 'Cancelled shipment cannot be planned';
       default:
-        return '';
+        return shipment.status;
     }
   };
 
   const getStatusColor = () => {
     switch (shipment.status) {
-      case 'Available':
+      case 'Ready for Planning':
         return 'bg-success-50 border-success-200 text-success-700';
-      case 'Already Planned':
+      case 'Planned':
       case 'Assigned':
+      case 'Picked Up':
+      case 'In Transit':
+      case 'Out for Delivery':
         return 'bg-indigo-50 border-indigo-200 text-indigo-700';
-      case 'Completed':
+      case 'Delivered':
         return 'bg-navy-50 border-navy-200 text-navy-500';
       case 'Cancelled':
+      case 'Exceptions':
         return 'bg-danger-50 border-danger-200 text-danger-700';
       default:
-        return '';
+        return 'bg-navy-50 border-navy-200 text-navy-500';
     }
   };
 
@@ -70,7 +62,7 @@ export function ShipmentPlanningCard({ shipment, isSelected, onToggle }: Shipmen
       <CardContent className="p-4">
         <div className="flex justify-between items-start mb-2">
           <div className="flex items-center space-x-2">
-            <span className="font-semibold text-navy-900">{shipment.id}</span>
+            <span className="font-semibold text-navy-900">{shipment.tracking}</span>
             <Badge variant={getPriorityVariant()}>{shipment.priority}</Badge>
           </div>
           <div className="flex items-center">
@@ -93,19 +85,19 @@ export function ShipmentPlanningCard({ shipment, isSelected, onToggle }: Shipmen
         <div className="space-y-2 mb-4">
           <div>
             <p className="text-sm font-medium text-navy-900">{shipment.customer}</p>
-            <p className="text-xs text-navy-500">{shipment.packageCount} Package(s) • {shipment.distance}</p>
+            <p className="text-xs text-navy-500">{shipment.packageCount || 1} Package(s) • {shipment.distance || 'Unknown distance'}</p>
           </div>
           
           <div className="flex items-center text-sm text-navy-700 bg-navy-50 p-2 rounded-md">
             <div className="flex flex-col flex-1 relative">
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-navy-400 shrink-0" />
-                <span className="truncate">{shipment.pickup}</span>
+                <span className="truncate">{shipment.origin}</span>
               </div>
               <div className="w-0.5 h-3 bg-navy-200 ml-1 my-0.5" />
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-primary-500 shrink-0" />
-                <span className="truncate">{shipment.delivery}</span>
+                <span className="truncate">{shipment.destination}</span>
               </div>
             </div>
           </div>

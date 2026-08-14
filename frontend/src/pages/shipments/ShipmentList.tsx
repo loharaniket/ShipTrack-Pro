@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table';
 import { Button } from '@/components/ui/Button';
@@ -7,27 +7,40 @@ import { Input } from '@/components/ui/Input';
 import { Plus, Filter, Download, XCircle } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
+import { MOCK_SHIPMENTS, ShipmentData } from '@/services/mockData';
 
 export function ShipmentList() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('All Statuses');
-  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isExporting, setIsExporting] = useState(false);
-  const [shipmentToCancel, setShipmentToCancel] = useState<number | null>(null);
+  const [shipmentToCancel, setShipmentToCancel] = useState<string | null>(null);
   
-  const [shipments, setShipments] = useState([
-    { id: 1, tracking: 'STP-2026-10481', cust: 'Acme Retail', origin: 'Mumbai DC', dest: 'Pune Business Park', stat: 'In Transit', eta: 'Today, 2:30 PM', driverAssigned: 'Rahul Sharma' },
-    { id: 2, tracking: 'STP-2026-10482', cust: 'Nova Electronics', origin: 'Delhi Hub', dest: 'Gurgaon', stat: 'Delivered', eta: '-', driverAssigned: 'Amit Singh' },
-    { id: 3, tracking: 'STP-2026-10483', cust: 'UrbanCart', origin: 'Bangalore', dest: 'Chennai', stat: 'Exceptions', eta: 'Tomorrow, 10:00 AM', driverAssigned: 'Rahul Sharma' },
-    { id: 4, tracking: 'STP-2026-10484', cust: 'FreshFoods', origin: 'Hyderabad', dest: 'Pune Business Park', stat: 'Delivered', eta: '-', driverAssigned: 'Suresh Kumar' },
-    { id: 5, tracking: 'STP-2026-10485', cust: 'Acme Retail', origin: 'Mumbai DC', dest: 'Surat', stat: 'Ready for Planning', eta: '-', driverAssigned: 'Unassigned' },
-  ]);
+  const [shipments, setShipments] = useState<ShipmentData[]>([]);
+
+  useEffect(() => {
+    // Role-based filtering of the central mock data
+    let filteredData = [...MOCK_SHIPMENTS];
+    
+    if (user?.role === 'Driver') {
+      filteredData = filteredData.filter(s => s.driver === 'Rahul Sharma');
+    } else if (user?.role === 'BusinessClient') {
+      filteredData = filteredData.filter(s => s.customer === 'Acme Retail');
+    } else if (user?.role === 'Customer') {
+      filteredData = filteredData.filter(s => s.customer === 'Nova Electronics');
+    }
+    // Administrator sees all
+    
+    setShipments(filteredData);
+  }, [user?.role]);
 
   const confirmCancel = () => {
     if (shipmentToCancel !== null) {
-      setShipments(shipments.filter(s => s.id !== shipmentToCancel));
+      setShipments(shipments.map(s => 
+        s.id === shipmentToCancel ? { ...s, status: 'Cancelled' as const } : s
+      ));
       setSelectedIds(selectedIds.filter(id => id !== shipmentToCancel));
       setShipmentToCancel(null);
     }
@@ -41,33 +54,34 @@ export function ShipmentList() {
   };
 
   const isDriver = user?.role === 'Driver';
+  const isBusinessClient = user?.role === 'BusinessClient';
+  const canCreate = ['Administrator', 'BusinessClient'].includes(user?.role || '');
   
-  // Base list depending on role
-  const viewableShipments = isDriver 
-    ? shipments.filter(s => s.driverAssigned === 'Rahul Sharma') // Mock match for logged in driver
-    : shipments;
-
-  const filteredShipments = viewableShipments.filter(s => {
+  const filteredShipments = shipments.filter(s => {
     const matchesSearch = s.tracking.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          s.cust.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = filterStatus === 'All Statuses' || s.stat === filterStatus;
+                          s.customer.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = filterStatus === 'All Statuses' || s.status === filterStatus;
     return matchesSearch && matchesStatus;
   });
 
   const toggleSelectAll = () => {
-    if (selectedIds.length === filteredShipments.length) {
+    if (selectedIds.length === filteredShipments.length && filteredShipments.length > 0) {
       setSelectedIds([]);
     } else {
       setSelectedIds(filteredShipments.map(s => s.id));
     }
   };
 
-  const toggleSelect = (id: number) => {
+  const toggleSelect = (id: string) => {
     if (selectedIds.includes(id)) {
       setSelectedIds(selectedIds.filter(selectedId => selectedId !== id));
     } else {
       setSelectedIds([...selectedIds, id]);
     }
+  };
+
+  const canCancel = (status: string) => {
+    return ['Draft', 'Ready for Planning', 'Planned'].includes(status);
   };
 
   return (
@@ -82,7 +96,7 @@ export function ShipmentList() {
             <Download className={`h-4 w-4 mr-2 ${isExporting ? 'animate-bounce' : ''}`} /> 
             {isExporting ? 'Exporting...' : 'Export'}
           </Button>
-          {!isDriver && (
+          {canCreate && (
             <Link to="/shipments/create">
               <Button><Plus className="h-4 w-4 mr-2" /> Create Shipment</Button>
             </Link>
@@ -107,11 +121,13 @@ export function ShipmentList() {
               onChange={(e) => setFilterStatus(e.target.value)}
             >
               <option>All Statuses</option>
+              <option>Draft</option>
               <option>Ready for Planning</option>
               <option>Assigned</option>
               <option>In Transit</option>
               <option>Delivered</option>
               <option>Exceptions</option>
+              <option>Cancelled</option>
             </select>
           </div>
         </div>
@@ -137,54 +153,55 @@ export function ShipmentList() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredShipments.length === 0 && (
+              {filteredShipments.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={8} className="text-center py-8 text-navy-500">
                     No shipments found matching your criteria.
                   </TableCell>
                 </TableRow>
+              ) : (
+                filteredShipments.map((s) => (
+                  <TableRow key={s.id} className={selectedIds.includes(s.id) ? 'bg-primary-50/50' : ''}>
+                    <TableCell>
+                      <input 
+                        type="checkbox" 
+                        className="rounded border-navy-300 cursor-pointer" 
+                        checked={selectedIds.includes(s.id)}
+                        onChange={() => toggleSelect(s.id)}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Link to={`/shipments/${s.tracking}`} className="font-medium text-primary-600 hover:underline">
+                        {s.tracking}
+                      </Link>
+                    </TableCell>
+                    <TableCell>{s.customer}</TableCell>
+                    <TableCell>{s.origin}</TableCell>
+                    <TableCell>{s.destination}</TableCell>
+                    <TableCell>
+                      <Badge variant={s.status === 'Draft' || s.status === 'Ready for Planning' ? 'warning' : s.status === 'Exceptions' || s.status === 'Cancelled' ? 'danger' : s.status === 'Delivered' ? 'success' : 'info'}>
+                        {s.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{s.eta}</TableCell>
+                    <TableCell className="text-right flex justify-end space-x-2">
+                      <Button variant="ghost" size="sm" onClick={() => navigate(`/tracking/${s.tracking}`)}>Track</Button>
+                      {(!isDriver && user?.role !== 'Customer') && (
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-danger-600 hover:text-danger-700 hover:bg-danger-50 disabled:opacity-30 disabled:hover:bg-transparent" 
+                          onClick={() => setShipmentToCancel(s.id)} 
+                          title={!canCancel(s.status) ? `Cannot cancel shipment in ${s.status} state` : "Cancel Shipment"}
+                          disabled={!canCancel(s.status)}
+                        >
+                          <XCircle className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))
               )}
-              {filteredShipments.map((s) => (
-                <TableRow key={s.id} className={selectedIds.includes(s.id) ? 'bg-primary-50/50' : ''}>
-                  <TableCell>
-                    <input 
-                      type="checkbox" 
-                      className="rounded border-navy-300 cursor-pointer" 
-                      checked={selectedIds.includes(s.id)}
-                      onChange={() => toggleSelect(s.id)}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Link to={`/shipments/${s.tracking}`} className="font-medium text-primary-600 hover:underline">
-                      {s.tracking}
-                    </Link>
-                  </TableCell>
-                  <TableCell>{s.cust}</TableCell>
-                  <TableCell>{s.origin}</TableCell>
-                  <TableCell>{s.dest}</TableCell>
-                  <TableCell>
-                    <Badge variant={s.stat === 'Exceptions' ? 'danger' : s.stat === 'Ready for Planning' ? 'warning' : s.stat === 'Delivered' ? 'success' : 'info'}>
-                      {s.stat}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{s.eta}</TableCell>
-                  <TableCell className="text-right flex justify-end space-x-2">
-                    <Button variant="ghost" size="sm" onClick={() => navigate(`/tracking/${s.tracking}`)}>Track</Button>
-                    {!isDriver && (
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="text-danger-600 hover:text-danger-700 hover:bg-danger-50" 
-                        onClick={() => setShipmentToCancel(s.id)} 
-                        title={s.stat === 'Delivered' ? "Cannot cancel delivered shipments" : "Cancel Shipment"}
-                        disabled={s.stat === 'Delivered'}
-                      >
-                        <XCircle className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
             </TableBody>
           </Table>
           

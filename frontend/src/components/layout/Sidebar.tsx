@@ -26,12 +26,9 @@ export function Sidebar({ isMobileOpen, closeMobile }: { isMobileOpen?: boolean;
           { name: 'Dashboard', path: '/', icon: LayoutDashboard },
           { name: 'Shipments', path: '/shipments', icon: Package },
           { name: 'Create Shipment', path: '/shipments/create', icon: PlusIcon },
-          { name: 'Routes', path: '/routes/planner', icon: Route },
-          { name: 'ETA Prediction', path: '/intelligence/eta', icon: BarChart3 },
           { name: 'Analytics', path: '/analytics', icon: BarChart3 },
           { name: 'Reports', path: '/reports', icon: FileText },
           { name: 'Notifications', path: '/notifications', icon: Bell },
-          { name: 'Customers', path: '/customers', icon: Users },
         ];
       case 'Administrator':
         return [

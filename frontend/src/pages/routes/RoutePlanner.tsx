@@ -3,20 +3,14 @@ import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { LiveMap } from '@/components/maps/LiveMap';
-import { ShipmentPlanningCard, ShipmentData } from './components/ShipmentPlanningCard';
+import { ShipmentPlanningCard } from './components/ShipmentPlanningCard';
+import { ShipmentData, MOCK_SHIPMENTS } from '@/services/mockData';
 import { ShipmentSelectionPanel } from './components/ShipmentSelectionPanel';
 import { SelectedShipmentList } from './components/SelectedShipmentList';
 import { RouteSummaryPanel } from './components/RouteSummaryPanel';
 import { CheckCircle } from 'lucide-react';
 
-const MOCK_SHIPMENTS: ShipmentData[] = [
-  { id: 'SHP-10025', customer: 'ABC Company', pickup: 'Mumbai Warehouse', delivery: 'Pune', distance: '145 km', priority: 'High', deadline: 'Today 18:00', status: 'Available', packageCount: 25 },
-  { id: 'SHP-10026', customer: 'Nova Electronics', pickup: 'Mumbai South', delivery: 'Navi Mumbai', distance: '32 km', priority: 'Urgent', deadline: 'Today 14:00', status: 'Available', packageCount: 5 },
-  { id: 'SHP-10027', customer: 'UrbanCart', pickup: 'Thane', delivery: 'Kalyan', distance: '28 km', priority: 'Standard', deadline: 'Tomorrow 10:00', status: 'Already Planned', assignedTo: 'R-102', packageCount: 12 },
-  { id: 'SHP-10028', customer: 'Acme Retail', pickup: 'Andheri', delivery: 'Bandra', distance: '12 km', priority: 'Standard', deadline: 'Today 20:00', status: 'Available', packageCount: 8 },
-  { id: 'SHP-10029', customer: 'Global Supply', pickup: 'Mumbai Airport', delivery: 'Vashi', distance: '22 km', priority: 'High', deadline: 'Tomorrow 12:00', status: 'Assigned', assignedTo: 'John', packageCount: 40 },
-  { id: 'SHP-10030', customer: 'Local Mart', pickup: 'Dadar', delivery: 'Worli', distance: '5 km', priority: 'Standard', deadline: 'Today 16:00', status: 'Completed', packageCount: 2 },
-];
+
 
 export function RoutePlanner() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);

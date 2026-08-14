@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { Input } from '@/components/ui/Input';
 import { Search } from 'lucide-react';
-import { ShipmentData, ShipmentPlanningCard } from './ShipmentPlanningCard';
+import { ShipmentPlanningCard } from './ShipmentPlanningCard';
+import { ShipmentData } from '@/services/mockData';
 
 interface ShipmentSelectionPanelProps {
   shipments: ShipmentData[];
