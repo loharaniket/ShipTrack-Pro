@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table';
 import { Button } from '@/components/ui/Button';
@@ -8,12 +8,12 @@ import { Plus, Filter, Download, XCircle } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useDomain } from '@/context/DomainContext';
-import { Shipment } from '@/types/domain';
+import { formatFriendlyDate } from '@/utils/dateFormatter';
 
 export function ShipmentList() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { shipments: domainShipments, updateShipmentStatus, drivers } = useDomain();
+  const { shipments: domainShipments, updateShipmentStatus, drivers, getShipmentView } = useDomain();
   
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('All Statuses');
@@ -151,7 +151,9 @@ export function ShipmentList() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredShipments.map((s) => (
+                filteredShipments.map((s) => {
+                  const view = getShipmentView(s.id);
+                  return (
                   <TableRow key={s.id} className={selectedIds.includes(s.id) ? 'bg-primary-50/50' : ''}>
                     <TableCell>
                       <input 
@@ -167,14 +169,14 @@ export function ShipmentList() {
                       </Link>
                     </TableCell>
                     <TableCell>{s.organizationId}</TableCell>
-                    <TableCell>{s.originAddress}</TableCell>
-                    <TableCell>{s.destinationAddress}</TableCell>
+                    <TableCell>{view?.originAddressLabel}</TableCell>
+                    <TableCell>{view?.destinationAddressLabel}</TableCell>
                     <TableCell>
                       <Badge variant={s.status === 'Draft' || s.status === 'Ready for Planning' ? 'warning' : s.status === 'Failed' || s.status === 'Cancelled' ? 'danger' : s.status === 'Delivered' ? 'success' : 'info'}>
                         {s.status}
                       </Badge>
                     </TableCell>
-                    <TableCell>{s.eta}</TableCell>
+                    <TableCell>{formatFriendlyDate(s.scheduledDelivery)}</TableCell>
                     <TableCell className="text-right flex justify-end space-x-2">
                       <Button variant="ghost" size="sm" onClick={() => navigate(`/tracking/${s.trackingNumber}`)}>Track</Button>
                       {(!isDriver && user?.role !== 'Customer') && (
@@ -191,7 +193,8 @@ export function ShipmentList() {
                       )}
                     </TableCell>
                   </TableRow>
-                ))
+                  );
+                })
               )}
             </TableBody>
           </Table>

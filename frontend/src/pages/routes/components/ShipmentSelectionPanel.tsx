@@ -1,6 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Input } from '@/components/ui/Input';
-import { Search } from 'lucide-react';
 import { ShipmentPlanningCard } from './ShipmentPlanningCard';
 import { Shipment } from '@/types/domain';
 import { useDomain } from '@/context/DomainContext';
@@ -12,21 +11,22 @@ interface ShipmentSelectionPanelProps {
 }
 
 export function ShipmentSelectionPanel({ shipments, selectedIds, onToggleShipment }: ShipmentSelectionPanelProps) {
-  const { isShipmentEligibleForPlanning } = useDomain();
+  const { isShipmentEligibleForPlanning, getShipmentView } = useDomain();
   const [searchTerm, setSearchTerm] = useState('');
 
   const filteredShipments = useMemo(() => {
     return shipments.filter(s => {
       if (!isShipmentEligibleForPlanning(s)) return false;
       
+      const dest = getShipmentView(s.id)?.destinationAddressLabel || '';
       const matchesSearch = 
         s.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
         s.trackingNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        s.destinationAddress.toLowerCase().includes(searchTerm.toLowerCase());
+        dest.toLowerCase().includes(searchTerm.toLowerCase());
       
       return matchesSearch;
     });
-  }, [shipments, searchTerm, isShipmentEligibleForPlanning]);
+  }, [shipments, searchTerm, isShipmentEligibleForPlanning, getShipmentView]);
 
   return (
     <div className="flex flex-col h-full bg-white border-r border-navy-200 shadow-sm z-10 w-96 shrink-0">

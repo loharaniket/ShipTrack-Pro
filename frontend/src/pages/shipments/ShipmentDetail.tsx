@@ -6,13 +6,14 @@ import { Badge } from '@/components/ui/Badge';
 import { MapPin, Navigation, Truck, User, Calendar, Map, CheckCircle2, AlertTriangle, FileText, CheckCircle, FastForward } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useDomain } from '@/context/DomainContext';
+import { formatFriendlyDate, formatRelativeTime } from '@/utils/dateFormatter';
 
 export function ShipmentDetail() {
   const { id } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
   
-  const { shipments, drivers, updateShipmentStatus } = useDomain();
+  const { shipments, drivers, updateShipmentStatus, getShipmentView, getShipmentPackages, getVehicleForDriver, getShipmentStatusHistory } = useDomain();
   
   const shipment = shipments.find(s => s.id === id || s.trackingNumber === id);
   
@@ -26,15 +27,20 @@ export function ShipmentDetail() {
   const [newTimelineTitle, setNewTimelineTitle] = useState('');
   const [newTimelineLoc, setNewTimelineLoc] = useState('');
 
+  // Derived Info
+  const view = getShipmentView(shipment?.id || '');
+  const pkgs = getShipmentPackages(shipment?.id || '');
+  const pkg = pkgs.length > 0 ? pkgs[0] : null;
+  const history = getShipmentStatusHistory(shipment?.id || '');
+  
   const [editedPriority, setEditedPriority] = useState(shipment?.priority || 'Standard');
-  const [editedWeight, setEditedWeight] = useState((shipment?.weightKg || 0).toString());
-  const [editedDescription, setEditedDescription] = useState(shipment?.description || '');
-  const [editedIsFragile, setEditedIsFragile] = useState(shipment?.isFragile || false);
+  const [editedWeight, setEditedWeight] = useState((pkg?.weight || 0).toString());
+  const [editedDescription, setEditedDescription] = useState(pkg?.description || '');
+  const [editedIsFragile, setEditedIsFragile] = useState(pkg?.fragile || false);
   const [editedInstructions, setEditedInstructions] = useState(shipment?.deliveryInstructions || '');
 
-  // Derived Info
   const driver = drivers.find(d => d.id === shipment?.driverId);
-  const vehicle = driver?.vehicle;
+  const vehicle = driver ? getVehicleForDriver(driver.id) : undefined;
 
   if (!shipment) {
     return (
@@ -69,7 +75,7 @@ export function ShipmentDetail() {
         <div className="flex items-center space-x-4">
           <h1 className="text-2xl font-bold text-navy-900">{shipment.trackingNumber}</h1>
           <Badge variant={shipment.status === 'Delivered' ? 'success' : shipment.status === 'Failed' ? 'warning' : 'info'}>{shipment.status}</Badge>
-          <Badge variant={shipment.priority === 'Urgent' ? 'danger' : shipment.priority === 'High' ? 'warning' : 'primary'}>{shipment.priority} Priority</Badge>
+          <Badge variant={shipment.priority === 'Urgent' ? 'danger' : shipment.priority === 'High' ? 'warning' : 'default'}>{shipment.priority} Priority</Badge>
         </div>
         <div className="flex space-x-2">
           {isAdmin && (
@@ -118,7 +124,7 @@ export function ShipmentDetail() {
                 <select 
                   className="w-full h-10 px-3 py-2 border border-navy-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
                   value={editedPriority}
-                  onChange={(e) => setEditedPriority(e.target.value)}
+                  onChange={(e) => setEditedPriority(e.target.value as any)}
                 >
                   <option value="Standard">Standard</option>
                   <option value="High">High</option>
@@ -194,7 +200,7 @@ export function ShipmentDetail() {
                 <select 
                   className="w-full h-10 px-3 py-2 border border-navy-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
                   value={newStatus}
-                  onChange={(e) => setNewStatus(e.target.value)}
+                  onChange={(e) => setNewStatus(e.target.value as any)}
                 >
                   <option value="Processing">Processing</option>
                   <option value="In Transit">In Transit</option>
@@ -279,7 +285,7 @@ export function ShipmentDetail() {
                     <MapPin className="h-5 w-5 text-navy-400 mr-2 mt-0.5" />
                     <div>
                       <p className="font-medium text-navy-900">{shipment.organizationId}</p>
-                      <p className="text-sm text-navy-600">{shipment.originAddress}</p>
+                      <p className="text-sm text-navy-600">{view?.originAddressLabel}</p>
                       <p className="text-xs text-navy-400 mt-1">Contact Details on File</p>
                     </div>
                   </div>
@@ -290,7 +296,7 @@ export function ShipmentDetail() {
                     <Navigation className="h-5 w-5 text-navy-400 mr-2 mt-0.5" />
                     <div>
                       <p className="font-medium text-navy-900">Destination Facility</p>
-                      <p className="text-sm text-navy-600">{shipment.destinationAddress}</p>
+                      <p className="text-sm text-navy-600">{view?.destinationAddressLabel}</p>
                       <p className="text-xs text-navy-400 mt-1">Contact Details on File</p>
                     </div>
                   </div>
@@ -300,10 +306,10 @@ export function ShipmentDetail() {
               <div className="mt-8 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="font-medium text-navy-900">Delivery Progress</span>
-                  <span className="font-medium text-primary-600">{shipment.progressPercentage}%</span>
+                  <span className="font-medium text-primary-600">{view?.progressPercentage}%</span>
                 </div>
                 <div className="h-2 bg-navy-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-primary-500" style={{ width: `${shipment.progressPercentage}%` }} />
+                  <div className="h-full bg-primary-500" style={{ width: `${view?.progressPercentage}%` }} />
                 </div>
                 <div className="flex justify-between text-xs text-navy-500 mt-2">
                   <span>Picked up</span>
@@ -325,15 +331,15 @@ export function ShipmentDetail() {
             </CardHeader>
             <CardContent>
               <div className="relative border-l border-navy-200 ml-3 space-y-8 pb-4">
-                {shipment.statusHistory?.map((event, i) => (
+                {history.map((event, i) => (
                   <div key={event.id} className="relative pl-6">
                     {i === 0 ? (
                       <span className="absolute -left-1.5 top-1 h-3 w-3 rounded-full bg-primary-500 ring-4 ring-primary-50" />
                     ) : (
                       <span className="absolute -left-1.5 top-1 h-3 w-3 rounded-full bg-navy-300" />
                     )}
-                    <h4 className={`text-sm font-semibold ${i === 0 ? 'text-primary-700' : 'text-navy-900'}`}>{event.status}</h4>
-                    <p className="text-sm text-navy-500 mt-0.5">{event.timestamp} • {event.location}</p>
+                    <h4 className={`text-sm font-semibold ${i === 0 ? 'text-primary-700' : 'text-navy-900'}`}>{event.newStatus}</h4>
+                    <p className="text-sm text-navy-500 mt-0.5">{formatRelativeTime(event.timestamp)} • {event.location || 'System'}</p>
                     {event.note && <p className="text-sm text-navy-600 italic mt-1">{event.note}</p>}
                   </div>
                 ))}
@@ -362,8 +368,7 @@ export function ShipmentDetail() {
                   <Truck className="h-5 w-5 text-navy-600" />
                 </div>
                 <div className="ml-3">
-                  <p className="text-sm font-medium text-navy-900">{vehicle?.registration || 'Not Assigned'}</p>
-                  <p className="text-xs text-navy-500">{vehicle?.type || '-'}</p>
+                  <p className="text-sm font-medium text-navy-900">{vehicle?.registrationNumber || 'Not Assigned'}</p>
                 </div>
               </div>
             </CardContent>
@@ -377,14 +382,14 @@ export function ShipmentDetail() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-xs text-navy-500">Contents</p>
-                  <p className="text-sm font-medium text-navy-900">{shipment.description || 'General Goods'}</p>
+                  <p className="text-sm font-medium text-navy-900">{pkg?.description || 'General Goods'}</p>
                 </div>
                 <div>
                   <p className="text-xs text-navy-500">Weight</p>
-                  <p className="text-sm font-medium text-navy-900">{shipment.weightKg} kg</p>
+                  <p className="text-sm font-medium text-navy-900">{pkg?.weight || 0} kg</p>
                 </div>
               </div>
-              {shipment.isFragile && (
+              {pkg?.fragile && (
                 <div className="flex items-center text-danger-600 bg-danger-50 p-2 rounded text-sm font-medium">
                   <AlertTriangle className="h-4 w-4 mr-2" />
                   Fragile Content
@@ -408,7 +413,7 @@ export function ShipmentDetail() {
                 <Calendar className="h-5 w-5 text-navy-400 mr-3" />
                 <div>
                   <p className="text-sm text-navy-500">Predicted Arrival</p>
-                  <p className="font-semibold text-navy-900">{shipment.eta || 'Pending'}</p>
+                  <p className="font-semibold text-navy-900">{formatFriendlyDate(shipment.scheduledDelivery)}</p>
                 </div>
               </div>
               <div className="flex items-center text-success-600 bg-success-50 p-2 rounded text-sm">

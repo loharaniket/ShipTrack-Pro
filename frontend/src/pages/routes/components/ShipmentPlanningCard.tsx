@@ -1,7 +1,8 @@
-import React from 'react';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Shipment } from '@/types/domain';
+import { useDomain } from '@/context/DomainContext';
+import { formatFriendlyDate } from '@/utils/dateFormatter';
 
 interface ShipmentPlanningCardProps {
   shipment: Shipment;
@@ -10,6 +11,12 @@ interface ShipmentPlanningCardProps {
 }
 
 export function ShipmentPlanningCard({ shipment, isSelected, onToggle }: ShipmentPlanningCardProps) {
+  const { getShipmentPackages, getShipmentView } = useDomain();
+  
+  const pkgs = getShipmentPackages(shipment.id);
+  const pkg = pkgs.length > 0 ? pkgs[0] : null;
+  const view = getShipmentView(shipment.id);
+  
   const isAvailable = shipment.status === 'Ready for Planning';
 
   const getStatusMessage = () => {
@@ -85,25 +92,25 @@ export function ShipmentPlanningCard({ shipment, isSelected, onToggle }: Shipmen
         <div className="space-y-2 mb-4">
           <div>
             <p className="text-sm font-medium text-navy-900">{shipment.organizationId}</p>
-            <p className="text-xs text-navy-500">{shipment.weightKg} kg</p>
+            <p className="text-xs text-navy-500">{pkg?.weight || 0} kg</p>
           </div>
           
           <div className="flex items-center text-sm text-navy-700 bg-navy-50 p-2 rounded-md">
             <div className="flex flex-col flex-1 relative">
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-navy-400 shrink-0" />
-                <span className="truncate">{shipment.originAddress}</span>
+                <span className="truncate">{view?.originAddressLabel}</span>
               </div>
               <div className="w-0.5 h-3 bg-navy-200 ml-1 my-0.5" />
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-primary-500 shrink-0" />
-                <span className="truncate">{shipment.destinationAddress}</span>
+                <span className="truncate">{view?.destinationAddressLabel}</span>
               </div>
             </div>
           </div>
 
           <div>
-             <p className="text-xs text-navy-500">ETA: <span className="font-medium text-navy-700">{shipment.eta}</span></p>
+             <p className="text-xs text-navy-500">ETA: <span className="font-medium text-navy-700">{formatFriendlyDate(shipment.scheduledDelivery)}</span></p>
           </div>
         </div>
 

@@ -1,17 +1,18 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Search, MapPin, Navigation, Clock, Package, Truck, CheckCircle2, Box } from 'lucide-react';
+import { MapPin, Navigation, Clock, Package, Truck, CheckCircle2, Box } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
 import { useAuth } from '@/context/AuthContext';
 import { useDomain } from '@/context/DomainContext';
 import { useNavigate } from 'react-router-dom';
+import { formatFriendlyDate, formatRelativeTime } from '@/utils/dateFormatter';
 import { Badge } from '@/components/ui/Badge';
 
 export function CustomerDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { shipments } = useDomain();
+  const { shipments, getShipmentView, getShipmentStatusHistory } = useDomain();
 
   const [trackingInput, setTrackingInput] = React.useState('');
   
@@ -98,7 +99,7 @@ export function CustomerDashboard() {
                     <div>
                       <CardTitle className="text-base font-bold text-navy-900">{s.trackingNumber}</CardTitle>
                       <p className="text-xs text-navy-500 mt-0.5 flex items-center">
-                        <Clock className="h-3 w-3 mr-1" /> Updated {s.statusHistory?.[0]?.timestamp || 'N/A'}
+                        <Clock className="h-3 w-3 mr-1" /> Updated {getShipmentStatusHistory(s.id)?.[0]?.timestamp ? formatRelativeTime(getShipmentStatusHistory(s.id)?.[0]?.timestamp) : 'N/A'}
                       </p>
                     </div>
                   </div>
@@ -106,25 +107,25 @@ export function CustomerDashboard() {
                 <CardContent className="pt-4 space-y-4">
                   <div className="flex justify-between items-center bg-navy-50 p-3 rounded-lg text-sm">
                     <div className="flex items-center text-navy-700">
-                      <MapPin className="h-4 w-4 mr-2 text-primary-500" /> {s.originAddress}
+                      <MapPin className="h-4 w-4 mr-2 text-primary-500" /> {getShipmentView(s.id)?.originAddressLabel}
                     </div>
                     <div className="flex items-center text-navy-700">
-                      <Navigation className="h-4 w-4 mr-2 text-navy-400" /> {s.destinationAddress}
+                      <Navigation className="h-4 w-4 mr-2 text-navy-400" /> {getShipmentView(s.id)?.destinationAddressLabel}
                     </div>
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span className="text-navy-500">Progress</span>
-                      <span className="font-medium">{s.progressPercentage}%</span>
+                      <span className="font-medium">{getShipmentView(s.id)?.progressPercentage}%</span>
                     </div>
                     <div className="h-2 bg-navy-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-info-500" style={{ width: `${s.progressPercentage}%` }} />
+                      <div className="h-full bg-info-500" style={{ width: `${getShipmentView(s.id)?.progressPercentage}%` }} />
                     </div>
                   </div>
                   <div className="flex items-center justify-between pt-2">
                     <div className="flex items-center text-sm font-medium text-navy-900">
                       <Clock className="h-4 w-4 mr-2 text-primary-500" />
-                      ETA: {s.eta}
+                      ETA: {getShipmentView(s.id)?.eta || formatFriendlyDate(s.scheduledDelivery)}
                     </div>
                     <Button variant="outline" size="sm" onClick={() => navigate(`/shipments/${s.trackingNumber}`)}>Track</Button>
                   </div>
@@ -161,15 +162,15 @@ export function CustomerDashboard() {
                 customerShipments.map(s => (
                   <tr key={s.id} className="hover:bg-navy-50">
                     <td className="px-6 py-4 font-medium">{s.trackingNumber}</td>
-                    <td className="px-6 py-4">{s.originAddress}</td>
-                    <td className="px-6 py-4">{s.destinationAddress}</td>
+                    <td className="px-6 py-4">{getShipmentView(s.id)?.originAddressLabel}</td>
+                    <td className="px-6 py-4">{getShipmentView(s.id)?.destinationAddressLabel}</td>
                     <td className="px-6 py-4">
                       <Badge variant={s.status === 'Delivered' ? 'success' : s.status === 'Failed' ? 'danger' : 'info'}>
                         {s.status}
                       </Badge>
                     </td>
-                    <td className="px-6 py-4">{s.eta}</td>
-                    <td className="px-6 py-4 text-navy-500">{s.statusHistory[0]?.timestamp || 'Unknown'}</td>
+                    <td className="px-6 py-4">{getShipmentView(s.id)?.eta || formatFriendlyDate(s.scheduledDelivery)}</td>
+                    <td className="px-6 py-4 text-navy-500">{getShipmentStatusHistory(s.id)?.[0]?.timestamp ? formatFriendlyDate(getShipmentStatusHistory(s.id)?.[0]?.timestamp) : 'Unknown'}</td>
                     <td className="px-6 py-4 text-right">
                       <Button variant="ghost" size="sm" onClick={() => navigate(`/tracking/${s.trackingNumber}`)}>Track</Button>
                     </td>

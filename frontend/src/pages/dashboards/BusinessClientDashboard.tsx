@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table';
 import { Button } from '@/components/ui/Button';
@@ -7,18 +7,17 @@ import { Package, Truck, CheckCircle2, Clock, FileDown, Plus, Trash2 } from 'luc
 import { useNavigate } from 'react-router-dom';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
-import { Shipment } from '@/types/domain';
 import { useAuth } from '@/context/AuthContext';
 import { useDomain } from '@/context/DomainContext';
 
 export function BusinessClientDashboard() {
   const { user } = useAuth();
-  const { shipments, addShipment, updateShipmentStatus } = useDomain();
+  const { shipments, addShipment, updateShipmentStatus, getShipmentView } = useDomain();
   const navigate = useNavigate();
   
   // Real security filtering
-  const customerName = user?.name || 'Acme Retail';
-  const myShipments = shipments.filter(s => s.customer === customerName);
+  const customerName = user?.organizationId || 'Acme Retail';
+  const myShipments = shipments.filter(s => s.organizationId === customerName);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newShipment, setNewShipment] = useState({ dest: '' });
@@ -30,27 +29,32 @@ export function BusinessClientDashboard() {
     const newId = `STP-2026-10${480 + shipments.length + 1}`;
     addShipment({
       id: Date.now().toString(),
-      tracking: newId,
-      customer: customerName,
-      origin: 'Mumbai DC',
-      destination: newShipment.dest,
+      trackingNumber: newId,
+      organizationId: customerName,
+      serviceType: 'Express',
+      originAddressId: 'ADDR-1',
+      destinationAddressId: 'ADDR-2',
       status: 'Draft',
       priority: 'Standard',
       driverId: null,
       routeId: null,
-      vehicleId: null,
-      eta: 'Pending',
-      lastUpdated: 'Just now',
-      progress: 0,
-      statusHistory: []
-    });
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }, [{
+      id: Date.now().toString(),
+      shipmentId: Date.now().toString(),
+      description: 'Standard Package',
+      weight: 5,
+      type: 'BOX',
+      fragile: false
+    }]);
     setIsModalOpen(false);
     setNewShipment({ dest: '' });
   };
 
   const confirmCancel = () => {
     if (shipmentToCancel !== null) {
-      updateShipmentStatus(shipmentToCancel, 'Cancelled', 'Cancelled by business client');
+      updateShipmentStatus(shipmentToCancel, 'Cancelled', user?.id || 'sys', 'Cancelled by business client');
       setShipmentToCancel(null);
     }
   };
@@ -153,19 +157,21 @@ export function BusinessClientDashboard() {
                   </TableCell>
                 </TableRow>
               ) : (
-                myShipments.map((s) => (
+                myShipments.map((s) => {
+                  const view = getShipmentView(s.id);
+                  return (
                   <TableRow key={s.id}>
-                    <TableCell className="font-medium text-primary-600">{s.tracking}</TableCell>
-                    <TableCell>{s.origin}</TableCell>
-                    <TableCell>{s.destination}</TableCell>
+                    <TableCell className="font-medium text-primary-600">{s.trackingNumber}</TableCell>
+                    <TableCell>{view?.originAddressLabel}</TableCell>
+                    <TableCell>{view?.destinationAddressLabel}</TableCell>
                     <TableCell>
                       <Badge variant={s.status === 'Draft' || s.status === 'Ready for Planning' ? 'warning' : s.status === 'Delivered' ? 'success' : s.status === 'Cancelled' ? 'danger' : 'info'}>
                         {s.status}
                       </Badge>
                     </TableCell>
-                    <TableCell>{s.eta}</TableCell>
+                    <TableCell>{view?.eta || 'Pending'}</TableCell>
                     <TableCell className="text-right flex justify-end space-x-2">
-                      <Button variant="ghost" size="sm" onClick={() => navigate(`/tracking/${s.tracking}`)}>Track</Button>
+                      <Button variant="ghost" size="sm" onClick={() => navigate(`/tracking/${s.trackingNumber}`)}>Track</Button>
                       <Button 
                         variant="ghost" 
                         size="sm" 
@@ -178,7 +184,8 @@ export function BusinessClientDashboard() {
                       </Button>
                     </TableCell>
                   </TableRow>
-                ))
+                  );
+                })
               )}
             </TableBody>
           </Table>

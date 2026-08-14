@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { GripVertical, Trash2 } from 'lucide-react';
 import { Shipment } from '@/types/domain';
+import { useDomain } from '@/context/DomainContext';
 
 interface SelectedShipmentListProps {
   selectedShipments: Shipment[];
@@ -10,6 +11,7 @@ interface SelectedShipmentListProps {
 
 export function SelectedShipmentList({ selectedShipments, onRemove, onReorder }: SelectedShipmentListProps) {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const { getShipmentView } = useDomain();
 
   if (selectedShipments.length === 0) {
     return (
@@ -24,7 +26,7 @@ export function SelectedShipmentList({ selectedShipments, onRemove, onReorder }:
     setDraggedIndex(index);
   };
 
-  const handleDragOver = (e: React.DragEvent, index: number) => {
+  const handleDragOver = (e: React.DragEvent, _index: number) => {
     e.preventDefault(); // Necessary to allow dropping
   };
 
@@ -58,7 +60,7 @@ export function SelectedShipmentList({ selectedShipments, onRemove, onReorder }:
               <p className="text-sm font-semibold text-navy-900 truncate">{shipment.trackingNumber}</p>
               <span className="text-xs bg-navy-100 text-navy-700 px-1.5 py-0.5 rounded">{shipment.organizationId}</span>
             </div>
-            <p className="text-xs text-navy-500 truncate mt-0.5">{shipment.originAddress} → {shipment.destinationAddress}</p>
+            <p className="text-xs text-navy-500 truncate mt-0.5">{getShipmentView(shipment.id)?.originAddressLabel} → {getShipmentView(shipment.id)?.destinationAddressLabel}</p>
           </div>
           
           <button 

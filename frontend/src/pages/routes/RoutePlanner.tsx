@@ -1,20 +1,17 @@
-import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
 import { LiveMap } from '@/components/maps/LiveMap';
-import { ShipmentPlanningCard } from './components/ShipmentPlanningCard';
 import { Shipment } from '@/types/domain';
 import { ShipmentSelectionPanel } from './components/ShipmentSelectionPanel';
-import { SelectedShipmentList } from './components/SelectedShipmentList';
 import { RouteSummaryPanel } from './components/RouteSummaryPanel';
 import { CheckCircle } from 'lucide-react';
 import { useDomain } from '@/context/DomainContext';
 
 
+import { useState } from 'react';
 
 export function RoutePlanner() {
-  const { shipments, drivers, createRoute } = useDomain();
+  const { shipments, drivers, createRoute, getVehicleForDriver, getShipmentPackages } = useDomain();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   
   const [isOptimizing, setIsOptimizing] = useState(false);
@@ -58,12 +55,15 @@ export function RoutePlanner() {
   };
 
   const driver = drivers.find(d => d.id === assignedDriverId);
-  const derivedVehicle = driver ? driver.vehicle : null;
+  const derivedVehicle = driver ? getVehicleForDriver(driver.id) : null;
 
   const handleCreateRoute = () => {
     if (!assignedDriverId || !derivedVehicle) return;
     
-    const selectedLoad = selectedShipments.reduce((sum, s) => sum + s.weightKg, 0);
+    const selectedLoad = selectedShipments.reduce((sum, s) => {
+      const pkgs = getShipmentPackages(s.id);
+      return sum + (pkgs.length > 0 ? pkgs[0].weight : 0);
+    }, 0);
     if (selectedLoad > derivedVehicle.capacityKg) {
       alert(`Cannot create route. Selected load (${selectedLoad}kg) exceeds vehicle capacity (${derivedVehicle.capacityKg}kg).`);
       return;
@@ -76,11 +76,10 @@ export function RoutePlanner() {
       id: routeId,
       name: `Route ${routeId}`,
       driverId: assignedDriverId,
+      vehicleId: derivedVehicle.id,
       status: 'Planned' as const,
-      origin: 'DC Default',
-      destination: 'Multiple Stops',
-      estimatedDistanceKm: selectedIds.length * 15.5,
-      estimatedDurationMins: selectedIds.length * 25
+      distance: selectedIds.length * 15.5,
+      duration: selectedIds.length * 25
     };
 
     const newStops = selectedIds.map((shipmentId, index) => ({

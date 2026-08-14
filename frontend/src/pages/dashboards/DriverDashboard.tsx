@@ -10,7 +10,7 @@ import { useDomain } from '@/context/DomainContext';
 export function DriverDashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { shipments, drivers, updateShipmentStatus } = useDomain();
+  const { shipments, drivers, updateShipmentStatus, getShipmentView } = useDomain();
   
   // For demo, find the driver record that matches the user name or default to DRV-001
   const driverRecord = drivers.find(d => d.email === user?.email) || drivers.find(d => d.name === user?.name) || drivers[0];
@@ -111,7 +111,7 @@ export function DriverDashboard() {
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-medium text-navy-500">ETA</p>
-                    <p className="text-lg font-bold text-primary-600">{activeShipment.eta || 'Pending'}</p>
+                    <p className="text-lg font-bold text-primary-600">{getShipmentView(activeShipment.id)?.eta || 'Pending'}</p>
                   </div>
                 </div>
                 
@@ -120,7 +120,7 @@ export function DriverDashboard() {
                     <Navigation className="h-5 w-5 text-primary-500 mr-3 mt-0.5" />
                     <div>
                       <p className="text-xs font-semibold text-navy-500 uppercase tracking-wide">Delivery Address</p>
-                      <p className="text-sm font-medium text-navy-900 mt-1">{activeShipment.destinationAddress}</p>
+                      <p className="text-sm font-medium text-navy-900 mt-1">{getShipmentView(activeShipment.id)?.destinationAddressLabel}</p>
                     </div>
                   </div>
                 </div>
@@ -132,7 +132,7 @@ export function DriverDashboard() {
                   <Button className="flex-1 bg-success-600 hover:bg-success-700 text-white border-0" size="lg" onClick={() => navigate('/pod/signature')} disabled={activeShipment.status !== 'Out for Delivery'}>
                     <CheckCircle className="h-5 w-5 mr-2" /> Mark Delivered
                   </Button>
-                  <Button variant="outline" size="lg" onClick={() => navigate(`/shipments/${activeShipment.tracking}`)}>
+                  <Button variant="outline" size="lg" onClick={() => navigate(`/shipments/${activeShipment.trackingNumber}`)}>
                     Details
                   </Button>
                 </div>
@@ -161,7 +161,7 @@ export function DriverDashboard() {
                       <span className="font-bold text-navy-900">{stop.trackingNumber}</span>
                       <span className="text-xs font-medium text-navy-500">Stop {i + 1}</span>
                     </div>
-                    <p className="text-sm text-navy-600 truncate">{stop.destinationAddress}</p>
+                    <p className="text-sm text-navy-600 truncate">{getShipmentView(stop.id)?.destinationAddressLabel}</p>
                     <p className="text-xs text-navy-400 mt-1">{stop.organizationId}</p>
                     <div className="mt-2">
                       <Button size="sm" variant="outline" className="w-full text-xs py-1 h-7" onClick={() => handleNextStatus(stop.id, stop.status)}>
@@ -201,7 +201,7 @@ export function DriverDashboard() {
                     <tr key={s.id} className="hover:bg-navy-50 transition-colors">
                       <td className="px-6 py-4 font-bold text-primary-600">{s.trackingNumber}</td>
                       <td className="px-6 py-4">{s.organizationId}</td>
-                      <td className="px-6 py-4">{s.destinationAddress}</td>
+                      <td className="px-6 py-4">{getShipmentView(s.id)?.destinationAddressLabel}</td>
                       <td className="px-6 py-4">
                         <Badge variant={s.status === 'Failed' ? 'danger' : s.status === 'Delivered' ? 'success' : (s.status === 'Assigned' || s.status === 'Ready for Planning' || s.status === 'Planned') ? 'warning' : 'info'}>
                           {s.status}

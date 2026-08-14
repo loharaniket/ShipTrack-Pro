@@ -1,8 +1,8 @@
-import React, { useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Eraser, CheckCircle, UploadCloud, Camera, ArrowLeft } from 'lucide-react';
+import { Eraser, CheckCircle, Camera, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useDomain } from '@/context/DomainContext';
@@ -11,7 +11,7 @@ export function DigitalSignature() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { shipments, drivers, submitPOD } = useDomain();
+  const { shipments, drivers, submitPOD, getShipmentView } = useDomain();
 
   const [isSigned, setIsSigned] = useState(false);
   const [receiverName, setReceiverName] = useState('');
@@ -39,9 +39,11 @@ export function DigitalSignature() {
     submitPOD({
       id: `POD-${Date.now()}`,
       shipmentId: activeShipment.id,
+      driverId: activeShipment.driverId || '',
       recipientName: receiverName,
-      deliveryNotes: notes,
-      timestamp: new Date().toISOString()
+      notes: notes,
+      deliveredAt: new Date().toISOString(),
+      deliveryResult: 'SUCCESS'
     });
     
     navigate('/my-route');
@@ -80,7 +82,7 @@ export function DigitalSignature() {
               <div>
                 <p className="text-navy-500 mb-1">Delivery Address</p>
                 <p className="font-medium text-navy-900">
-                  {activeShipment.destinationAddress}
+                  {getShipmentView(activeShipment.id)?.destinationAddressLabel}
                 </p>
               </div>
               <div>

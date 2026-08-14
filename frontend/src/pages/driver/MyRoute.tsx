@@ -1,8 +1,7 @@
-import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
-import { CheckCircle, Navigation, FastForward } from 'lucide-react';
+import { CheckCircle, FastForward } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useDomain } from '@/context/DomainContext';
@@ -10,9 +9,10 @@ import { useDomain } from '@/context/DomainContext';
 export function MyRoute() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { routes, routeStops, shipments, drivers, updateShipmentStatus, updateRouteStopStatus } = useDomain();
+  const { routes, routeStops, shipments, drivers, updateShipmentStatus, updateRouteStopStatus, getVehicleForDriver, getShipmentView } = useDomain();
   
   const driverRecord = drivers.find(d => d.email === user?.email) || drivers.find(d => d.name === user?.name) || drivers[0];
+  const vehicleObj = getVehicleForDriver(driverRecord.id);
   
   const handleNextStatus = (shipmentId: string, currentStatus: string) => {
     let nextStatus: any = null;
@@ -48,7 +48,6 @@ export function MyRoute() {
     ? routeStops.filter(s => s.routeId === activeRoute.id).sort((a,b) => a.sequence - b.sequence).map(stop => shipments.find(s => s.id === stop.shipmentId)).filter(Boolean) as any[]
     : [];
   
-  const vehicleObj = driverRecord.vehicle;
   const vehicle = vehicleObj ? `${vehicleObj.registrationNumber} (${vehicleObj.type})` : 'N/A';
   
   const totalStops = routeShipments.length;
@@ -152,11 +151,11 @@ export function MyRoute() {
                             {isCurrent && <Badge className="mb-2" variant="info">Current Stop</Badge>}
                             <h4 className="font-bold text-navy-900">{shipment.organizationId} ({shipment.trackingNumber})</h4>
                           </div>
-                          <Badge variant={isCompleted ? 'success' : isCurrent ? 'default' : 'outline'}>
+                          <Badge variant={isCompleted ? 'success' : isCurrent ? 'info' : 'default'}>
                             {isCompleted ? 'Completed' : isUpcoming ? 'Upcoming' : shipment.status}
                           </Badge>
                         </div>
-                        <p className="text-sm text-navy-600 mb-3">{shipment.destinationAddress}</p>
+                        <p className="text-sm text-navy-600 mb-3">{getShipmentView(shipment.id)?.destinationAddressLabel}</p>
                         
                         {(isCurrent || isUpcoming) && (
                           <div className="flex space-x-3 mt-4">

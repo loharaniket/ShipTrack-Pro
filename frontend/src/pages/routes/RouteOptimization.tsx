@@ -26,10 +26,10 @@ export function RouteOptimization() {
       routeId: selectedRouteId,
       originalStopSequence: selectedRouteStops.map(s => s.id),
       optimizedStopSequence: optimizedSequence,
-      previousDistance: selectedRoute?.estimatedDistanceKm || 0,
-      optimizedDistance: (selectedRoute?.estimatedDistanceKm || 0) * 0.85,
-      previousDuration: selectedRoute?.estimatedDurationMins || 0,
-      optimizedDuration: (selectedRoute?.estimatedDurationMins || 0) * 0.85,
+      previousDistance: selectedRoute?.distance || 0,
+      optimizedDistance: (selectedRoute?.distance || 0) * 0.85,
+      previousDuration: selectedRoute?.duration || 0,
+      optimizedDuration: (selectedRoute?.duration || 0) * 0.85,
       generatedAt: new Date().toISOString()
     };
 
@@ -80,11 +80,11 @@ export function RouteOptimization() {
             <div className="grid grid-cols-3 gap-4 text-center">
               <div>
                 <p className="text-sm text-navy-500">Distance</p>
-                <p className="text-xl font-semibold text-navy-900">{selectedRoute.estimatedDistanceKm} km</p>
+                <p className="text-xl font-semibold text-navy-900">{selectedRoute.distance} km</p>
               </div>
               <div>
                 <p className="text-sm text-navy-500">Time</p>
-                <p className="text-xl font-semibold text-navy-900">{Math.floor(selectedRoute.estimatedDurationMins / 60)}h {selectedRoute.estimatedDurationMins % 60}m</p>
+                <p className="text-xl font-semibold text-navy-900">{Math.floor(selectedRoute.duration / 60)}h {selectedRoute.duration % 60}m</p>
               </div>
               <div>
                 <p className="text-sm text-navy-500">Stops</p>
@@ -113,16 +113,16 @@ export function RouteOptimization() {
               <div>
                 <p className="text-sm text-navy-500">Distance</p>
                 <div className="flex items-center justify-center text-xl font-semibold text-success-600">
-                  {Math.round(selectedRoute.estimatedDistanceKm * 0.8)} km
+                  {Math.round(selectedRoute.distance * 0.8)} km
                 </div>
-                <p className="text-xs text-success-500 mt-1">-{Math.round(selectedRoute.estimatedDistanceKm * 0.2)} km</p>
+                <p className="text-xs text-success-500 mt-1">-{Math.round(selectedRoute.distance * 0.2)} km</p>
               </div>
               <div>
                 <p className="text-sm text-navy-500">Time</p>
                 <div className="flex items-center justify-center text-xl font-semibold text-success-600">
-                  {Math.floor((selectedRoute.estimatedDurationMins * 0.85) / 60)}h {Math.round((selectedRoute.estimatedDurationMins * 0.85) % 60)}m
+                  {Math.floor((selectedRoute.duration * 0.85) / 60)}h {Math.round((selectedRoute.duration * 0.85) % 60)}m
                 </div>
-                <p className="text-xs text-success-500 mt-1">-{Math.round(selectedRoute.estimatedDurationMins * 0.15)} min</p>
+                <p className="text-xs text-success-500 mt-1">-{Math.round(selectedRoute.duration * 0.15)} min</p>
               </div>
               <div>
                 <p className="text-sm text-navy-500">Stops</p>
@@ -149,7 +149,7 @@ export function RouteOptimization() {
               </div>
               <div>
                 <h3 className="font-semibold text-success-900">Optimization Ready</h3>
-                <p className="text-sm text-success-700 mt-1">Applying this route will save an estimated {Math.round(selectedRoute.estimatedDistanceKm * 0.2)}km and {Math.round(selectedRoute.estimatedDurationMins * 0.15)} minutes of driving time.</p>
+                <p className="text-sm text-success-700 mt-1">Applying this route will save an estimated {Math.round(selectedRoute.distance * 0.2)}km and {Math.round(selectedRoute.duration * 0.15)} minutes of driving time.</p>
               </div>
             </div>
             <Button className="bg-success-600 hover:bg-success-700 text-white border-0" onClick={handleApply} disabled={isApplying}>

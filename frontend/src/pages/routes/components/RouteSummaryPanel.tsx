@@ -2,9 +2,10 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
-import { Navigation, Users, CheckCircle, Car, AlertTriangle } from 'lucide-react';
+import { Navigation, CheckCircle, AlertTriangle } from 'lucide-react';
 import { Shipment } from '@/types/domain';
 import { SelectedShipmentList } from './SelectedShipmentList';
+import { useDomain } from '@/context/DomainContext';
 
 interface RouteSummaryPanelProps {
   selectedShipments: Shipment[];
@@ -33,6 +34,7 @@ export function RouteSummaryPanel({
   derivedVehicle,
   drivers
 }: RouteSummaryPanelProps) {
+  const { getShipmentPackages } = useDomain();
   
   const estimatedDistance = selectedShipments.length * 15.5; // dummy calc
   const estimatedTime = selectedShipments.length * 25; // dummy calc in minutes
@@ -44,7 +46,10 @@ export function RouteSummaryPanel({
     return `${h}h ${m}m`;
   };
 
-  const totalLoad = selectedShipments.reduce((sum, s) => sum + (s.weightKg || 0), 0);
+  const totalLoad = selectedShipments.reduce((sum, s) => {
+    const pkgs = getShipmentPackages(s.id);
+    return sum + (pkgs.length > 0 ? pkgs[0].weight : 0);
+  }, 0);
   const isCapacityExceeded = derivedVehicle ? totalLoad > derivedVehicle.capacityKg : false;
 
   return (

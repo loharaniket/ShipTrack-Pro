@@ -11,7 +11,7 @@ import { useDomain } from '@/context/DomainContext';
 
 export function DriverManagement() {
   const navigate = useNavigate();
-  const { drivers, addDriver } = useDomain();
+  const { drivers, addDriver, getVehicleForDriver } = useDomain();
 
   const [selectedDriver, setSelectedDriver] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -29,18 +29,22 @@ export function DriverManagement() {
 
   const handleAddDriver = () => {
     if (!newDriver.name || !newDriver.phone) return;
-    addDriver({
+    const vehicle = {
+      id: `VEH-${Date.now()}`,
+      registrationNumber: newDriver.regNumber,
+      type: newDriver.type,
+      capacityKg: Number(newDriver.capacity),
+      status: 'Active' as const
+    };
+    const driver = {
       id: `DRV-${Date.now()}`,
       name: newDriver.name,
       phone: newDriver.phone,
       email: newDriver.email,
-      status: 'Active',
-      vehicle: {
-        registrationNumber: newDriver.regNumber,
-        type: newDriver.type,
-        capacityKg: Number(newDriver.capacity)
-      }
-    });
+      status: 'Active' as any,
+      vehicleId: vehicle.id
+    };
+    addDriver(driver, vehicle);
     setIsAddModalOpen(false);
     setNewDriver({ name: '', phone: '', email: '', regNumber: '', type: 'Van', capacity: 500 });
   };
@@ -100,7 +104,7 @@ export function DriverManagement() {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    {getVehicleDisplay(d.vehicle)}
+                    {getVehicleDisplay(getVehicleForDriver(d.id))}
                   </TableCell>
                   <TableCell className="text-right flex justify-end space-x-2">
                     <Button 
@@ -133,19 +137,19 @@ export function DriverManagement() {
 
           <div className="space-y-2 mt-4">
             <h4 className="text-sm font-semibold text-navy-900 border-b border-navy-100 pb-1">Vehicle Information</h4>
-            {selectedDriver?.vehicle ? (
+            {selectedDriver && getVehicleForDriver(selectedDriver.id) ? (
               <div className="grid grid-cols-2 gap-4 text-sm mt-2">
                 <div>
                   <p className="text-navy-500">Registration</p>
-                  <p className="font-medium text-navy-900">{selectedDriver.vehicle.registrationNumber}</p>
+                  <p className="font-medium text-navy-900">{getVehicleForDriver(selectedDriver.id)?.registrationNumber}</p>
                 </div>
                 <div>
                   <p className="text-navy-500">Type</p>
-                  <p className="font-medium text-navy-900">{selectedDriver.vehicle.type}</p>
+                  <p className="font-medium text-navy-900">{getVehicleForDriver(selectedDriver.id)?.type}</p>
                 </div>
                 <div>
                   <p className="text-navy-500">Capacity</p>
-                  <p className="font-medium text-navy-900">{selectedDriver.vehicle.capacityKg} kg</p>
+                  <p className="font-medium text-navy-900">{getVehicleForDriver(selectedDriver.id)?.capacityKg} kg</p>
                 </div>
               </div>
             ) : (

@@ -1,4 +1,3 @@
-import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table';
@@ -6,7 +5,7 @@ import { Package, Truck, AlertTriangle, Route, Users, MapPin, CheckCircle, Clock
 import { useDomain } from '@/context/DomainContext';
 
 export function AdministratorDashboard() {
-  const { shipments, exceptions: domainExceptions, routes, drivers } = useDomain();
+  const { shipments, exceptions: domainExceptions, routes, drivers, getShipmentView, getVehicleForDriver, getShipmentStatusHistory } = useDomain();
   
   const totalShipments = shipments.length;
   const readyForPlan = shipments.filter(s => s.status === 'Ready for Planning').length;
@@ -22,7 +21,7 @@ export function AdministratorDashboard() {
 
   const mockDrivers = drivers;
   
-  const availableDrivers = mockDrivers.filter(d => d.status === 'Available').length;
+  const availableDrivers = mockDrivers.filter(d => d.status === 'Active').length;
 
   return (
     <div className="space-y-6">
@@ -110,7 +109,7 @@ export function AdministratorDashboard() {
                   <TableRow key={s.id}>
                     <TableCell className="font-medium">{s.trackingNumber}</TableCell>
                     <TableCell>{s.organizationId}</TableCell>
-                    <TableCell>{s.originAddress} → {s.destinationAddress}</TableCell>
+                    <TableCell>{getShipmentView(s.id)?.originAddressLabel} → {getShipmentView(s.id)?.destinationAddressLabel}</TableCell>
                     <TableCell>
                       <Badge variant={
                         s.status === 'Delivered' ? 'success' : 
@@ -153,12 +152,12 @@ export function AdministratorDashboard() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={d.status === 'Available' ? 'success' : 'info'}>
+                      <Badge variant={d.status === 'Active' ? 'success' : 'info'}>
                         {d.status}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-navy-500">Not Tracked</TableCell>
-                    <TableCell>{d.vehicle?.registrationNumber || 'No Vehicle'}</TableCell>
+                    <TableCell>{getVehicleForDriver(d.id)?.registrationNumber || 'No Vehicle'}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -195,7 +194,7 @@ export function AdministratorDashboard() {
                     <TableCell>{s.driverId || '-'}</TableCell>
                     <TableCell className="font-medium">Delivery Delayed / Address Issue</TableCell>
                     <TableCell className="flex items-center text-navy-500">
-                      <Clock className="h-3 w-3 mr-1" /> {s.statusHistory?.[0]?.timestamp || 'N/A'}
+                      <Clock className="h-3 w-3 mr-1" /> {getShipmentStatusHistory(s.id)?.[0]?.timestamp || 'N/A'}
                     </TableCell>
                   </TableRow>
                 ))}
