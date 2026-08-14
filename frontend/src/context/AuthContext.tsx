@@ -16,7 +16,6 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'VIEW_ALL_SHIPMENTS',
     'CREATE_SHIPMENT',
     'MANAGE_DRIVERS',
-    'MANAGE_VEHICLES',
     'ASSIGN_SHIPMENTS',
     'CREATE_ROUTE',
     'OPTIMIZE_ROUTE',

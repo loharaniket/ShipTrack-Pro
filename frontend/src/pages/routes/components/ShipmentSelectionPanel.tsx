@@ -3,6 +3,7 @@ import { Input } from '@/components/ui/Input';
 import { Search } from 'lucide-react';
 import { ShipmentPlanningCard } from './ShipmentPlanningCard';
 import { Shipment } from '@/types/domain';
+import { useDomain } from '@/context/DomainContext';
 
 interface ShipmentSelectionPanelProps {
   shipments: Shipment[];
@@ -11,21 +12,21 @@ interface ShipmentSelectionPanelProps {
 }
 
 export function ShipmentSelectionPanel({ shipments, selectedIds, onToggleShipment }: ShipmentSelectionPanelProps) {
+  const { isShipmentEligibleForPlanning } = useDomain();
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('All');
 
   const filteredShipments = useMemo(() => {
     return shipments.filter(s => {
+      if (!isShipmentEligibleForPlanning(s)) return false;
+      
       const matchesSearch = 
         s.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
         s.trackingNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
         s.destinationAddress.toLowerCase().includes(searchTerm.toLowerCase());
       
-      const matchesStatus = filterStatus === 'All' || s.status === filterStatus;
-      
-      return matchesSearch && matchesStatus;
+      return matchesSearch;
     });
-  }, [shipments, searchTerm, filterStatus]);
+  }, [shipments, searchTerm, isShipmentEligibleForPlanning]);
 
   return (
     <div className="flex flex-col h-full bg-white border-r border-navy-200 shadow-sm z-10 w-96 shrink-0">
@@ -39,16 +40,6 @@ export function ShipmentSelectionPanel({ shipments, selectedIds, onToggleShipmen
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
-          <select 
-            className="w-full h-10 px-3 py-2 border border-navy-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-          >
-            <option value="All">All Statuses</option>
-            <option value="Ready for Planning">Ready for Planning</option>
-            <option value="Planned">Planned</option>
-            <option value="In Transit">In Transit</option>
-          </select>
         </div>
       </div>
 

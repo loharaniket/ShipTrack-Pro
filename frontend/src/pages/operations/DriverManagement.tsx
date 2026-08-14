@@ -11,25 +11,43 @@ import { useDomain } from '@/context/DomainContext';
 
 export function DriverManagement() {
   const navigate = useNavigate();
-  const { drivers, vehicles, assignFleetToDriver } = useDomain();
+  const { drivers, addDriver } = useDomain();
 
+  const [selectedDriver, setSelectedDriver] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedDriverId, setSelectedDriverId] = useState<string | null>(null);
-  const [selectedVehicleId, setSelectedVehicleId] = useState<string>('');
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
-  const handleAssignVehicle = () => {
-    if (selectedDriverId && selectedVehicleId) {
-      assignFleetToDriver(selectedDriverId, selectedVehicleId);
-      setIsModalOpen(false);
-      setSelectedDriverId(null);
-      setSelectedVehicleId('');
-    }
+  // New Driver Form State
+  const [newDriver, setNewDriver] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    regNumber: '',
+    type: 'Van',
+    capacity: 500
+  });
+
+  const handleAddDriver = () => {
+    if (!newDriver.name || !newDriver.phone) return;
+    addDriver({
+      id: `DRV-${Date.now()}`,
+      name: newDriver.name,
+      phone: newDriver.phone,
+      email: newDriver.email,
+      status: 'Active',
+      vehicle: {
+        registrationNumber: newDriver.regNumber,
+        type: newDriver.type,
+        capacityKg: Number(newDriver.capacity)
+      }
+    });
+    setIsAddModalOpen(false);
+    setNewDriver({ name: '', phone: '', email: '', regNumber: '', type: 'Van', capacity: 500 });
   };
 
-  const getVehicleDisplay = (vehicleId: string | null | undefined) => {
-    if (!vehicleId) return <span className="text-navy-400">Not Assigned</span>;
-    const v = vehicles.find(v => v.id === vehicleId);
-    return v ? `${v.registration} (${v.type})` : vehicleId;
+  const getVehicleDisplay = (vehicle: any) => {
+    if (!vehicle) return <span className="text-navy-400">No Vehicle</span>;
+    return `${vehicle.registrationNumber} (${vehicle.type})`;
   };
 
   return (
@@ -41,6 +59,7 @@ export function DriverManagement() {
         </div>
         <div className="flex items-center space-x-3">
           <Button variant="outline"><Download className="h-4 w-4 mr-2" /> Export</Button>
+          <Button onClick={() => setIsAddModalOpen(true)}><Plus className="h-4 w-4 mr-2" /> Add Driver</Button>
         </div>
       </div>
 
@@ -53,7 +72,7 @@ export function DriverManagement() {
                 <TableHead>Name</TableHead>
                 <TableHead>Phone</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Assigned Vehicle</TableHead>
+                <TableHead>Driver Vehicle</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -81,7 +100,7 @@ export function DriverManagement() {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    {getVehicleDisplay(d.vehicleId)}
+                    {getVehicleDisplay(d.vehicle)}
                   </TableCell>
                   <TableCell className="text-right flex justify-end space-x-2">
                     <Button 
@@ -89,12 +108,11 @@ export function DriverManagement() {
                       size="sm" 
                       className="text-primary-600 hover:text-primary-700 hover:bg-primary-50"
                       onClick={() => {
-                        setSelectedDriverId(d.id);
-                        setSelectedVehicleId(d.vehicleId || '');
+                        setSelectedDriver(d);
                         setIsModalOpen(true);
                       }}
                     >
-                      Assign Vehicle
+                      View Details
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -104,33 +122,113 @@ export function DriverManagement() {
         </CardContent>
       </Card>
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Assign Vehicle to Driver">
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Driver Vehicle Details">
         <div className="space-y-4">
           <div className="space-y-2">
-            <h4 className="text-sm font-semibold text-navy-900 border-b border-navy-100 pb-1">Driver Details</h4>
+            <h4 className="text-sm font-semibold text-navy-900 border-b border-navy-100 pb-1">Driver Information</h4>
             <p className="text-sm text-navy-600 font-medium">
-              {drivers.find(d => d.id === selectedDriverId)?.name || 'Unknown Driver'}
+              {selectedDriver?.name || 'Unknown Driver'}
             </p>
           </div>
 
           <div className="space-y-2 mt-4">
-            <h4 className="text-sm font-semibold text-navy-900 border-b border-navy-100 pb-1">Select Vehicle</h4>
-            <select 
-              className="w-full h-10 px-3 py-2 border border-navy-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
-              value={selectedVehicleId}
-              onChange={(e) => setSelectedVehicleId(e.target.value)}
-            >
-              <option value="" disabled>Select Vehicle</option>
-              {vehicles.map(v => (
-                <option key={v.id} value={v.id}>{v.registration} ({v.type}) - Cap: {v.capacityKg}kg</option>
-              ))}
-            </select>
-            <p className="text-xs text-navy-500">Creating this assignment automatically links the driver and vehicle for all route planning.</p>
+            <h4 className="text-sm font-semibold text-navy-900 border-b border-navy-100 pb-1">Vehicle Information</h4>
+            {selectedDriver?.vehicle ? (
+              <div className="grid grid-cols-2 gap-4 text-sm mt-2">
+                <div>
+                  <p className="text-navy-500">Registration</p>
+                  <p className="font-medium text-navy-900">{selectedDriver.vehicle.registrationNumber}</p>
+                </div>
+                <div>
+                  <p className="text-navy-500">Type</p>
+                  <p className="font-medium text-navy-900">{selectedDriver.vehicle.type}</p>
+                </div>
+                <div>
+                  <p className="text-navy-500">Capacity</p>
+                  <p className="font-medium text-navy-900">{selectedDriver.vehicle.capacityKg} kg</p>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-red-500 mt-2">This driver does not have a vehicle configured.</p>
+            )}
           </div>
 
           <div className="pt-4 flex justify-end space-x-2">
-            <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-            <Button onClick={handleAssignVehicle} disabled={!selectedVehicleId}>Assign Vehicle</Button>
+            <Button variant="outline" onClick={() => setIsModalOpen(false)}>Close</Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Add Driver Modal */}
+      <Modal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} title="Add New Driver">
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-navy-700 mb-1">Full Name</label>
+              <Input 
+                value={newDriver.name}
+                onChange={e => setNewDriver({...newDriver, name: e.target.value})}
+                placeholder="John Doe"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-navy-700 mb-1">Phone</label>
+              <Input 
+                value={newDriver.phone}
+                onChange={e => setNewDriver({...newDriver, phone: e.target.value})}
+                placeholder="+1 234 567 8900"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-navy-700 mb-1">Email</label>
+              <Input 
+                value={newDriver.email}
+                onChange={e => setNewDriver({...newDriver, email: e.target.value})}
+                placeholder="john@example.com"
+                type="email"
+              />
+            </div>
+          </div>
+          
+          <div className="pt-2">
+            <h4 className="text-sm font-semibold text-navy-900 border-b border-navy-100 pb-1 mb-3">Vehicle Details</h4>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2">
+                <label className="block text-sm font-medium text-navy-700 mb-1">Registration Number</label>
+                <Input 
+                  value={newDriver.regNumber}
+                  onChange={e => setNewDriver({...newDriver, regNumber: e.target.value})}
+                  placeholder="MH-12-AB-1234"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-navy-700 mb-1">Vehicle Type</label>
+                <select 
+                  className="w-full h-10 px-3 py-2 border border-navy-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                  value={newDriver.type}
+                  onChange={e => setNewDriver({...newDriver, type: e.target.value})}
+                >
+                  <option value="Van">Van</option>
+                  <option value="Truck">Truck</option>
+                  <option value="Heavy Truck">Heavy Truck</option>
+                  <option value="Bike">Bike</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-navy-700 mb-1">Capacity (kg)</label>
+                <Input 
+                  type="number"
+                  value={newDriver.capacity}
+                  onChange={e => setNewDriver({...newDriver, capacity: Number(e.target.value)})}
+                  placeholder="500"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-4 flex justify-end space-x-2">
+            <Button variant="outline" onClick={() => setIsAddModalOpen(false)}>Cancel</Button>
+            <Button onClick={handleAddDriver} disabled={!newDriver.name || !newDriver.phone}>Add Driver</Button>
           </div>
         </div>
       </Modal>

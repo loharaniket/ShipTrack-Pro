@@ -12,17 +12,17 @@ export function ShipmentDetail() {
   const { user } = useAuth();
   const navigate = useNavigate();
   
-  const { shipments, drivers, vehicles, updateShipmentStatus, assignFleetToDriver } = useDomain();
+  const { shipments, drivers, updateShipmentStatus } = useDomain();
   
   const shipment = shipments.find(s => s.id === id || s.trackingNumber === id);
   
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
-  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+
   const [isTimelineModalOpen, setIsTimelineModalOpen] = useState(false);
 
   const [newStatus, setNewStatus] = useState(shipment?.status || 'Draft');
-  const [newDriver, setNewDriver] = useState(shipment?.driverId || '');
+
   const [newTimelineTitle, setNewTimelineTitle] = useState('');
   const [newTimelineLoc, setNewTimelineLoc] = useState('');
 
@@ -34,7 +34,7 @@ export function ShipmentDetail() {
 
   // Derived Info
   const driver = drivers.find(d => d.id === shipment?.driverId);
-  const vehicle = vehicles.find(v => v.id === shipment?.vehicleId);
+  const vehicle = driver?.vehicle;
 
   if (!shipment) {
     return (
@@ -74,7 +74,7 @@ export function ShipmentDetail() {
         <div className="flex space-x-2">
           {isAdmin && (
             <>
-              <Button variant="outline" onClick={() => setIsAssignModalOpen(true)}>Assign Fleet Unit</Button>
+
               <Button variant="outline" onClick={() => setIsEditModalOpen(true)}>Edit Details</Button>
               <Button onClick={() => setIsStatusModalOpen(true)}>Update Status</Button>
             </>
@@ -215,48 +215,6 @@ export function ShipmentDetail() {
         </div>
       )}
 
-      {/* Assign Fleet Unit Modal */}
-      {isAssignModalOpen && (
-        <div className="fixed inset-0 bg-navy-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden flex flex-col">
-            <div className="px-6 py-4 border-b border-navy-100 flex justify-between items-center">
-              <h3 className="text-lg font-semibold text-navy-900">Assign Fleet Unit</h3>
-              <button onClick={() => setIsAssignModalOpen(false)} className="text-navy-400 hover:text-navy-600">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-navy-700 mb-1">Select Driver (Vehicle auto-assigned)</label>
-                <select 
-                  className="w-full h-10 px-3 py-2 border border-navy-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
-                  value={newDriver}
-                  onChange={(e) => setNewDriver(e.target.value)}
-                >
-                  <option value="" disabled>Select driver...</option>
-                  {drivers.filter(d => d.status === 'Active' && d.vehicleId).map(d => {
-                     const v = vehicles.find(vh => vh.id === d.vehicleId);
-                     return <option key={d.id} value={d.id}>{d.name} ({v?.registration})</option>;
-                  })}
-                </select>
-              </div>
-            </div>
-            <div className="px-6 py-4 border-t border-navy-100 bg-navy-50 flex justify-end space-x-3">
-              <Button variant="outline" onClick={() => setIsAssignModalOpen(false)}>Cancel</Button>
-              <Button onClick={() => {
-                const derivedVehicle = drivers.find(d => d.id === newDriver)?.vehicleId;
-                if (derivedVehicle) {
-                  // Actually creating a route is standard flow, but for manual override:
-                  assignFleetToDriver(newDriver, derivedVehicle);
-                }
-                setIsAssignModalOpen(false);
-              }}>Assign</Button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Update Timeline Modal */}
       {isTimelineModalOpen && (
@@ -320,7 +278,7 @@ export function ShipmentDetail() {
                   <div className="flex items-start">
                     <MapPin className="h-5 w-5 text-navy-400 mr-2 mt-0.5" />
                     <div>
-                      <p className="font-medium text-navy-900">{shipment.customerId}</p>
+                      <p className="font-medium text-navy-900">{shipment.organizationId}</p>
                       <p className="text-sm text-navy-600">{shipment.originAddress}</p>
                       <p className="text-xs text-navy-400 mt-1">Contact Details on File</p>
                     </div>

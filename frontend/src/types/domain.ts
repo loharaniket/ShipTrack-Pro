@@ -6,7 +6,6 @@ export type Permission =
   | 'CREATE_SHIPMENT'
   | 'UPDATE_ASSIGNED_SHIPMENT'
   | 'MANAGE_DRIVERS'
-  | 'MANAGE_VEHICLES'
   | 'ASSIGN_SHIPMENTS'
   | 'CREATE_ROUTE'
   | 'OPTIMIZE_ROUTE'
@@ -60,24 +59,22 @@ export interface Driver {
   phone: string;
   email: string;
   status: 'Active' | 'Inactive' | 'On Leave';
-  vehicleId?: string | null;
+  vehicle?: {
+    registrationNumber: string;
+    type: string;
+    capacityKg: number;
+  };
   userId?: string; // Links driver to user account
 }
 
-export interface Vehicle {
+export interface ShipmentHistoryEvent {
   id: string;
-  registration: string;
-  type: string;
-  capacityKg: number;
-  status: 'Available' | 'In Use' | 'Maintenance';
-}
-
-export interface StatusHistoryEvent {
-  id: string;
-  status: ShipmentStatus | RouteStatus;
-  timestamp: string; // Using ISO string or deterministic mock timestamp
-  updatedBy: string; // User ID
-  location: string;
+  shipmentId: string;
+  previousStatus: ShipmentStatus;
+  newStatus: ShipmentStatus;
+  actorUserId: string; // User ID
+  timestamp: string; // ISO 8601
+  location?: string;
   note?: string;
 }
 
@@ -86,29 +83,32 @@ export interface ShipmentException {
   shipmentId: string;
   type: 'VEHICLE_BREAKDOWN' | 'WEATHER_DELAY' | 'CUSTOMER_UNAVAILABLE' | 'OTHER';
   description: string;
-  createdAt: string;
+  createdAt: string; // ISO 8601
+  createdBy: string; // User ID
   resolvedAt?: string | null;
+  resolvedBy?: string | null;
+  resolution?: string;
 }
 
 export interface ProofOfDelivery {
   id: string;
   shipmentId: string;
+  driverId: string;
   recipientName: string;
   signatureUrl?: string; // Optional if collected
   deliveryNotes?: string;
-  timestamp: string;
+  timestamp: string; // ISO 8601
 }
 
 export interface Shipment {
   id: string;
   trackingNumber: string; // Usually external facing ID like "STP-..."
-  customerId: string;     // Ref to Customer
+  organizationId: string;     // Ref to Organization (Tenant)
   originAddress: string;
   destinationAddress: string;
   status: ShipmentStatus;
   priority: Priority;
   driverId: string | null;
-  vehicleId: string | null;
   routeId: string | null;
   weightKg: number;
   description: string;
@@ -116,7 +116,7 @@ export interface Shipment {
   deliveryInstructions?: string;
   eta: string;
   progressPercentage: number;
-  statusHistory: StatusHistoryEvent[];
+  statusHistory: ShipmentHistoryEvent[];
 }
 
 export interface RouteStop {
@@ -132,11 +132,21 @@ export interface Route {
   id: string;
   name: string;
   driverId: string | null;
-  vehicleId: string | null;
   status: RouteStatus;
   origin: string;
   destination: string;
   estimatedDistanceKm: number;
   estimatedDurationMins: number;
-  stops: string[]; // Array of RouteStop IDs, sequence determined by the RouteStop entity itself or we can store an ordered array
+}
+
+export interface OptimizationResult {
+  id: string;
+  routeId: string;
+  originalStopSequence: string[]; // array of RouteStop IDs
+  optimizedStopSequence: string[]; // array of RouteStop IDs
+  previousDistance: number;
+  optimizedDistance: number;
+  previousDuration: number;
+  optimizedDuration: number;
+  generatedAt: string; // ISO 8601
 }

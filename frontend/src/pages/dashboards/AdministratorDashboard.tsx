@@ -109,7 +109,7 @@ export function AdministratorDashboard() {
                 {shipments.slice(0, 5).map((s) => (
                   <TableRow key={s.id}>
                     <TableCell className="font-medium">{s.trackingNumber}</TableCell>
-                    <TableCell>{s.customerId}</TableCell>
+                    <TableCell>{s.organizationId}</TableCell>
                     <TableCell>{s.originAddress} → {s.destinationAddress}</TableCell>
                     <TableCell>
                       <Badge variant={
@@ -158,7 +158,7 @@ export function AdministratorDashboard() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-navy-500">Not Tracked</TableCell>
-                    <TableCell>{d.vehicleId || 'N/A'}</TableCell>
+                    <TableCell>{d.vehicle?.registrationNumber || 'No Vehicle'}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -191,7 +191,7 @@ export function AdministratorDashboard() {
                 {shipments.filter(s => s.status === 'Failed').map(s => (
                   <TableRow key={s.id}>
                     <TableCell className="font-medium text-danger-700">{s.trackingNumber}</TableCell>
-                    <TableCell>{s.customerId}</TableCell>
+                    <TableCell>{s.organizationId}</TableCell>
                     <TableCell>{s.driverId || '-'}</TableCell>
                     <TableCell className="font-medium">Delivery Delayed / Address Issue</TableCell>
                     <TableCell className="flex items-center text-navy-500">

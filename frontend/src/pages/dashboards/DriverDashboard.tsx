@@ -107,7 +107,7 @@ export function DriverDashboard() {
                     <Badge variant="info" className="ml-2 bg-info-100 text-info-700 hover:bg-info-200">
                       {activeShipment.status}
                     </Badge>
-                    <p className="text-sm text-navy-600 mt-1">{activeShipment.customerId}</p>
+                    <p className="text-sm text-navy-600 mt-1">{activeShipment.organizationId}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-medium text-navy-500">ETA</p>
@@ -162,7 +162,7 @@ export function DriverDashboard() {
                       <span className="text-xs font-medium text-navy-500">Stop {i + 1}</span>
                     </div>
                     <p className="text-sm text-navy-600 truncate">{stop.destinationAddress}</p>
-                    <p className="text-xs text-navy-400 mt-1">{stop.customerId}</p>
+                    <p className="text-xs text-navy-400 mt-1">{stop.organizationId}</p>
                     <div className="mt-2">
                       <Button size="sm" variant="outline" className="w-full text-xs py-1 h-7" onClick={() => handleNextStatus(stop.id, stop.status)}>
                         <Play className="h-3 w-3 mr-1" /> Start Pickup
@@ -200,7 +200,7 @@ export function DriverDashboard() {
                   driverShipments.map(s => (
                     <tr key={s.id} className="hover:bg-navy-50 transition-colors">
                       <td className="px-6 py-4 font-bold text-primary-600">{s.trackingNumber}</td>
-                      <td className="px-6 py-4">{s.customerId}</td>
+                      <td className="px-6 py-4">{s.organizationId}</td>
                       <td className="px-6 py-4">{s.destinationAddress}</td>
                       <td className="px-6 py-4">
                         <Badge variant={s.status === 'Failed' ? 'danger' : s.status === 'Delivered' ? 'success' : (s.status === 'Assigned' || s.status === 'Ready for Planning' || s.status === 'Planned') ? 'warning' : 'info'}>

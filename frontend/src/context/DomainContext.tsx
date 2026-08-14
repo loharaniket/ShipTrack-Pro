@@ -3,14 +3,14 @@ import {
   MOCK_SHIPMENTS, MOCK_DRIVERS, MOCK_VEHICLES, MOCK_ROUTES, MOCK_ROUTE_STOPS, MOCK_EXCEPTIONS, MOCK_PODS
 } from '@/services/mockData';
 import { 
-  Shipment, Driver, Vehicle, Route, RouteStop, ShipmentException, ProofOfDelivery, 
-  ShipmentStatus, StatusHistoryEvent, RouteStatus
+  Shipment, Driver, Route, RouteStop, ShipmentException, ProofOfDelivery, 
+  ShipmentStatus, ShipmentHistoryEvent, RouteStatus, OptimizationResult
 } from '@/types/domain';
+import { canTransitionShipmentStatus, canTransitionRouteStatus } from '@/utils/statusTransitions';
 
 interface DomainContextType {
   shipments: Shipment[];
   drivers: Driver[];
-  vehicles: Vehicle[];
   routes: Route[];
   routeStops: RouteStop[];
   exceptions: ShipmentException[];
@@ -18,14 +18,17 @@ interface DomainContextType {
   
   // Actions
   updateShipmentStatus: (id: string, newStatus: ShipmentStatus, userId: string, location: string, note?: string) => void;
-  assignFleetToDriver: (driverId: string, vehicleId: string) => void;
   createRoute: (route: Route, stops: RouteStop[]) => void;
   updateRouteStatus: (routeId: string, status: RouteStatus) => void;
-  optimizeRoute: (routeId: string, optimizedStopSequence: string[]) => void;
+  updateRouteStopStatus: (routeStopId: string, status: RouteStopStatus) => void;
+  assignDriverToRoute: (routeId: string, driverId: string) => void;
+  optimizeRoute: (routeId: string, result: OptimizationResult) => void;
   dispatchRoute: (routeId: string) => void;
   submitPOD: (pod: ProofOfDelivery) => void;
   createException: (exception: ShipmentException) => void;
   addShipment: (shipment: Shipment) => void;
+  addDriver: (driver: Driver) => void;
+  isShipmentEligibleForPlanning: (shipment: Shipment) => boolean;
 }
 
 const DomainContext = createContext<DomainContextType | undefined>(undefined);
@@ -33,7 +36,6 @@ const DomainContext = createContext<DomainContextType | undefined>(undefined);
 export function DomainProvider({ children }: { children: ReactNode }) {
   const [shipments, setShipments] = useState<Shipment[]>(MOCK_SHIPMENTS);
   const [drivers, setDrivers] = useState<Driver[]>(MOCK_DRIVERS);
-  const [vehicles, setVehicles] = useState<Vehicle[]>(MOCK_VEHICLES);
   const [routes, setRoutes] = useState<Route[]>(MOCK_ROUTES);
   const [routeStops, setRouteStops] = useState<RouteStop[]>(MOCK_ROUTE_STOPS);
   const [exceptions, setExceptions] = useState<ShipmentException[]>(MOCK_EXCEPTIONS);
@@ -41,12 +43,14 @@ export function DomainProvider({ children }: { children: ReactNode }) {
 
   const updateShipmentStatus = (id: string, newStatus: ShipmentStatus, userId: string, location: string, note?: string) => {
     setShipments(prev => prev.map(shipment => {
-      if (shipment.id === id || shipment.trackingNumber === id) {
-        const newEvent: StatusHistoryEvent = {
+      if ((shipment.id === id || shipment.trackingNumber === id) && canTransitionShipmentStatus(shipment.status, newStatus)) {
+        const newEvent: ShipmentHistoryEvent = {
           id: Date.now().toString(),
-          status: newStatus,
-          timestamp: new Date().toISOString(), // Deterministic ISO time
-          updatedBy: userId,
+          shipmentId: shipment.id,
+          previousStatus: shipment.status,
+          newStatus: newStatus,
+          timestamp: new Date().toISOString(),
+          actorUserId: userId,
           location: location,
           note
         };
@@ -70,26 +74,26 @@ export function DomainProvider({ children }: { children: ReactNode }) {
     }));
   };
 
-  const assignFleetToDriver = (driverId: string, vehicleId: string) => {
-    setDrivers(prev => prev.map(driver => 
-      driver.id === driverId ? { ...driver, vehicleId } : driver
-    ));
-    // Optional: mark vehicle as In Use, others as Available
-  };
-
   const createRoute = (route: Route, stops: RouteStop[]) => {
     setRoutes(prev => [...prev, route]);
     setRouteStops(prev => [...prev, ...stops]);
-    // Also update shipments to be Assigned
+    // Also update shipments to be Planned
     const shipmentIds = stops.map(s => s.shipmentId);
     setShipments(prev => prev.map(shipment => {
       if (shipmentIds.includes(shipment.id)) {
+        const newEvent: ShipmentHistoryEvent = {
+          id: Date.now().toString(),
+          shipmentId: shipment.id,
+          previousStatus: shipment.status,
+          newStatus: 'Planned',
+          timestamp: new Date().toISOString(),
+          actorUserId: 'System',
+        };
         return {
           ...shipment,
-          status: 'Planned', // Or Assigned if dispatched
+          status: 'Planned',
           routeId: route.id,
-          driverId: route.driverId,
-          vehicleId: route.vehicleId
+          statusHistory: [newEvent, ...shipment.statusHistory]
         };
       }
       return shipment;
@@ -100,40 +104,34 @@ export function DomainProvider({ children }: { children: ReactNode }) {
     setRoutes(prev => prev.map(r => r.id === routeId ? { ...r, status } : r));
   };
 
-  const optimizeRoute = (routeId: string, optimizedStopSequence: string[]) => {
-    // Reorder routeStops based on the optimized sequence
-    setRouteStops(prev => {
-      const updatedStops = [...prev];
-      let seq = 1;
-      for (const stopId of optimizedStopSequence) {
-        const index = updatedStops.findIndex(s => s.id === stopId);
-        if (index !== -1) {
-          updatedStops[index] = { ...updatedStops[index], sequence: seq++ };
-        }
-      }
-      return updatedStops;
-    });
+  const updateRouteStopStatus = (routeStopId: string, status: RouteStopStatus) => {
+    setRouteStops(prev => prev.map(s => s.id === routeStopId ? { ...s, status } : s));
   };
 
-  const dispatchRoute = (routeId: string) => {
-    setRoutes(prev => prev.map(r => r.id === routeId ? { ...r, status: 'Dispatched' } : r));
-    // Update all shipments in the route to 'Assigned'
+  const assignDriverToRoute = (routeId: string, driverId: string) => {
+    const driver = drivers.find(d => d.id === driverId);
+    if (!driver || !driver.vehicle) return;
+    
+    setRoutes(prev => prev.map(r => r.id === routeId ? { ...r, status: 'Assigned', driverId: driver.id } : r));
+    
     setRouteStops(prev => {
       const routeStopItems = prev.filter(s => s.routeId === routeId);
       const shipmentIds = routeStopItems.map(s => s.shipmentId);
       
       setShipments(sPrev => sPrev.map(shipment => {
         if (shipmentIds.includes(shipment.id)) {
-          const newEvent: StatusHistoryEvent = {
+          const newEvent: ShipmentHistoryEvent = {
             id: Date.now().toString(),
-            status: 'Assigned',
+            shipmentId: shipment.id,
+            previousStatus: shipment.status,
+            newStatus: 'Assigned',
             timestamp: new Date().toISOString(),
-            updatedBy: 'System', // System dispatch
-            location: 'System'
+            actorUserId: 'System',
           };
           return {
             ...shipment,
             status: 'Assigned',
+            driverId: driver.id,
             progressPercentage: 10,
             statusHistory: [newEvent, ...shipment.statusHistory]
           };
@@ -144,9 +142,32 @@ export function DomainProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  const optimizeRoute = (routeId: string, result: OptimizationResult) => {
+    setRouteStops(prev => {
+      const updatedStops = [...prev];
+      let seq = 1;
+      for (const stopId of result.optimizedStopSequence) {
+        const index = updatedStops.findIndex(s => s.id === stopId);
+        if (index !== -1) {
+          updatedStops[index] = { ...updatedStops[index], sequence: seq++ };
+        }
+      }
+      return updatedStops;
+    });
+  };
+
+  const dispatchRoute = (routeId: string) => {
+    setRoutes(prev => prev.map(r => r.id === routeId && r.status === 'Assigned' ? { ...r, status: 'Dispatched' } : r));
+    // Note: Shipments remain 'Assigned' until the Driver physically acts on them
+  };
+
   const submitPOD = (pod: ProofOfDelivery) => {
     setPods(prev => [...prev, pod]);
     updateShipmentStatus(pod.shipmentId, 'Delivered', 'System', 'Delivery Location', pod.deliveryNotes);
+    
+    setRouteStops(prev => prev.map(s => 
+      s.shipmentId === pod.shipmentId ? { ...s, status: 'Completed' } : s
+    ));
   };
 
   const createException = (exception: ShipmentException) => {
@@ -158,11 +179,20 @@ export function DomainProvider({ children }: { children: ReactNode }) {
     setShipments(prev => [shipment, ...prev]);
   };
 
+  const addDriver = (driver: Driver) => {
+    setDrivers(prev => [driver, ...prev]);
+  };
+
+  const isShipmentEligibleForPlanning = (shipment: Shipment) => {
+    return shipment.status === 'Ready for Planning';
+  };
+
   return (
     <DomainContext.Provider value={{ 
-      shipments, drivers, vehicles, routes, routeStops, exceptions, pods,
-      updateShipmentStatus, assignFleetToDriver, createRoute, updateRouteStatus,
-      optimizeRoute, dispatchRoute, submitPOD, createException, addShipment
+      shipments, drivers, routes, routeStops, exceptions, pods,
+      updateShipmentStatus, createRoute, updateRouteStatus, updateRouteStopStatus,
+      assignDriverToRoute, optimizeRoute, dispatchRoute, submitPOD, createException, addShipment, addDriver,
+      isShipmentEligibleForPlanning
     }}>
       {children}
     </DomainContext.Provider>

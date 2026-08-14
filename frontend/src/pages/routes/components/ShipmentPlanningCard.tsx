@@ -84,7 +84,7 @@ export function ShipmentPlanningCard({ shipment, isSelected, onToggle }: Shipmen
 
         <div className="space-y-2 mb-4">
           <div>
-            <p className="text-sm font-medium text-navy-900">{shipment.customerId}</p>
+            <p className="text-sm font-medium text-navy-900">{shipment.organizationId}</p>
             <p className="text-xs text-navy-500">{shipment.weightKg} kg</p>
           </div>
           

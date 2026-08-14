@@ -14,7 +14,7 @@ import { useDomain } from '@/context/DomainContext';
 
 
 export function RoutePlanner() {
-  const { shipments, drivers, vehicles, createRoute } = useDomain();
+  const { shipments, drivers, createRoute } = useDomain();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   
   const [isOptimizing, setIsOptimizing] = useState(false);
@@ -58,10 +58,17 @@ export function RoutePlanner() {
   };
 
   const driver = drivers.find(d => d.id === assignedDriverId);
-  const derivedVehicle = driver && driver.vehicleId ? vehicles.find(v => v.id === driver.vehicleId) : null;
+  const derivedVehicle = driver ? driver.vehicle : null;
 
   const handleCreateRoute = () => {
     if (!assignedDriverId || !derivedVehicle) return;
+    
+    const selectedLoad = selectedShipments.reduce((sum, s) => sum + s.weightKg, 0);
+    if (selectedLoad > derivedVehicle.capacityKg) {
+      alert(`Cannot create route. Selected load (${selectedLoad}kg) exceeds vehicle capacity (${derivedVehicle.capacityKg}kg).`);
+      return;
+    }
+
     setIsRouteCreated(true);
     
     const routeId = `RT-${Date.now()}`;
@@ -69,13 +76,11 @@ export function RoutePlanner() {
       id: routeId,
       name: `Route ${routeId}`,
       driverId: assignedDriverId,
-      vehicleId: derivedVehicle.id,
       status: 'Planned' as const,
       origin: 'DC Default',
       destination: 'Multiple Stops',
       estimatedDistanceKm: selectedIds.length * 15.5,
-      estimatedDurationMins: selectedIds.length * 25,
-      stops: [] // will populate below
+      estimatedDurationMins: selectedIds.length * 25
     };
 
     const newStops = selectedIds.map((shipmentId, index) => ({
@@ -86,8 +91,6 @@ export function RoutePlanner() {
       status: 'Pending' as const,
       eta: 'TBD'
     }));
-    
-    newRoute.stops = newStops.map(s => s.id);
 
     createRoute(newRoute, newStops);
     

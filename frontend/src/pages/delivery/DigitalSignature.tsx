@@ -75,7 +75,7 @@ export function DigitalSignature() {
             <CardContent className="p-6 space-y-4 text-sm">
               <div>
                 <p className="text-navy-500 mb-1">Customer</p>
-                <p className="font-bold text-navy-900">{activeShipment.customerId}</p>
+                <p className="font-bold text-navy-900">{activeShipment.organizationId}</p>
               </div>
               <div>
                 <p className="text-navy-500 mb-1">Delivery Address</p>

@@ -112,10 +112,10 @@ export function RouteSummaryPanel({
 
             {assignedDriver && (
               <div className="mt-2 p-3 bg-navy-50 rounded-lg border border-navy-100">
-                <p className="text-xs font-semibold text-navy-500 uppercase tracking-wide mb-1">Automatically Assigned Vehicle</p>
+                <p className="text-xs font-semibold text-navy-500 uppercase tracking-wide mb-1">Driver Vehicle</p>
                 {derivedVehicle ? (
                   <div>
-                    <p className="text-sm font-bold text-navy-900">{derivedVehicle.registration}</p>
+                    <p className="text-sm font-bold text-navy-900">{derivedVehicle.registrationNumber}</p>
                     <p className="text-xs text-navy-600">{derivedVehicle.type}</p>
                     <div className="mt-2 text-xs flex justify-between items-center border-t border-navy-200 pt-2">
                       <span className="text-navy-500">Route Load:</span>
@@ -127,7 +127,7 @@ export function RouteSummaryPanel({
                 ) : (
                   <div className="flex items-start text-danger-600">
                     <AlertTriangle className="w-4 h-4 mr-2 mt-0.5 shrink-0" />
-                    <span className="text-xs font-medium">Selected driver does not have an assigned vehicle. Planning is disabled.</span>
+                    <span className="text-xs font-medium">This driver does not have a valid vehicle configured. Planning is disabled.</span>
                   </div>
                 )}
               </div>

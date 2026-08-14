@@ -16,8 +16,8 @@ export function CustomerDashboard() {
   const [trackingInput, setTrackingInput] = React.useState('');
   
   // Real security filtering
-  const customerId = user?.organizationId || 'CUST-002'; // Nova Electronics fallback
-  const customerShipments = shipments.filter(s => s.customerId === customerId);
+  const organizationId = user?.organizationId || 'CUST-002'; // Nova Electronics fallback
+  const customerShipments = shipments.filter(s => s.organizationId === organizationId);
   
   const activeShipments = customerShipments.filter(s => s.status !== 'Delivered' && s.status !== 'Cancelled');
   const inTransitCount = customerShipments.filter(s => s.status === 'In Transit').length;

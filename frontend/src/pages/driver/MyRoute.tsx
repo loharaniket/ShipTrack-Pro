@@ -10,18 +10,32 @@ import { useDomain } from '@/context/DomainContext';
 export function MyRoute() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { routes, routeStops, shipments, drivers, vehicles, updateShipmentStatus } = useDomain();
+  const { routes, routeStops, shipments, drivers, updateShipmentStatus, updateRouteStopStatus } = useDomain();
   
   const driverRecord = drivers.find(d => d.email === user?.email) || drivers.find(d => d.name === user?.name) || drivers[0];
   
-  const handleNextStatus = (id: string, currentStatus: string) => {
+  const handleNextStatus = (shipmentId: string, currentStatus: string) => {
     let nextStatus: any = null;
-    if (currentStatus === 'Assigned' || currentStatus === 'Planned') nextStatus = 'Picked Up';
-    else if (currentStatus === 'Picked Up') nextStatus = 'In Transit';
-    else if (currentStatus === 'In Transit') nextStatus = 'Out for Delivery';
+    let nextRouteStopStatus: any = null;
+    
+    if (currentStatus === 'Assigned') {
+      nextStatus = 'Picked Up';
+      nextRouteStopStatus = 'Pending';
+    } else if (currentStatus === 'Picked Up') {
+      nextStatus = 'In Transit';
+    } else if (currentStatus === 'In Transit') {
+      nextStatus = 'Out for Delivery';
+      nextRouteStopStatus = 'Arrived';
+    }
     
     if (nextStatus) {
-      updateShipmentStatus(id, nextStatus, driverRecord.id, 'Driver App');
+      updateShipmentStatus(shipmentId, nextStatus, driverRecord.id, 'Driver App');
+      if (nextRouteStopStatus) {
+        const stop = routeStops.find(s => s.shipmentId === shipmentId);
+        if (stop) {
+          updateRouteStopStatus(stop.id, nextRouteStopStatus);
+        }
+      }
     }
   };
   
@@ -34,8 +48,8 @@ export function MyRoute() {
     ? routeStops.filter(s => s.routeId === activeRoute.id).sort((a,b) => a.sequence - b.sequence).map(stop => shipments.find(s => s.id === stop.shipmentId)).filter(Boolean) as any[]
     : [];
   
-  const vehicleObj = activeRoute ? vehicles.find(v => v.id === activeRoute.vehicleId) : null;
-  const vehicle = vehicleObj ? `${vehicleObj.registration} (${vehicleObj.type})` : 'N/A';
+  const vehicleObj = driverRecord.vehicle;
+  const vehicle = vehicleObj ? `${vehicleObj.registrationNumber} (${vehicleObj.type})` : 'N/A';
   
   const totalStops = routeShipments.length;
   const completedStops = routeShipments.filter(s => s.status === 'Delivered').length;
@@ -83,7 +97,7 @@ export function MyRoute() {
                   <Badge variant={isRouteActive ? 'info' : 'success'}>{isRouteActive ? 'In Progress' : 'Completed'}</Badge>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm text-navy-500">Vehicle</p>
+                  <p className="text-sm text-navy-500">My Vehicle</p>
                   <p className="font-medium text-navy-900">{vehicle}</p>
                 </div>
               </div>
@@ -136,7 +150,7 @@ export function MyRoute() {
                         <div className="flex justify-between items-start mb-1">
                           <div>
                             {isCurrent && <Badge className="mb-2" variant="info">Current Stop</Badge>}
-                            <h4 className="font-bold text-navy-900">{shipment.customerId} ({shipment.trackingNumber})</h4>
+                            <h4 className="font-bold text-navy-900">{shipment.organizationId} ({shipment.trackingNumber})</h4>
                           </div>
                           <Badge variant={isCompleted ? 'success' : isCurrent ? 'default' : 'outline'}>
                             {isCompleted ? 'Completed' : isUpcoming ? 'Upcoming' : shipment.status}

@@ -56,7 +56,7 @@ export function SelectedShipmentList({ selectedShipments, onRemove, onReorder }:
           <div className="flex-1 min-w-0">
             <div className="flex items-center space-x-2">
               <p className="text-sm font-semibold text-navy-900 truncate">{shipment.trackingNumber}</p>
-              <span className="text-xs bg-navy-100 text-navy-700 px-1.5 py-0.5 rounded">{shipment.customerId}</span>
+              <span className="text-xs bg-navy-100 text-navy-700 px-1.5 py-0.5 rounded">{shipment.organizationId}</span>
             </div>
             <p className="text-xs text-navy-500 truncate mt-0.5">{shipment.originAddress} → {shipment.destinationAddress}</p>
           </div>

@@ -20,9 +20,21 @@ export function RouteOptimization() {
     
     // Deterministic mock optimization: reverse the stop sequence
     const optimizedSequence = [...selectedRouteStops].reverse().map(s => s.id);
+    
+    const result = {
+      id: `OPT-${Date.now()}`,
+      routeId: selectedRouteId,
+      originalStopSequence: selectedRouteStops.map(s => s.id),
+      optimizedStopSequence: optimizedSequence,
+      previousDistance: selectedRoute?.estimatedDistanceKm || 0,
+      optimizedDistance: (selectedRoute?.estimatedDistanceKm || 0) * 0.85,
+      previousDuration: selectedRoute?.estimatedDurationMins || 0,
+      optimizedDuration: (selectedRoute?.estimatedDurationMins || 0) * 0.85,
+      generatedAt: new Date().toISOString()
+    };
 
     setTimeout(() => {
-      optimizeRoute(selectedRouteId, optimizedSequence);
+      optimizeRoute(selectedRouteId, result);
       setIsApplying(false);
       setIsApplied(true);
     }, 1500);

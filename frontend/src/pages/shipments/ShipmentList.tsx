@@ -26,10 +26,8 @@ export function ShipmentList() {
   if (user?.role === 'Driver') {
     const driverRecord = drivers.find(d => d.email === user?.email) || drivers.find(d => d.name === user?.name) || drivers[0];
     visibleShipments = visibleShipments.filter(s => s.driverId === driverRecord.id);
-  } else if (user?.role === 'BusinessClient') {
-    visibleShipments = visibleShipments.filter(s => s.customerId === 'CUST-002'); // Example
-  } else if (user?.role === 'Customer') {
-    visibleShipments = visibleShipments.filter(s => s.customerId === (user?.organizationId || 'CUST-002'));
+  } else if (user?.role === 'BusinessClient' || user?.role === 'Customer') {
+    visibleShipments = visibleShipments.filter(s => s.organizationId === user?.organizationId);
   }
     
   const confirmCancel = () => {
@@ -52,7 +50,7 @@ export function ShipmentList() {
   
   const filteredShipments = visibleShipments.filter(s => {
     const matchesSearch = s.trackingNumber.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          s.customerId.toLowerCase().includes(searchTerm.toLowerCase());
+                          s.organizationId.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === 'All Statuses' || s.status === filterStatus;
     return matchesSearch && matchesStatus;
   });
@@ -168,7 +166,7 @@ export function ShipmentList() {
                         {s.trackingNumber}
                       </Link>
                     </TableCell>
-                    <TableCell>{s.customerId}</TableCell>
+                    <TableCell>{s.organizationId}</TableCell>
                     <TableCell>{s.originAddress}</TableCell>
                     <TableCell>{s.destinationAddress}</TableCell>
                     <TableCell>
