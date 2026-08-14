@@ -51,7 +51,7 @@ export function BusinessClientDashboard() {
       updateShipmentStatus({
         shipmentId: shipmentToCancel, 
         newStatus: 'Cancelled', 
-        actor: { type: 'USER', userId: user?.id || 'UNKNOWN' }, 
+        actor: { type: 'USER', userId: user!.id }, 
         note: 'Cancelled by business client'
       });
       setShipmentToCancel(null);
@@ -85,9 +85,6 @@ export function BusinessClientDashboard() {
           <Button variant="outline" onClick={handleDownload} disabled={isDownloading} className="flex-1 sm:flex-none">
             <FileDown className={`h-4 w-4 mr-2 ${isDownloading ? 'animate-bounce' : ''}`} /> 
             {isDownloading ? 'Downloading...' : 'Download Report'}
-          </Button>
-          <Button onClick={() => setIsModalOpen(true)} className="flex-1 sm:flex-none">
-            <Plus className="h-4 w-4 mr-2" /> Create Shipment
           </Button>
         </div>
       </div>

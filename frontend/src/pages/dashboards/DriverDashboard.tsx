@@ -26,7 +26,7 @@ export function DriverDashboard() {
       updateShipmentStatus({
         shipmentId: id, 
         newStatus: nextStatus, 
-        actor: { type: 'USER', userId: driverRecord.id }, 
+        actor: { type: 'USER', userId: user!.id }, 
         location: 'Driver App'
       });
     }

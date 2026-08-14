@@ -1,17 +1,20 @@
 import {
   ProofOfDelivery,
   Shipment,
-  ShipmentStatusEvent
+  ShipmentStatusEvent,
+  RouteStop
 } from '../types/domain';
 
 import { SubmitPODRequest } from '../types/api';
 
 import { updateShipmentStatus } from './shipmentService';
+import { updateRouteStopStatus } from './routeService';
 
 interface PODServiceState {
   pods: ProofOfDelivery[];
   shipments: Shipment[];
   statusEvents: ShipmentStatusEvent[];
+  routeStops: RouteStop[];
 }
 
 export const submitPOD = (
@@ -21,7 +24,8 @@ export const submitPOD = (
   const {
     pods,
     shipments,
-    statusEvents
+    statusEvents,
+    routeStops
   } = state;
 
   const shipment = shipments.find(
@@ -91,10 +95,21 @@ export const submitPOD = (
       }
     );
 
+    let routeStopsResult = routeStops;
+
+  if (req.routeStopId && req.deliveryResult === 'SUCCESS') {
+    const rsResult = updateRouteStopStatus(
+      { routeStopId: req.routeStopId, newStatus: 'Completed', actor: req.actor },
+      { routeStops }
+    );
+    routeStopsResult = rsResult.routeStops;
+  }
+
   return {
     pods: [newPOD, ...pods],
     shipments: shipmentStateUpdate.shipments,
     statusEvents:
-      shipmentStateUpdate.statusEvents
+      shipmentStateUpdate.statusEvents,
+    routeStops: routeStopsResult
   };
 };

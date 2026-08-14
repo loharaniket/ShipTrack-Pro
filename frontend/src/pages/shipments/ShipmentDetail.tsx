@@ -68,7 +68,7 @@ export function ShipmentDetail() {
       updateShipmentStatus({
         shipmentId: shipment.id, 
         newStatus: nextStatus, 
-        actor: { type: 'USER', userId: user?.id || 'UNKNOWN' }, 
+        actor: { type: 'USER', userId: user!.id }, 
         location: 'Detail view'
       });
     }
@@ -221,7 +221,7 @@ export function ShipmentDetail() {
                 updateShipmentStatus({
                   shipmentId: shipment.id, 
                   newStatus: newStatus as any, 
-                  actor: { type: 'USER', userId: user?.id || 'UNKNOWN' }, 
+                  actor: { type: 'USER', userId: user!.id }, 
                   note: 'Manual Override'
                 });
                 setIsStatusModalOpen(false);
@@ -273,7 +273,7 @@ export function ShipmentDetail() {
                   updateShipmentStatus({
                     shipmentId: shipment.id, 
                     newStatus: shipment.status, 
-                    actor: { type: 'USER', userId: user?.id || 'UNKNOWN' }, 
+                    actor: { type: 'USER', userId: user!.id }, 
                     location: newTimelineLoc || 'In Route', 
                     note: newTimelineTitle
                   });

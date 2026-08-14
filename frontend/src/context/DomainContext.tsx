@@ -158,9 +158,7 @@ export function DomainProvider({ children }: { children: ReactNode }) {
       const result = updateShipmentStatus(req, { shipments, statusEvents });
       setShipments(result.shipments);
       setStatusEvents(result.statusEvents);
-    } catch (err) {
-      console.error(err);
-    }
+    } catch (err: any) { console.error(err); alert(err.message); }
   };
 
   const handleCreateRoute = (req: CreateRouteRequest, driverId?: string) => {
@@ -183,23 +181,21 @@ export function DomainProvider({ children }: { children: ReactNode }) {
       setStatusEvents(result.statusEvents);
       
       return newRouteId;
-    } catch (err) {
-      console.error(err);
-    }
+    } catch (err: any) { console.error(err); alert(err.message); }
   };
   
   const handleUpdateRouteStatus = (req: UpdateRouteStatusRequest) => {
     try {
       const result = updateRouteStatus(req, { routes });
       setRoutes(result.routes);
-    } catch (err) { console.error(err); }
+    } catch (err: any) { console.error(err); alert(err.message); }
   };
 
   const handleUpdateRouteStopStatus = (req: UpdateRouteStopStatusRequest) => {
     try {
       const result = updateRouteStopStatus(req, { routeStops });
       setRouteStops(result.routeStops);
-    } catch (err) { console.error(err); }
+    } catch (err: any) { console.error(err); alert(err.message); }
   };
 
   const handleAssignDriverToRoute = (req: AssignDriverRequest) => {
@@ -208,14 +204,14 @@ export function DomainProvider({ children }: { children: ReactNode }) {
       setRoutes(result.routes);
       setShipments(result.shipments);
       setStatusEvents(result.statusEvents);
-    } catch (err) { console.error(err); }
+    } catch (err: any) { console.error(err); alert(err.message); }
   };
 
   const handleDispatchRoute = (req: DispatchRouteRequest) => {
     try {
       const result = dispatchRoute(req, { routes, shipments });
       setRoutes(result.routes);
-    } catch (err) { console.error(err); }
+    } catch (err: any) { console.error(err); alert(err.message); }
   };
 
   const optimizeRoute = (routeId: string, result: OptimizationResult) => {
@@ -234,22 +230,19 @@ export function DomainProvider({ children }: { children: ReactNode }) {
 
   const handleSubmitPOD = (req: SubmitPODRequest) => {
     try {
-      const result = submitPOD(req, { pods, shipments, statusEvents });
+      const result = submitPOD(req, { pods, shipments, statusEvents, routeStops });
       setPods(result.pods);
       setShipments(result.shipments);
       setStatusEvents(result.statusEvents);
-      // also mark route stop completed
-      if (req.routeStopId) {
-        setRouteStops(prev => prev.map(s => s.id === req.routeStopId ? { ...s, status: 'Completed', actualDeparture: new Date().toISOString() } : s));
-      }
-    } catch (err) { console.error(err); }
+      setRouteStops(result.routeStops);
+    } catch (err: any) { console.error(err); alert(err.message); }
   };
 
   const handleCreateException = (req: CreateExceptionRequest) => {
     try {
       const result = createException(req, { exceptions, shipments, routes });
       setExceptions(result.exceptions);
-    } catch (err) { console.error(err); }
+    } catch (err: any) { console.error(err); alert(err.message); }
   };
 
   const handleAddShipment = (req: CreateShipmentRequest) => {
@@ -257,7 +250,7 @@ export function DomainProvider({ children }: { children: ReactNode }) {
       const result = createShipment(req, { shipments, packages });
       setShipments(result.shipments);
       setPackages(result.packages);
-    } catch (err) { console.error(err); }
+    } catch (err: any) { console.error(err); alert(err.message); }
   };
 
   const addDriver = (driver: Driver, vehicle?: Vehicle) => {

@@ -42,7 +42,7 @@ export function DigitalSignature() {
       recipientName: receiverName,
       notes: notes,
       deliveryResult: 'SUCCESS',
-      actor: { type: 'USER', userId: activeShipment.driverId || 'UNKNOWN' }
+      actor: { type: 'USER', userId: user!.id }
     });
     
     navigate('/my-route');
