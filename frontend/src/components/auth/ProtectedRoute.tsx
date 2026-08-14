@@ -20,7 +20,7 @@ export function ProtectedRoute({ allowedRoles }: { allowedRoles?: string[] }) {
              <ShieldAlert className="h-16 w-16 text-danger-500 mx-auto" />
              <h1 className="text-2xl font-bold text-navy-900">403 Access Restricted</h1>
              <p className="text-navy-500">
-               You don't have permission to access this resource. Your current role is <strong>{user.role}</strong>.
+               You don't have permission to access this resource.
              </p>
              <div className="pt-4">
                <Button onClick={() => window.location.href = '/'}>Return to Dashboard</Button>

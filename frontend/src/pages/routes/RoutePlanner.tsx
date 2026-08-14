@@ -14,12 +14,11 @@ import { CheckCircle } from 'lucide-react';
 
 export function RoutePlanner() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [currentStep, setCurrentStep] = useState(1);
-  const totalSteps = 4;
   
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [isOptimized, setIsOptimized] = useState(false);
   const [assignedDriver, setAssignedDriver] = useState<string | null>(null);
+  const [assignedVehicle, setAssignedVehicle] = useState<string | null>(null);
   
   const [isRouteCreated, setIsRouteCreated] = useState(false);
 
@@ -63,8 +62,8 @@ export function RoutePlanner() {
     setTimeout(() => {
       setIsRouteCreated(false);
       setSelectedIds([]);
-      setCurrentStep(1);
       setAssignedDriver(null);
+      setAssignedVehicle(null);
       setIsOptimized(false);
       // alert("Route Created");
     }, 2000);
@@ -110,13 +109,15 @@ export function RoutePlanner() {
           isOptimized={isOptimized}
           assignedDriver={assignedDriver}
           setAssignedDriver={setAssignedDriver}
+          assignedVehicle={assignedVehicle}
+          setAssignedVehicle={setAssignedVehicle}
         />
       </div>
       
       {/* Mobile Footer Overlay */}
       <div className="md:hidden absolute bottom-0 inset-x-0 p-4 bg-white border-t border-navy-200 z-50 flex justify-between items-center">
         <span className="text-sm font-semibold text-navy-900">{selectedIds.length} Shipments Selected</span>
-        <Button onClick={handleCreateRoute} disabled={!assignedDriver || selectedIds.length === 0}>Create Route</Button>
+        <Button onClick={handleCreateRoute} disabled={!assignedDriver || !assignedVehicle || selectedIds.length === 0}>Create Route</Button>
       </div>
     </div>
   );

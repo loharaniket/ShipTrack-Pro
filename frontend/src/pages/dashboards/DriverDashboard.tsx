@@ -1,14 +1,26 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Navigation, CheckCircle, Package, Truck, AlertTriangle } from 'lucide-react';
+import { Navigation, CheckCircle, Package, Truck, AlertTriangle, Play } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { MOCK_SHIPMENTS } from '@/services/mockData';
 import { Badge } from '@/components/ui/Badge';
+import { useAuth } from '@/context/AuthContext';
 
 export function DriverDashboard() {
   const navigate = useNavigate();
-  const driverName = 'Rahul Sharma';
+  const { user } = useAuth();
+  const driverName = user?.name || 'Rahul Sharma';
+  
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const handleStatusChange = (id: string, newStatus: string) => {
+    const shipment = MOCK_SHIPMENTS.find(s => s.id === id);
+    if (shipment) {
+      shipment.status = newStatus;
+      setRefreshKey(prev => prev + 1);
+    }
+  };
 
   const driverShipments = MOCK_SHIPMENTS.filter(s => s.driver === driverName);
   const assignedCount = driverShipments.filter(s => ['Assigned', 'Picked Up', 'In Transit', 'Out for Delivery'].includes(s.status)).length;
@@ -17,10 +29,10 @@ export function DriverDashboard() {
   const exceptionCount = driverShipments.filter(s => s.status === 'Exceptions').length;
 
   const activeShipment = driverShipments.find(s => ['In Transit', 'Out for Delivery'].includes(s.status));
-  const upcomingStops = driverShipments.filter(s => s.status === 'Assigned');
+  const upcomingStops = driverShipments.filter(s => s.status === 'Assigned' || s.status === 'Ready for Planning' || s.status === 'Planned');
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" key={refreshKey}>
       <div>
         <h1 className="text-2xl font-bold text-navy-900">Driver Dashboard</h1>
         <p className="text-navy-500">Welcome back, {driverName}. Here is your delivery queue for today.</p>
@@ -92,7 +104,7 @@ export function DriverDashboard() {
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-medium text-navy-500">ETA</p>
-                    <p className="text-lg font-bold text-primary-600">{activeShipment.eta}</p>
+                    <p className="text-lg font-bold text-primary-600">{activeShipment.eta || 'Pending'}</p>
                   </div>
                 </div>
                 
@@ -114,8 +126,11 @@ export function DriverDashboard() {
                   <Button className="flex-1" size="lg" onClick={() => navigate('/my-route')}>
                     <Navigation className="h-5 w-5 mr-2" /> Open My Route
                   </Button>
+                  <Button className="flex-1 bg-success-600 hover:bg-success-700 text-white border-0" size="lg" onClick={() => navigate('/pod/signature')}>
+                    <CheckCircle className="h-5 w-5 mr-2" /> Mark Delivered
+                  </Button>
                   <Button variant="outline" size="lg" onClick={() => navigate(`/shipments/${activeShipment.tracking}`)}>
-                    View Shipment
+                    Details
                   </Button>
                 </div>
               </CardContent>
@@ -123,7 +138,7 @@ export function DriverDashboard() {
           ) : (
             <Card>
               <CardContent className="p-8 text-center text-navy-500">
-                No active shipments in transit.
+                No active shipments in transit. Select "Start Pickup" on an upcoming stop to begin.
               </CardContent>
             </Card>
           )}
@@ -145,6 +160,11 @@ export function DriverDashboard() {
                     </div>
                     <p className="text-sm text-navy-600 truncate">{stop.destination}</p>
                     <p className="text-xs text-navy-400 mt-1">{stop.customer}</p>
+                    <div className="mt-2">
+                      <Button size="sm" variant="outline" className="w-full text-xs py-1 h-7" onClick={() => handleStatusChange(stop.id, 'In Transit')}>
+                        <Play className="h-3 w-3 mr-1" /> Start Pickup
+                      </Button>
+                    </div>
                   </div>
                 ))
               )}
@@ -180,11 +200,17 @@ export function DriverDashboard() {
                       <td className="px-6 py-4">{s.customer}</td>
                       <td className="px-6 py-4">{s.destination}</td>
                       <td className="px-6 py-4">
-                        <Badge variant={s.status === 'Exceptions' ? 'danger' : s.status === 'Delivered' ? 'success' : s.status === 'Assigned' ? 'warning' : 'info'}>
+                        <Badge variant={s.status === 'Exceptions' ? 'danger' : s.status === 'Delivered' ? 'success' : (s.status === 'Assigned' || s.status === 'Ready for Planning' || s.status === 'Planned') ? 'warning' : 'info'}>
                           {s.status}
                         </Badge>
                       </td>
-                      <td className="px-6 py-4 text-right">
+                      <td className="px-6 py-4 text-right space-x-2">
+                        {(s.status === 'Assigned' || s.status === 'Ready for Planning' || s.status === 'Planned') && (
+                          <Button size="sm" onClick={() => handleStatusChange(s.id, 'In Transit')}>Start</Button>
+                        )}
+                        {(s.status === 'In Transit' || s.status === 'Out for Delivery') && (
+                          <Button size="sm" className="bg-success-600 hover:bg-success-700 text-white" onClick={() => navigate('/pod/signature')}>Deliver</Button>
+                        )}
                         <Button variant="ghost" size="sm" onClick={() => navigate(`/shipments/${s.tracking}`)}>View</Button>
                       </td>
                     </tr>

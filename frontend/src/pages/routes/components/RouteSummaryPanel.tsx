@@ -16,6 +16,8 @@ interface RouteSummaryPanelProps {
   isOptimized: boolean;
   assignedDriver: string | null;
   setAssignedDriver: (driver: string) => void;
+  assignedVehicle: string | null;
+  setAssignedVehicle: (vehicle: string) => void;
 }
 
 export function RouteSummaryPanel({ 
@@ -27,7 +29,9 @@ export function RouteSummaryPanel({
   isOptimizing, 
   isOptimized, 
   assignedDriver,
-  setAssignedDriver
+  setAssignedDriver,
+  assignedVehicle,
+  setAssignedVehicle
 }: RouteSummaryPanelProps) {
   
   const estimatedDistance = selectedShipments.length * 15.5; // dummy calc
@@ -91,16 +95,28 @@ export function RouteSummaryPanel({
         <div className="space-y-3">
           <h3 className="text-sm font-semibold text-navy-900 border-b border-navy-100 pb-1">Fleet Assignment</h3>
           <div>
-            <label className="block text-sm font-medium text-navy-700 mb-1">Assign Fleet Unit</label>
+            <label className="block text-sm font-medium text-navy-700 mb-1">Assign Driver</label>
             <select 
-              className="w-full h-10 px-3 py-2 border border-navy-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm mb-2"
+              className="w-full h-10 px-3 py-2 border border-navy-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm mb-3"
               value={assignedDriver || ''}
               onChange={(e) => setAssignedDriver(e.target.value)}
             >
+              <option value="" disabled>Select a driver...</option>
+              <option value="Rahul Sharma">Rahul Sharma</option>
+              <option value="Amit Patel">Amit Patel</option>
+              <option value="Suresh Kumar">Suresh Kumar</option>
+            </select>
+
+            <label className="block text-sm font-medium text-navy-700 mb-1">Assign Vehicle</label>
+            <select 
+              className="w-full h-10 px-3 py-2 border border-navy-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm mb-2"
+              value={assignedVehicle || ''}
+              onChange={(e) => setAssignedVehicle(e.target.value)}
+            >
               <option value="" disabled>Select a vehicle...</option>
-              <option value="Rahul Sharma (MH-12-AB-4821)">MH-12-AB-4821 (Rahul Sharma)</option>
-              <option value="Amit Patel (DL-4C-AF-2938)">DL-4C-AF-2938 (Amit Patel)</option>
-              <option value="Suresh Kumar (KA-01-MJ-9912)">KA-01-MJ-9912 (Suresh Kumar)</option>
+              <option value="MH-12-AB-4821">MH-12-AB-4821 (Heavy Truck)</option>
+              <option value="DL-4C-AF-2938">DL-4C-AF-2938 (Medium Truck)</option>
+              <option value="KA-01-MJ-9912">KA-01-MJ-9912 (Refrigerated)</option>
             </select>
           </div>
         </div>
