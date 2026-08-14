@@ -29,11 +29,20 @@ export function MyRoute() {
     }
     
     if (nextStatus) {
-      updateShipmentStatus(shipmentId, nextStatus, driverRecord.id, 'Driver App');
+      updateShipmentStatus({
+        shipmentId: shipmentId, 
+        newStatus: nextStatus, 
+        actor: { type: 'USER', userId: driverRecord.id }, 
+        location: 'Driver App'
+      });
       if (nextRouteStopStatus) {
         const stop = routeStops.find(s => s.shipmentId === shipmentId);
         if (stop) {
-          updateRouteStopStatus(stop.id, nextRouteStopStatus);
+          updateRouteStopStatus({
+            routeStopId: stop.id, 
+            newStatus: nextRouteStopStatus, 
+            actor: { type: 'USER', userId: driverRecord.id }
+          });
         }
       }
     }

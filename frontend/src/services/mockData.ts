@@ -3,7 +3,6 @@ import {
   ShipmentException, ProofOfDelivery, ShipmentStatusEvent, TrackingEvent, MediaFile
 } from '../types/domain';
 
-const NOW = new Date().toISOString();
 const TWO_HOURS_AGO = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
 const ONE_HOUR_AGO = new Date(Date.now() - 60 * 60 * 1000).toISOString();
 const THIRTY_MINS_AGO = new Date(Date.now() - 30 * 60 * 1000).toISOString();
@@ -52,10 +51,10 @@ export const MOCK_VEHICLES: Vehicle[] = [
 ];
 
 export const MOCK_DRIVERS: Driver[] = [
-  { id: 'DRV-001', name: 'Rahul Sharma', phone: '+91 98765 43210', email: 'driver1@shiptrack.com', status: 'Active', userId: 'USR-002', vehicleId: 'VEH-001' },
-  { id: 'DRV-002', name: 'Amit Singh', phone: '+91 98765 11111', email: 'driver2@shiptrack.com', status: 'On Leave', userId: 'USR-003', vehicleId: 'VEH-002' },
-  { id: 'DRV-003', name: 'Vijay Singh', phone: '+91 98765 22222', email: 'driver3@shiptrack.com', status: 'Active', vehicleId: 'VEH-003' },
-  { id: 'DRV-004', name: 'Suresh Kumar', phone: '+91 98765 33333', email: 'driver4@shiptrack.com', status: 'Active', vehicleId: 'VEH-004' },
+  { id: 'DRV-001', name: 'Rahul Sharma', phone: '+91 98765 43210', email: 'driver1@shiptrack.com', status: 'Active', userId: 'USR-002' },
+  { id: 'DRV-002', name: 'Amit Singh', phone: '+91 98765 11111', email: 'driver2@shiptrack.com', status: 'On Leave', userId: 'USR-003' },
+  { id: 'DRV-003', name: 'Vijay Singh', phone: '+91 98765 22222', email: 'driver3@shiptrack.com', status: 'Active' },
+  { id: 'DRV-004', name: 'Suresh Kumar', phone: '+91 98765 33333', email: 'driver4@shiptrack.com', status: 'Active' },
   { id: 'DRV-005', name: 'Unassigned Driver', phone: '+91 98765 00000', email: 'driver5@shiptrack.com', status: 'Active' }
 ];
 
@@ -145,11 +144,11 @@ export const MOCK_ROUTE_STOPS: RouteStop[] = [
 ];
 
 export const MOCK_EXCEPTIONS: ShipmentException[] = [
-  { id: 'EXC-1', shipmentId: 'SHP-3', type: 'VEHICLE_BREAKDOWN', severity: 'HIGH', description: 'Vehicle tire puncture on Highway 4', status: 'OPEN', createdAt: FIVE_MINS_AGO, createdBy: 'SYSTEM' }
+  { id: 'EXC-1', shipmentId: 'SHP-3', type: 'VEHICLE_BREAKDOWN', severity: 'HIGH', description: 'Vehicle tire puncture on Highway 4', status: 'OPEN', createdAt: FIVE_MINS_AGO, createdByType: 'SYSTEM', createdByUserId: null }
 ];
 
 export const MOCK_PODS: ProofOfDelivery[] = [
-  { id: 'POD-1', shipmentId: 'SHP-2', driverId: 'DRV-004', recipientName: 'Front Desk', notes: 'Left at reception', deliveredAt: TWO_HOURS_AGO, deliveryResult: 'SUCCESS' }
+  { id: 'POD-1', shipmentId: 'SHP-2', driverId: 'DRV-004', recipientName: 'Front Desk', notes: 'Left at reception', deliveredAt: TWO_HOURS_AGO, deliveryResult: 'SUCCESS', actorType: 'USER', actorUserId: 'DRV-004' }
 ];
 
 export const MOCK_TRACKING_EVENTS: TrackingEvent[] = [];

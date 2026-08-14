@@ -28,33 +28,32 @@ export function BusinessClientDashboard() {
     if (!newShipment.dest) return;
     const newId = `STP-2026-10${480 + shipments.length + 1}`;
     addShipment({
-      id: Date.now().toString(),
       trackingNumber: newId,
       organizationId: customerName,
       serviceType: 'Express',
       originAddressId: 'ADDR-1',
       destinationAddressId: 'ADDR-2',
-      status: 'Draft',
       priority: 'Standard',
-      driverId: null,
-      routeId: null,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }, [{
-      id: Date.now().toString(),
-      shipmentId: Date.now().toString(),
-      description: 'Standard Package',
-      weight: 5,
-      type: 'BOX',
-      fragile: false
-    }]);
+      packages: [{
+        description: 'Standard Package',
+        quantity: 1,
+        weight: 5,
+        packageType: 'BOX',
+        fragile: false
+      }]
+    });
     setIsModalOpen(false);
     setNewShipment({ dest: '' });
   };
 
   const confirmCancel = () => {
     if (shipmentToCancel !== null) {
-      updateShipmentStatus(shipmentToCancel, 'Cancelled', user?.id || 'sys', 'Cancelled by business client');
+      updateShipmentStatus({
+        shipmentId: shipmentToCancel, 
+        newStatus: 'Cancelled', 
+        actor: { type: 'USER', userId: user?.id || null }, 
+        note: 'Cancelled by business client'
+      });
       setShipmentToCancel(null);
     }
   };

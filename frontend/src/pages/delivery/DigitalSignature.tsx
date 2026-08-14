@@ -37,13 +37,12 @@ export function DigitalSignature() {
     if (!activeShipment) return;
     
     submitPOD({
-      id: `POD-${Date.now()}`,
       shipmentId: activeShipment.id,
       driverId: activeShipment.driverId || '',
       recipientName: receiverName,
       notes: notes,
-      deliveredAt: new Date().toISOString(),
-      deliveryResult: 'SUCCESS'
+      deliveryResult: 'SUCCESS',
+      actor: { type: 'USER', userId: activeShipment.driverId || null }
     });
     
     navigate('/my-route');

@@ -56,6 +56,8 @@ export interface User {
   name: string;
   email: string;
   role: Role;
+  // NOTE: For this product, a user belongs to exactly one organization
+  // and has exactly one primary role. We use organizationId to link this.
   organizationId?: string; // Optional for Admins, required for Customers/BusinessClients
 }
 
@@ -89,7 +91,7 @@ export interface Driver {
   phone: string;
   email: string;
   status: 'Active' | 'Inactive' | 'On Leave';
-  vehicleId?: string; // Explicit assignment relation
+  vehicleId?: string; // NOTE: Derived view-model property for UI compatibility only. Canonical relationship is DriverVehicleAssignment.
 }
 
 export interface DriverVehicleAssignment {
@@ -150,8 +152,8 @@ export interface ShipmentStatusEvent {
   shipmentId: string;
   previousStatus: ShipmentStatus | null;
   newStatus: ShipmentStatus;
-  actorUserId: string | null; // Nullable for SYSTEM
   actorType: 'USER' | 'SYSTEM';
+  actorUserId: string | null; // Nullable for SYSTEM
   timestamp: string; // ISO 8601
   latitude?: number;
   longitude?: number;
@@ -183,9 +185,11 @@ export interface ShipmentException {
   description: string;
   status: 'OPEN' | 'RESOLVED';
   createdAt: string; // ISO 8601
-  createdBy: string; // User ID
+  createdByType: 'USER' | 'SYSTEM';
+  createdByUserId: string | null; 
   resolvedAt?: string | null; // ISO 8601
-  resolvedBy?: string | null; // User ID
+  resolvedByType?: 'USER' | 'SYSTEM';
+  resolvedByUserId?: string | null; 
   notes?: string;
 }
 
@@ -210,6 +214,8 @@ export interface ProofOfDelivery {
   latitude?: number;
   longitude?: number;
   deliveryResult: 'SUCCESS' | 'FAILED_REJECTED' | 'FAILED_NOT_FOUND';
+  actorType: 'USER' | 'SYSTEM';
+  actorUserId: string | null;
 }
 
 export interface Route {

@@ -1,7 +1,6 @@
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { LiveMap } from '@/components/maps/LiveMap';
-import { Shipment } from '@/types/domain';
 import { ShipmentSelectionPanel } from './components/ShipmentSelectionPanel';
 import { RouteSummaryPanel } from './components/RouteSummaryPanel';
 import { CheckCircle } from 'lucide-react';
@@ -69,29 +68,10 @@ export function RoutePlanner() {
       return;
     }
 
-    setIsRouteCreated(true);
-    
-    const routeId = `RT-${Date.now()}`;
-    const newRoute = {
-      id: routeId,
-      name: `Route ${routeId}`,
-      driverId: assignedDriverId,
-      vehicleId: derivedVehicle.id,
-      status: 'Planned' as const,
-      distance: selectedIds.length * 15.5,
-      duration: selectedIds.length * 25
-    };
-
-    const newStops = selectedIds.map((shipmentId, index) => ({
-      id: `STP-${Date.now()}-${index}`,
-      routeId,
-      shipmentId,
-      sequence: index + 1,
-      status: 'Pending' as const,
-      eta: 'TBD'
-    }));
-
-    createRoute(newRoute, newStops);
+    createRoute({
+      name: `Route ${Date.now()}`,
+      shipmentIds: selectedIds,
+    }, assignedDriverId);
     
     setTimeout(() => {
       setIsRouteCreated(false);

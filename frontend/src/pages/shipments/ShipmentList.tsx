@@ -32,7 +32,12 @@ export function ShipmentList() {
     
   const confirmCancel = () => {
     if (shipmentToCancel !== null) {
-      updateShipmentStatus(shipmentToCancel, 'Cancelled', user?.id || 'sys', 'Shipment List View');
+      updateShipmentStatus({
+        shipmentId: shipmentToCancel, 
+        newStatus: 'Cancelled', 
+        actor: { type: 'USER', userId: user?.id || null }, 
+        location: 'Shipment List View'
+      });
       setSelectedIds(selectedIds.filter(id => id !== shipmentToCancel));
       setShipmentToCancel(null);
     }

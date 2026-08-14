@@ -23,7 +23,12 @@ export function DriverDashboard() {
     else if (currentStatus === 'In Transit') nextStatus = 'Out for Delivery';
     
     if (nextStatus) {
-      updateShipmentStatus(id, nextStatus, driverRecord.id, 'Driver App');
+      updateShipmentStatus({
+        shipmentId: id, 
+        newStatus: nextStatus, 
+        actor: { type: 'USER', userId: driverRecord.id }, 
+        location: 'Driver App'
+      });
     }
   };
 

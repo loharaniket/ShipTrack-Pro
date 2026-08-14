@@ -65,7 +65,12 @@ export function ShipmentDetail() {
     else if (shipment.status === 'In Transit') nextStatus = 'Out for Delivery';
     
     if (nextStatus) {
-      updateShipmentStatus(shipment.id, nextStatus, user?.id || 'sys', 'Detail view');
+      updateShipmentStatus({
+        shipmentId: shipment.id, 
+        newStatus: nextStatus, 
+        actor: { type: 'USER', userId: user?.id || null }, 
+        location: 'Detail view'
+      });
     }
   };
 
@@ -213,7 +218,12 @@ export function ShipmentDetail() {
             <div className="px-6 py-4 border-t border-navy-100 bg-navy-50 flex justify-end space-x-3">
               <Button variant="outline" onClick={() => setIsStatusModalOpen(false)}>Cancel</Button>
               <Button onClick={() => {
-                updateShipmentStatus(shipment.id, newStatus as any, user?.id || 'sys', 'Manual Override');
+                updateShipmentStatus({
+                  shipmentId: shipment.id, 
+                  newStatus: newStatus as any, 
+                  actor: { type: 'USER', userId: user?.id || null }, 
+                  note: 'Manual Override'
+                });
                 setIsStatusModalOpen(false);
               }}>Confirm</Button>
             </div>
@@ -260,7 +270,13 @@ export function ShipmentDetail() {
               <Button variant="outline" onClick={() => setIsTimelineModalOpen(false)}>Cancel</Button>
               <Button onClick={() => {
                 if (newTimelineTitle) {
-                  updateShipmentStatus(shipment.id, shipment.status, user?.id || 'sys', newTimelineLoc || 'In Route', newTimelineTitle);
+                  updateShipmentStatus({
+                    shipmentId: shipment.id, 
+                    newStatus: shipment.status, 
+                    actor: { type: 'USER', userId: user?.id || null }, 
+                    location: newTimelineLoc || 'In Route', 
+                    note: newTimelineTitle
+                  });
                   setNewTimelineTitle('');
                   setNewTimelineLoc('');
                   setIsTimelineModalOpen(false);
