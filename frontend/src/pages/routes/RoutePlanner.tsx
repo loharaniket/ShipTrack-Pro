@@ -1,4 +1,4 @@
-import { Card, CardContent } from '@/components/ui/Card';
+import { Shipment } from '@/types/domain';
 import { Button } from '@/components/ui/Button';
 import { LiveMap } from '@/components/maps/LiveMap';
 import { ShipmentSelectionPanel } from './components/ShipmentSelectionPanel';

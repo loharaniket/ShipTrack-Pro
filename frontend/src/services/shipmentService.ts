@@ -1,14 +1,68 @@
-import { Shipment, ShipmentStatusEvent, ShipmentPackage } from '../types/domain';
-import { UpdateShipmentStatusRequest, CreateShipmentRequest } from '../types/api';
+import {
+  Shipment,
+  ShipmentStatusEvent,
+  ShipmentPackage,
+  Address,
+  Organization
+} from '../types/domain';
+
+import {
+  UpdateShipmentStatusRequest,
+  CreateShipmentRequest
+} from '../types/api';
+
 import { canTransitionShipmentStatus } from '../utils/statusTransitions';
+
+interface ShipmentServiceState {
+  shipments: Shipment[];
+  packages: ShipmentPackage[];
+  statusEvents?: ShipmentStatusEvent[];
+  addresses?: Address[];
+  organizations?: Organization[];
+}
 
 export const createShipment = (
   req: CreateShipmentRequest,
-  state: { shipments: Shipment[]; packages: ShipmentPackage[] }
+  state: ShipmentServiceState
 ) => {
-  const { shipments, packages } = state;
+  const {
+    shipments,
+    packages,
+    addresses = [],
+    organizations = []
+  } = state;
+
+  if (!organizations.some(org => org.id === req.organizationId)) {
+    throw new Error(`Organization not found: ${req.organizationId}`);
+  }
+
+  if (!addresses.some(address => address.id === req.originAddressId)) {
+    throw new Error(`Origin address not found: ${req.originAddressId}`);
+  }
+
+  if (!addresses.some(address => address.id === req.destinationAddressId)) {
+    throw new Error(
+      `Destination address not found: ${req.destinationAddressId}`
+    );
+  }
+
+  if (req.packages.length === 0) {
+    throw new Error('At least one package is required');
+  }
+
+  if (
+    shipments.some(
+      shipment => shipment.trackingNumber === req.trackingNumber
+    )
+  ) {
+    throw new Error(
+      `Tracking number already exists: ${req.trackingNumber}`
+    );
+  }
+
   const shipmentId = `SHP-${Date.now()}`;
-  
+  const now = new Date().toISOString();
+
   const newShipment: Shipment = {
     id: shipmentId,
     trackingNumber: req.trackingNumber,
@@ -27,15 +81,26 @@ export const createShipment = (
     driverId: null,
     routeId: null,
     status: 'Draft',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
+    createdAt: now,
+    updatedAt: now
   };
 
-  const newPackages: ShipmentPackage[] = req.packages.map((pkg, idx) => ({
-    ...pkg,
-    id: `PKG-${Date.now()}-${idx}`,
-    shipmentId
-  }));
+  const newPackages: ShipmentPackage[] = req.packages.map(
+    (pkg, index) => ({
+      id: `PKG-${Date.now()}-${index}`,
+      shipmentId,
+      description: pkg.description,
+      quantity: pkg.quantity,
+      weight: pkg.weight,
+      length: pkg.length,
+      width: pkg.width,
+      height: pkg.height,
+      packageType: pkg.packageType,
+      fragile: pkg.fragile,
+      declaredValue: pkg.declaredValue,
+      specialHandling: pkg.specialHandling
+    })
+  );
 
   return {
     shipments: [newShipment, ...shipments],
@@ -45,34 +110,57 @@ export const createShipment = (
 
 export const updateShipmentStatus = (
   req: UpdateShipmentStatusRequest,
-  state: { shipments: Shipment[]; statusEvents: ShipmentStatusEvent[] }
-): { shipments: Shipment[]; statusEvents: ShipmentStatusEvent[] } => {
+  state: {
+    shipments: Shipment[];
+    statusEvents: ShipmentStatusEvent[];
+  }
+): {
+  shipments: Shipment[];
+  statusEvents: ShipmentStatusEvent[];
+} => {
   const { shipments, statusEvents } = state;
-  const idx = shipments.findIndex(s => s.id === req.shipmentId || s.trackingNumber === req.shipmentId);
-  if (idx === -1) throw new Error('Shipment not found');
 
-  const shipment = shipments[idx];
-  
-  if (!canTransitionShipmentStatus(shipment.status, req.newStatus)) {
-    throw new Error(`Invalid status transition from ${shipment.status} to ${req.newStatus}`);
+  const idx = shipments.findIndex(
+    shipment =>
+      shipment.id === req.shipmentId ||
+      shipment.trackingNumber === req.shipmentId
+  );
+
+  if (idx === -1) {
+    throw new Error(`Shipment not found: ${req.shipmentId}`);
   }
 
-  const newEvent: ShipmentStatusEvent = {
-    id: Date.now().toString(),
+  const shipment = shipments[idx];
+
+  if (
+    !canTransitionShipmentStatus(
+      shipment.status,
+      req.newStatus
+    )
+  ) {
+    throw new Error(
+      `Invalid shipment status transition: ${shipment.status} -> ${req.newStatus}`
+    );
+  }
+
+  const now = new Date().toISOString();
+
+  const event: ShipmentStatusEvent = {
+    id: `SE-${Date.now()}`,
     shipmentId: shipment.id,
     previousStatus: shipment.status,
     newStatus: req.newStatus,
-    timestamp: new Date().toISOString(),
-    actorUserId: req.actor.userId,
     actorType: req.actor.type,
+    actorUserId: req.actor.userId,
+    timestamp: now,
     location: req.location,
     note: req.note
   };
 
-  const updatedShipment = { 
-    ...shipment, 
-    status: req.newStatus, 
-    updatedAt: new Date().toISOString() 
+  const updatedShipment: Shipment = {
+    ...shipment,
+    status: req.newStatus,
+    updatedAt: now
   };
 
   const newShipments = [...shipments];
@@ -80,6 +168,6 @@ export const updateShipmentStatus = (
 
   return {
     shipments: newShipments,
-    statusEvents: [newEvent, ...statusEvents]
+    statusEvents: [event, ...statusEvents]
   };
 };

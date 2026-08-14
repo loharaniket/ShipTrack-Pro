@@ -35,7 +35,7 @@ export function ShipmentList() {
       updateShipmentStatus({
         shipmentId: shipmentToCancel, 
         newStatus: 'Cancelled', 
-        actor: { type: 'USER', userId: user?.id || null }, 
+        actor: { type: 'USER', userId: user?.id || 'UNKNOWN' }, 
         location: 'Shipment List View'
       });
       setSelectedIds(selectedIds.filter(id => id !== shipmentToCancel));

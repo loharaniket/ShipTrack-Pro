@@ -1,13 +1,101 @@
-import { Route, RouteStop, Shipment, ShipmentStatusEvent } from '../types/domain';
-import { CreateRouteRequest, AssignDriverRequest, UpdateRouteStatusRequest, UpdateRouteStopStatusRequest, DispatchRouteRequest } from '../types/api';
-import { canTransitionRouteStatus, canTransitionRouteStopStatus, canTransitionShipmentStatus } from '../utils/statusTransitions';
+import {
+  Route,
+  RouteStop,
+  Shipment,
+  ShipmentStatusEvent,
+  Driver
+} from '../types/domain';
+
+import {
+  CreateRouteRequest,
+  AssignDriverRequest,
+  UpdateRouteStatusRequest,
+  UpdateRouteStopStatusRequest,
+  DispatchRouteRequest
+} from '../types/api';
+
+import {
+  canTransitionRouteStatus,
+  canTransitionRouteStopStatus,
+  canTransitionShipmentStatus
+} from '../utils/statusTransitions';
+
+interface RouteServiceState {
+  routes: Route[];
+  routeStops: RouteStop[];
+  shipments: Shipment[];
+  statusEvents: ShipmentStatusEvent[];
+  drivers?: Driver[];
+}
+
+const getRequiredShipments = (
+  shipmentIds: string[],
+  shipments: Shipment[]
+): Shipment[] => {
+  const uniqueIds = [...new Set(shipmentIds)];
+
+  if (uniqueIds.length !== shipmentIds.length) {
+    throw new Error('Duplicate shipment IDs are not allowed');
+  }
+
+  const resolved = uniqueIds.map(id => {
+    const shipment = shipments.find(item => item.id === id);
+
+    if (!shipment) {
+      throw new Error(`Shipment not found: ${id}`);
+    }
+
+    return shipment;
+  });
+
+  return resolved;
+};
 
 export const createRoute = (
   req: CreateRouteRequest,
-  state: { routes: Route[]; routeStops: RouteStop[]; shipments: Shipment[]; statusEvents: ShipmentStatusEvent[] }
+  state: RouteServiceState
 ) => {
-  const { routes, routeStops, shipments, statusEvents } = state;
+  const {
+    routes,
+    routeStops,
+    shipments,
+    statusEvents
+  } = state;
+
+  if (!req.name.trim()) {
+    throw new Error('Route name is required');
+  }
+
+  if (req.shipmentIds.length === 0) {
+    throw new Error('At least one shipment is required');
+  }
+
+  const selectedShipments = getRequiredShipments(
+    req.shipmentIds,
+    shipments
+  );
+
+  for (const shipment of selectedShipments) {
+    if (shipment.routeId) {
+      throw new Error(
+        `Shipment ${shipment.id} is already assigned to route ${shipment.routeId}`
+      );
+    }
+
+    if (
+      !canTransitionShipmentStatus(
+        shipment.status,
+        'Planned'
+      )
+    ) {
+      throw new Error(
+        `Shipment ${shipment.id} cannot transition from ${shipment.status} to Planned`
+      );
+    }
+  }
+
   const routeId = `RT-${Date.now()}`;
+  const now = new Date().toISOString();
 
   const newRoute: Route = {
     id: routeId,
@@ -21,38 +109,42 @@ export const createRoute = (
     duration: 0
   };
 
-  const newStops: RouteStop[] = req.shipmentIds.map((shipmentId, index) => {
-    return {
+  const newStops: RouteStop[] =
+    selectedShipments.map((shipment, index) => ({
       id: `STP-${Date.now()}-${index}`,
       routeId,
-      shipmentId,
+      shipmentId: shipment.id,
+      addressId: shipment.destinationAddressId,
       sequence: index + 1,
       status: 'Pending'
-    };
-  });
+    }));
 
-  // Automatically transition shipment statuses to 'Planned'
   const newShipments = [...shipments];
   const newEvents = [...statusEvents];
 
-  req.shipmentIds.forEach(shipmentId => {
-    const idx = newShipments.findIndex(s => s.id === shipmentId);
-    if (idx !== -1) {
-      const s = newShipments[idx];
-      if (canTransitionShipmentStatus(s.status, 'Planned')) {
-        newShipments[idx] = { ...s, status: 'Planned', routeId, updatedAt: new Date().toISOString() };
-        newEvents.unshift({
-          id: `${Date.now()}-${shipmentId}`,
-          shipmentId,
-          previousStatus: s.status,
-          newStatus: 'Planned',
-          actorUserId: null,
-          actorType: 'SYSTEM',
-          timestamp: new Date().toISOString()
-        });
-      }
-    }
-  });
+  for (const shipment of selectedShipments) {
+    const index = newShipments.findIndex(
+      item => item.id === shipment.id
+    );
+
+    newShipments[index] = {
+      ...shipment,
+      status: 'Planned',
+      routeId,
+      updatedAt: now
+    };
+
+    newEvents.unshift({
+      id: `SE-${Date.now()}-${shipment.id}`,
+      shipmentId: shipment.id,
+      previousStatus: shipment.status,
+      newStatus: 'Planned',
+      actorType: 'SYSTEM',
+      actorUserId: null,
+      timestamp: now,
+      note: `Shipment planned on route ${routeId}`
+    });
+  }
 
   return {
     routes: [...routes, newRoute],
@@ -67,19 +159,49 @@ export const updateRouteStatus = (
   state: { routes: Route[] }
 ) => {
   const { routes } = state;
-  const idx = routes.findIndex(r => r.id === req.routeId);
-  if (idx === -1) throw new Error('Route not found');
 
-  const route = routes[idx];
-  
-  if (!canTransitionRouteStatus(route.status, req.newStatus)) {
-    throw new Error(`Invalid route transition from ${route.status} to ${req.newStatus}`);
+  const index = routes.findIndex(
+    route => route.id === req.routeId
+  );
+
+  if (index === -1) {
+    throw new Error(`Route not found: ${req.routeId}`);
   }
 
-  const newRoutes = [...routes];
-  newRoutes[idx] = { ...route, status: req.newStatus };
+  const route = routes[index];
 
-  return { routes: newRoutes };
+  if (
+    !canTransitionRouteStatus(
+      route.status,
+      req.newStatus
+    )
+  ) {
+    throw new Error(
+      `Invalid route transition: ${route.status} -> ${req.newStatus}`
+    );
+  }
+
+  const now = new Date().toISOString();
+
+  const updatedRoute: Route = {
+    ...route,
+    status: req.newStatus,
+    actualStart:
+      req.newStatus === 'In Progress'
+        ? route.actualStart ?? now
+        : route.actualStart,
+    actualEnd:
+      req.newStatus === 'Completed'
+        ? route.actualEnd ?? now
+        : route.actualEnd
+  };
+
+  const newRoutes = [...routes];
+  newRoutes[index] = updatedRoute;
+
+  return {
+    routes: newRoutes
+  };
 };
 
 export const updateRouteStopStatus = (
@@ -87,85 +209,233 @@ export const updateRouteStopStatus = (
   state: { routeStops: RouteStop[] }
 ) => {
   const { routeStops } = state;
-  const idx = routeStops.findIndex(s => s.id === req.routeStopId);
-  if (idx === -1) throw new Error('RouteStop not found');
 
-  const stop = routeStops[idx];
+  const index = routeStops.findIndex(
+    stop => stop.id === req.routeStopId
+  );
 
-  if (!canTransitionRouteStopStatus(stop.status, req.newStatus)) {
-    throw new Error(`Invalid route stop transition from ${stop.status} to ${req.newStatus}`);
+  if (index === -1) {
+    throw new Error(
+      `Route stop not found: ${req.routeStopId}`
+    );
   }
 
-  const newStops = [...routeStops];
-  newStops[idx] = { 
-    ...stop, 
-    status: req.newStatus, 
-    actualArrival: req.actualArrival || stop.actualArrival,
-    actualDeparture: req.actualDeparture || stop.actualDeparture
+  const stop = routeStops[index];
+
+  if (
+    !canTransitionRouteStopStatus(
+      stop.status,
+      req.newStatus
+    )
+  ) {
+    throw new Error(
+      `Invalid route stop transition: ${stop.status} -> ${req.newStatus}`
+    );
+  }
+
+  const now = new Date().toISOString();
+
+  const updatedStop: RouteStop = {
+    ...stop,
+    status: req.newStatus,
+    actualArrival:
+      req.actualArrival ??
+      (req.newStatus === 'Arrived'
+        ? now
+        : stop.actualArrival),
+    actualDeparture:
+      req.actualDeparture ??
+      (req.newStatus === 'Completed'
+        ? now
+        : stop.actualDeparture)
   };
 
-  return { routeStops: newStops };
+  const newStops = [...routeStops];
+  newStops[index] = updatedStop;
+
+  return {
+    routeStops: newStops
+  };
 };
 
 export const assignDriverToRoute = (
   req: AssignDriverRequest,
-  state: { routes: Route[]; routeStops: RouteStop[]; shipments: Shipment[]; statusEvents: ShipmentStatusEvent[] }
+  state: RouteServiceState
 ) => {
-  const { routes, routeStops, shipments, statusEvents } = state;
-  const idx = routes.findIndex(r => r.id === req.routeId);
-  if (idx === -1) throw new Error('Route not found');
+  const {
+    routes,
+    routeStops,
+    shipments,
+    statusEvents,
+    drivers = []
+  } = state;
 
-  const route = routes[idx];
-  if (!canTransitionRouteStatus(route.status, 'Assigned')) {
-    throw new Error(`Invalid route transition from ${route.status} to Assigned`);
+  const routeIndex = routes.findIndex(
+    route => route.id === req.routeId
+  );
+
+  if (routeIndex === -1) {
+    throw new Error(`Route not found: ${req.routeId}`);
+  }
+
+  if (
+    drivers.length > 0 &&
+    !drivers.some(driver => driver.id === req.driverId)
+  ) {
+    throw new Error(`Driver not found: ${req.driverId}`);
+  }
+
+  const route = routes[routeIndex];
+
+  if (
+    !canTransitionRouteStatus(
+      route.status,
+      'Assigned'
+    )
+  ) {
+    throw new Error(
+      `Invalid route transition: ${route.status} -> Assigned`
+    );
+  }
+
+  const routeStopItems = routeStops.filter(
+    stop => stop.routeId === req.routeId
+  );
+
+  if (routeStopItems.length === 0) {
+    throw new Error(
+      `Route ${req.routeId} has no route stops`
+    );
+  }
+
+  const shipmentIds = routeStopItems.map(
+    stop => stop.shipmentId
+  );
+
+  const selectedShipments = getRequiredShipments(
+    shipmentIds,
+    shipments
+  );
+
+  for (const shipment of selectedShipments) {
+    if (shipment.routeId !== req.routeId) {
+      throw new Error(
+        `Shipment ${shipment.id} is not linked to route ${req.routeId}`
+      );
+    }
+
+    if (
+      !canTransitionShipmentStatus(
+        shipment.status,
+        'Assigned'
+      )
+    ) {
+      throw new Error(
+        `Shipment ${shipment.id} cannot transition from ${shipment.status} to Assigned`
+      );
+    }
   }
 
   const newRoutes = [...routes];
-  newRoutes[idx] = { ...route, status: 'Assigned', driverId: req.driverId };
 
-  const routeStopItems = routeStops.filter(s => s.routeId === req.routeId);
-  const shipmentIds = routeStopItems.map(s => s.shipmentId);
+  newRoutes[routeIndex] = {
+    ...route,
+    status: 'Assigned',
+    driverId: req.driverId
+  };
 
   const newShipments = [...shipments];
   const newEvents = [...statusEvents];
+  const now = new Date().toISOString();
 
-  shipmentIds.forEach(shipmentId => {
-    const sIdx = newShipments.findIndex(s => s.id === shipmentId);
-    if (sIdx !== -1) {
-      const s = newShipments[sIdx];
-      if (canTransitionShipmentStatus(s.status, 'Assigned')) {
-        newShipments[sIdx] = { ...s, status: 'Assigned', driverId: req.driverId, updatedAt: new Date().toISOString() };
-        newEvents.unshift({
-          id: `${Date.now()}-${shipmentId}`,
-          shipmentId: shipmentId,
-          previousStatus: s.status,
-          newStatus: 'Assigned',
-          actorUserId: req.actor.userId,
-          actorType: req.actor.type,
-          timestamp: new Date().toISOString()
-        });
-      }
-    }
-  });
+  for (const shipment of selectedShipments) {
+    const index = newShipments.findIndex(
+      item => item.id === shipment.id
+    );
 
-  return { routes: newRoutes, shipments: newShipments, statusEvents: newEvents };
+    newShipments[index] = {
+      ...shipment,
+      status: 'Assigned',
+      driverId: req.driverId,
+      routeId: req.routeId,
+      updatedAt: now
+    };
+
+    newEvents.unshift({
+      id: `SE-${Date.now()}-${shipment.id}`,
+      shipmentId: shipment.id,
+      previousStatus: shipment.status,
+      newStatus: 'Assigned',
+      actorType: req.actor.type,
+      actorUserId: req.actor.userId,
+      timestamp: now,
+      note: `Driver ${req.driverId} assigned to route ${req.routeId}`
+    });
+  }
+
+  return {
+    routes: newRoutes,
+    shipments: newShipments,
+    statusEvents: newEvents
+  };
 };
 
 export const dispatchRoute = (
   req: DispatchRouteRequest,
-  state: { routes: Route[] }
+  state: {
+    routes: Route[];
+    shipments: Shipment[];
+  }
 ) => {
-  const { routes } = state;
-  const idx = routes.findIndex(r => r.id === req.routeId);
-  if (idx === -1) throw new Error('Route not found');
+  const { routes, shipments } = state;
 
-  const route = routes[idx];
-  if (!canTransitionRouteStatus(route.status, 'Dispatched')) {
-    throw new Error(`Invalid route transition from ${route.status} to Dispatched`);
+  const index = routes.findIndex(
+    route => route.id === req.routeId
+  );
+
+  if (index === -1) {
+    throw new Error(`Route not found: ${req.routeId}`);
+  }
+
+  const route = routes[index];
+
+  if (
+    !canTransitionRouteStatus(
+      route.status,
+      'Dispatched'
+    )
+  ) {
+    throw new Error(
+      `Invalid route transition: ${route.status} -> Dispatched`
+    );
+  }
+
+  const routeShipments = shipments.filter(
+    shipment => shipment.routeId === req.routeId
+  );
+
+  if (routeShipments.length === 0) {
+    throw new Error(
+      `Route ${req.routeId} has no shipments`
+    );
+  }
+
+  for (const shipment of routeShipments) {
+    if (shipment.status !== 'Assigned') {
+      throw new Error(
+        `Shipment ${shipment.id} must be Assigned before route dispatch`
+      );
+    }
   }
 
   const newRoutes = [...routes];
-  newRoutes[idx] = { ...route, status: 'Dispatched' };
 
-  return { routes: newRoutes };
+  newRoutes[index] = {
+    ...route,
+    status: 'Dispatched'
+  };
+
+  return {
+    routes: newRoutes
+  };
 };

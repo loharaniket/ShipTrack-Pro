@@ -1,6 +1,10 @@
-export type Role = 'Administrator' | 'Driver' | 'Customer' | 'BusinessClient';
+export type Role =
+  | 'Administrator'
+  | 'Driver'
+  | 'Customer'
+  | 'BusinessClient';
 
-export type Permission = 
+export type Permission =
   | 'VIEW_ALL_SHIPMENTS'
   | 'VIEW_OWN_SHIPMENTS'
   | 'CREATE_SHIPMENT'
@@ -14,7 +18,7 @@ export type Permission =
   | 'VIEW_REPORTS'
   | 'MANAGE_USERS';
 
-export type ShipmentStatus = 
+export type ShipmentStatus =
   | 'Draft'
   | 'Ready for Planning'
   | 'Planned'
@@ -26,7 +30,7 @@ export type ShipmentStatus =
   | 'Failed'
   | 'Cancelled';
 
-export type RouteStatus = 
+export type RouteStatus =
   | 'Draft'
   | 'Planned'
   | 'Assigned'
@@ -45,10 +49,17 @@ export type RouteStopStatus =
 
 export type Priority = 'Standard' | 'High' | 'Urgent';
 
+export type ActorType = 'USER' | 'SYSTEM';
+
+export interface Actor {
+  type: ActorType;
+  userId: string | null;
+}
+
 export interface Organization {
   id: string;
   name: string;
-  createdAt: string; // ISO 8601
+  createdAt: string;
 }
 
 export interface User {
@@ -56,9 +67,7 @@ export interface User {
   name: string;
   email: string;
   role: Role;
-  // NOTE: For this product, a user belongs to exactly one organization
-  // and has exactly one primary role. We use organizationId to link this.
-  organizationId?: string; // Optional for Admins, required for Customers/BusinessClients
+  organizationId?: string;
 }
 
 export interface Address {
@@ -86,20 +95,19 @@ export interface Vehicle {
 
 export interface Driver {
   id: string;
-  userId?: string; // Links driver to user account
+  userId?: string;
   name: string;
   phone: string;
   email: string;
   status: 'Active' | 'Inactive' | 'On Leave';
-  vehicleId?: string; // NOTE: Derived view-model property for UI compatibility only. Canonical relationship is DriverVehicleAssignment.
 }
 
 export interface DriverVehicleAssignment {
   id: string;
   driverId: string;
   vehicleId: string;
-  assignedAt: string; // ISO 8601
-  unassignedAt?: string; // ISO 8601
+  assignedAt: string;
+  unassignedAt?: string;
 }
 
 export interface ShipmentPackage {
@@ -119,7 +127,7 @@ export interface ShipmentPackage {
 
 export interface Shipment {
   id: string;
-  trackingNumber: string; // Customer-facing ID
+  trackingNumber: string;
   organizationId: string;
   serviceType: string;
   priority: Priority;
@@ -132,14 +140,13 @@ export interface Shipment {
   driverId: string | null;
   routeId: string | null;
   status: ShipmentStatus;
-  createdAt: string; // ISO 8601
-  updatedAt: string; // ISO 8601
-  scheduledPickup?: string; // ISO 8601
-  scheduledDelivery?: string; // ISO 8601
+  createdAt: string;
+  updatedAt: string;
+  scheduledPickup?: string;
+  scheduledDelivery?: string;
   deliveryInstructions?: string;
 }
 
-// UI/View Model type extending Shipment with derived values for the frontend demo
 export interface ShipmentView extends Shipment {
   originAddressLabel: string;
   destinationAddressLabel: string;
@@ -152,9 +159,9 @@ export interface ShipmentStatusEvent {
   shipmentId: string;
   previousStatus: ShipmentStatus | null;
   newStatus: ShipmentStatus;
-  actorType: 'USER' | 'SYSTEM';
-  actorUserId: string | null; // Nullable for SYSTEM
-  timestamp: string; // ISO 8601
+  actorType: ActorType;
+  actorUserId: string | null;
+  timestamp: string;
   latitude?: number;
   longitude?: number;
   location?: string;
@@ -172,24 +179,36 @@ export interface TrackingEvent {
   speed?: number;
   heading?: number;
   accuracy?: number;
-  timestamp: string; // ISO 8601
+  timestamp: string;
   source: 'GPS_DEVICE' | 'DRIVER_APP' | 'SYSTEM';
 }
+
+export type ShipmentExceptionType =
+  | 'VEHICLE_BREAKDOWN'
+  | 'WEATHER_DELAY'
+  | 'CUSTOMER_UNAVAILABLE'
+  | 'OTHER';
+
+export type ExceptionSeverity =
+  | 'LOW'
+  | 'MEDIUM'
+  | 'HIGH'
+  | 'CRITICAL';
 
 export interface ShipmentException {
   id: string;
   shipmentId: string;
   routeId?: string;
-  type: 'VEHICLE_BREAKDOWN' | 'WEATHER_DELAY' | 'CUSTOMER_UNAVAILABLE' | 'OTHER';
-  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  type: ShipmentExceptionType;
+  severity: ExceptionSeverity;
   description: string;
   status: 'OPEN' | 'RESOLVED';
-  createdAt: string; // ISO 8601
-  createdByType: 'USER' | 'SYSTEM';
-  createdByUserId: string | null; 
-  resolvedAt?: string | null; // ISO 8601
-  resolvedByType?: 'USER' | 'SYSTEM';
-  resolvedByUserId?: string | null; 
+  createdAt: string;
+  createdByType: ActorType;
+  createdByUserId: string | null;
+  resolvedAt?: string | null;
+  resolvedByType?: ActorType;
+  resolvedByUserId?: string | null;
   notes?: string;
 }
 
@@ -198,8 +217,13 @@ export interface MediaFile {
   url: string;
   type: 'IMAGE' | 'SIGNATURE' | 'DOCUMENT';
   sizeBytes?: number;
-  uploadedAt: string; // ISO 8601
+  uploadedAt: string;
 }
+
+export type DeliveryResult =
+  | 'SUCCESS'
+  | 'FAILED_REJECTED'
+  | 'FAILED_NOT_FOUND';
 
 export interface ProofOfDelivery {
   id: string;
@@ -207,14 +231,14 @@ export interface ProofOfDelivery {
   routeStopId?: string;
   driverId: string;
   recipientName: string;
-  deliveredAt: string; // ISO 8601
+  deliveredAt: string;
   signatureMediaId?: string;
   photoMediaIds?: string[];
   notes?: string;
   latitude?: number;
   longitude?: number;
-  deliveryResult: 'SUCCESS' | 'FAILED_REJECTED' | 'FAILED_NOT_FOUND';
-  actorType: 'USER' | 'SYSTEM';
+  deliveryResult: DeliveryResult;
+  actorType: ActorType;
   actorUserId: string | null;
 }
 
@@ -224,12 +248,12 @@ export interface Route {
   driverId: string | null;
   vehicleId: string | null;
   status: RouteStatus;
-  plannedStart?: string; // ISO 8601
-  plannedEnd?: string; // ISO 8601
-  actualStart?: string; // ISO 8601
-  actualEnd?: string; // ISO 8601
-  distance: number; // km
-  duration: number; // mins
+  plannedStart?: string;
+  plannedEnd?: string;
+  actualStart?: string;
+  actualEnd?: string;
+  distance: number;
+  duration: number;
 }
 
 export interface RouteStop {
@@ -239,22 +263,22 @@ export interface RouteStop {
   addressId?: string;
   sequence: number;
   status: RouteStopStatus;
-  plannedArrival?: string; // ISO 8601
-  actualArrival?: string; // ISO 8601
-  actualDeparture?: string; // ISO 8601
-  serviceDuration?: number; // mins
+  plannedArrival?: string;
+  actualArrival?: string;
+  actualDeparture?: string;
+  serviceDuration?: number;
 }
 
 export interface OptimizationResult {
   id: string;
   routeId: string;
-  originalStopSequence: string[]; // array of RouteStop IDs
-  optimizedStopSequence: string[]; // array of RouteStop IDs
+  originalStopSequence: string[];
+  optimizedStopSequence: string[];
   previousDistance: number;
   optimizedDistance: number;
   previousDuration: number;
   optimizedDuration: number;
-  generatedAt: string; // ISO 8601
+  generatedAt: string;
 }
 
 export interface Geofence {
@@ -271,7 +295,7 @@ export interface GeofenceEvent {
   driverId?: string;
   vehicleId?: string;
   eventType: 'ENTER' | 'EXIT';
-  timestamp: string; // ISO 8601
+  timestamp: string;
 }
 
 export interface Notification {
@@ -280,15 +304,16 @@ export interface Notification {
   type: string;
   message: string;
   read: boolean;
-  createdAt: string; // ISO 8601
+  createdAt: string;
 }
 
 export interface AuditLog {
   id: string;
-  userId: string;
+  actorType: ActorType;
+  actorUserId: string | null;
   action: string;
   entity: string;
   entityId: string;
-  timestamp: string; // ISO 8601
+  timestamp: string;
   details?: string;
 }

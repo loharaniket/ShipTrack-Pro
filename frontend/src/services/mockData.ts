@@ -105,6 +105,16 @@ export const MOCK_SHIPMENTS: Shipment[] = [
     id: 'SHP-8', trackingNumber: 'STP-2026-10488', organizationId: 'CUST-001', serviceType: 'Standard', priority: 'Standard',
     originAddressId: 'ADDR-3', destinationAddressId: 'ADDR-13', driverId: null, routeId: null, status: 'Draft',
     createdAt: ONE_DAY_AGO, updatedAt: ONE_DAY_AGO
+  },
+  {
+    id: 'SHP-9', trackingNumber: 'STP-2026-10489', organizationId: 'CUST-002', serviceType: 'Express', priority: 'High',
+    originAddressId: 'ADDR-2', destinationAddressId: 'ADDR-5', driverId: 'DRV-001', routeId: 'RT102', status: 'Assigned',
+    createdAt: ONE_DAY_AGO, updatedAt: ONE_HOUR_AGO, deliveryInstructions: 'Call before delivery'
+  },
+  {
+    id: 'SHP-10', trackingNumber: 'STP-2026-10490', organizationId: 'CUST-003', serviceType: 'Standard', priority: 'Standard',
+    originAddressId: 'ADDR-1', destinationAddressId: 'ADDR-6', driverId: 'DRV-001', routeId: 'RT102', status: 'Out for Delivery',
+    createdAt: ONE_DAY_AGO, updatedAt: FIFTEEN_MINS_AGO
   }
 ];
 
@@ -116,7 +126,9 @@ export const MOCK_PACKAGES: ShipmentPackage[] = [
   { id: 'PKG-5', shipmentId: 'SHP-5', description: 'Apparel Bulk', quantity: 1, weight: 850, packageType: 'Pallet', fragile: false },
   { id: 'PKG-6', shipmentId: 'SHP-6', description: 'Machinery Parts', quantity: 1, weight: 600, packageType: 'Crate', fragile: false },
   { id: 'PKG-7', shipmentId: 'SHP-7', description: 'Smartphones', quantity: 1, weight: 50, packageType: 'Box', fragile: true },
-  { id: 'PKG-8', shipmentId: 'SHP-8', description: 'Office Supplies', quantity: 1, weight: 10, packageType: 'Box', fragile: false }
+  { id: 'PKG-8', shipmentId: 'SHP-8', description: 'Office Supplies', quantity: 1, weight: 10, packageType: 'Box', fragile: false },
+  { id: 'PKG-9', shipmentId: 'SHP-9', description: 'Tech Gadgets', quantity: 2, weight: 10, packageType: 'Box', fragile: true },
+  { id: 'PKG-10', shipmentId: 'SHP-10', description: 'Home Appliances', quantity: 1, weight: 15, packageType: 'Box', fragile: false }
 ];
 
 export const MOCK_STATUS_EVENTS: ShipmentStatusEvent[] = [
@@ -129,7 +141,9 @@ export const MOCK_STATUS_EVENTS: ShipmentStatusEvent[] = [
   { id: 'h7', shipmentId: 'SHP-5', previousStatus: 'Draft', newStatus: 'Ready for Planning', actorUserId: null, actorType: 'SYSTEM', timestamp: TWO_HOURS_AGO },
   { id: 'h8', shipmentId: 'SHP-6', previousStatus: 'Ready for Planning', newStatus: 'Assigned', actorUserId: 'USR-001', actorType: 'USER', timestamp: THIRTY_MINS_AGO },
   { id: 'h9', shipmentId: 'SHP-7', previousStatus: 'In Transit', newStatus: 'Out for Delivery', actorUserId: 'USR-004', actorType: 'USER', timestamp: FIFTEEN_MINS_AGO, location: 'Mumbai South' },
-  { id: 'h10', shipmentId: 'SHP-8', previousStatus: null, newStatus: 'Draft', actorUserId: 'USR-005', actorType: 'USER', timestamp: ONE_DAY_AGO }
+  { id: 'h10', shipmentId: 'SHP-8', previousStatus: null, newStatus: 'Draft', actorUserId: 'USR-005', actorType: 'USER', timestamp: ONE_DAY_AGO },
+  { id: 'h11', shipmentId: 'SHP-9', previousStatus: 'Draft', newStatus: 'Assigned', actorUserId: 'USR-001', actorType: 'USER', timestamp: ONE_HOUR_AGO },
+  { id: 'h12', shipmentId: 'SHP-10', previousStatus: 'In Transit', newStatus: 'Out for Delivery', actorUserId: 'USR-002', actorType: 'USER', timestamp: FIFTEEN_MINS_AGO, location: 'Mumbai Suburbs' }
 ];
 
 export const MOCK_ROUTES: Route[] = [
@@ -140,7 +154,9 @@ export const MOCK_ROUTES: Route[] = [
 export const MOCK_ROUTE_STOPS: RouteStop[] = [
   { id: 'STP-1', routeId: 'RT102', shipmentId: 'SHP-1', addressId: 'ADDR-2', sequence: 1, status: 'Pending' },
   { id: 'STP-2', routeId: 'RT102', shipmentId: 'SHP-3', addressId: 'ADDR-6', sequence: 2, status: 'Pending' },
-  { id: 'STP-3', routeId: 'RT101', shipmentId: 'SHP-7', addressId: 'ADDR-12', sequence: 1, status: 'Pending' }
+  { id: 'STP-3', routeId: 'RT101', shipmentId: 'SHP-7', addressId: 'ADDR-12', sequence: 1, status: 'Pending' },
+  { id: 'STP-4', routeId: 'RT102', shipmentId: 'SHP-9', addressId: 'ADDR-5', sequence: 3, status: 'Pending' },
+  { id: 'STP-5', routeId: 'RT102', shipmentId: 'SHP-10', addressId: 'ADDR-6', sequence: 4, status: 'Pending' }
 ];
 
 export const MOCK_EXCEPTIONS: ShipmentException[] = [

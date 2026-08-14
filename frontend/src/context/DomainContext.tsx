@@ -75,7 +75,7 @@ export function DomainProvider({ children }: { children: ReactNode }) {
   const [packages, setPackages] = useState<ShipmentPackage[]>(MOCK_PACKAGES);
   const [drivers, setDrivers] = useState<Driver[]>(MOCK_DRIVERS);
   const [vehicles, setVehicles] = useState<Vehicle[]>(MOCK_VEHICLES);
-  const [driverVehicleAssignments] = useState<DriverVehicleAssignment[]>(MOCK_DRIVER_VEHICLE_ASSIGNMENTS);
+  const [driverVehicleAssignments, setDriverVehicleAssignments] = useState<DriverVehicleAssignment[]>(MOCK_DRIVER_VEHICLE_ASSIGNMENTS);
   const [routes, setRoutes] = useState<Route[]>(MOCK_ROUTES);
   const [routeStops, setRouteStops] = useState<RouteStop[]>(MOCK_ROUTE_STOPS);
   const [statusEvents, setStatusEvents] = useState<ShipmentStatusEvent[]>(MOCK_STATUS_EVENTS);
@@ -96,6 +96,27 @@ export function DomainProvider({ children }: { children: ReactNode }) {
   };
 
   const getShipmentPackages = (shipmentId: string) => packages.filter(p => p.shipmentId === shipmentId);
+  const getVehicleForDriver = (driverId: string) => {
+    const assignment = driverVehicleAssignments
+      .filter(
+        item =>
+          item.driverId === driverId &&
+          !item.unassignedAt
+      )
+      .sort(
+        (a, b) =>
+          new Date(b.assignedAt).getTime() -
+          new Date(a.assignedAt).getTime()
+      )[0];
+
+    if (!assignment) {
+      return undefined;
+    }
+
+    return vehicles.find(
+      vehicle => vehicle.id === assignment.vehicleId
+    );
+  };
   const getShipmentDriver = (shipmentId: string) => {
     const s = shipments.find(x => x.id === shipmentId);
     return s && s.driverId ? drivers.find(d => d.id === s.driverId) : undefined;
@@ -106,15 +127,6 @@ export function DomainProvider({ children }: { children: ReactNode }) {
   };
   const getRouteStopsByRoute = (routeId: string) => routeStops.filter(s => s.routeId === routeId).sort((a, b) => a.sequence - b.sequence);
   
-  const getVehicleForDriver = (driverId: string) => {
-    const d = drivers.find(drv => drv.id === driverId);
-    if (d && d.vehicleId) {
-      return vehicles.find(v => v.id === d.vehicleId);
-    }
-    const assignment = driverVehicleAssignments.find(a => a.driverId === driverId && !a.unassignedAt);
-    return assignment ? vehicles.find(v => v.id === assignment.vehicleId) : undefined;
-  };
-
   const getShipmentStatusHistory = (shipmentId: string) => statusEvents.filter(e => e.shipmentId === shipmentId).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
   const getShipmentView = (shipmentId: string): ShipmentView | undefined => {
@@ -153,14 +165,14 @@ export function DomainProvider({ children }: { children: ReactNode }) {
 
   const handleCreateRoute = (req: CreateRouteRequest, driverId?: string) => {
     try {
-      let result = createRoute(req, { routes, routeStops, shipments, statusEvents });
+      let result = createRoute(req, { routes, routeStops, shipments, statusEvents, drivers });
       
       const newRouteId = result.routes[result.routes.length - 1].id;
       
       if (driverId) {
         const assignResult = assignDriverToRoute(
-          { routeId: newRouteId, driverId, actor: { type: 'USER', userId: 'SYSTEM' } },
-          { routes: result.routes, routeStops: result.routeStops, shipments: result.shipments, statusEvents: result.statusEvents }
+          { routeId: newRouteId, driverId, actor: { type: 'SYSTEM', userId: null } },
+          { routes: result.routes, routeStops: result.routeStops, shipments: result.shipments, statusEvents: result.statusEvents, drivers }
         );
         result = { ...result, routes: assignResult.routes, shipments: assignResult.shipments, statusEvents: assignResult.statusEvents };
       }
@@ -201,7 +213,7 @@ export function DomainProvider({ children }: { children: ReactNode }) {
 
   const handleDispatchRoute = (req: DispatchRouteRequest) => {
     try {
-      const result = dispatchRoute(req, { routes });
+      const result = dispatchRoute(req, { routes, shipments });
       setRoutes(result.routes);
     } catch (err) { console.error(err); }
   };
@@ -235,7 +247,7 @@ export function DomainProvider({ children }: { children: ReactNode }) {
 
   const handleCreateException = (req: CreateExceptionRequest) => {
     try {
-      const result = createException(req, { exceptions });
+      const result = createException(req, { exceptions, shipments, routes });
       setExceptions(result.exceptions);
     } catch (err) { console.error(err); }
   };
@@ -250,9 +262,24 @@ export function DomainProvider({ children }: { children: ReactNode }) {
 
   const addDriver = (driver: Driver, vehicle?: Vehicle) => {
     setDrivers(prev => [driver, ...prev]);
-    if (vehicle) {
-      setVehicles(prev => [vehicle, ...prev]);
+
+    if (!vehicle) {
+      return;
     }
+
+    setVehicles(prev => [vehicle, ...prev]);
+
+    const assignment: DriverVehicleAssignment = {
+      id: `DVA-${Date.now()}`,
+      driverId: driver.id,
+      vehicleId: vehicle.id,
+      assignedAt: new Date().toISOString()
+    };
+
+    setDriverVehicleAssignments(prev => [
+      assignment,
+      ...prev
+    ]);
   };
 
   const isShipmentEligibleForPlanning = (shipment: Shipment) => {

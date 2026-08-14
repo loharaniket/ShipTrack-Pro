@@ -51,7 +51,7 @@ export function BusinessClientDashboard() {
       updateShipmentStatus({
         shipmentId: shipmentToCancel, 
         newStatus: 'Cancelled', 
-        actor: { type: 'USER', userId: user?.id || null }, 
+        actor: { type: 'USER', userId: user?.id || 'UNKNOWN' }, 
         note: 'Cancelled by business client'
       });
       setShipmentToCancel(null);

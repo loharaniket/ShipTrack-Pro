@@ -1,18 +1,36 @@
-import { 
-  Priority, 
-  ShipmentStatus, 
-  RouteStatus, 
-  RouteStopStatus, 
-  ShipmentPackage 
+import {
+  Priority,
+  ShipmentStatus,
+  RouteStatus,
+  RouteStopStatus,
+  ShipmentExceptionType,
+  ExceptionSeverity,
+  DeliveryResult
 } from './domain';
 
-// --- Shared Actor Interface ---
-export interface ActorDTO {
-  type: 'USER' | 'SYSTEM';
-  userId: string | null;
+export type ActorDTO =
+  | {
+      type: 'USER';
+      userId: string;
+    }
+  | {
+      type: 'SYSTEM';
+      userId: null;
+    };
+
+export interface CreateShipmentPackageRequest {
+  description: string;
+  quantity: number;
+  weight: number;
+  length?: number;
+  width?: number;
+  height?: number;
+  packageType: string;
+  fragile: boolean;
+  declaredValue?: number;
+  specialHandling?: string;
 }
 
-// --- Shipment Operations ---
 export interface CreateShipmentRequest {
   trackingNumber: string;
   organizationId: string;
@@ -27,13 +45,14 @@ export interface CreateShipmentRequest {
   deliveryInstructions?: string;
   scheduledPickup?: string;
   scheduledDelivery?: string;
-  packages: Omit<ShipmentPackage, 'id' | 'shipmentId'>[];
+  packages: CreateShipmentPackageRequest[];
 }
 
 export interface UpdateShipmentRequest {
-  shipmentId: string;
   priority?: Priority;
   deliveryInstructions?: string;
+  scheduledPickup?: string;
+  scheduledDelivery?: string;
 }
 
 export interface UpdateShipmentStatusRequest {
@@ -44,12 +63,27 @@ export interface UpdateShipmentStatusRequest {
   note?: string;
 }
 
-// --- Route Operations ---
+export interface CreateAddressRequest {
+  line1: string;
+  line2?: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+  latitude?: number;
+  longitude?: number;
+  contactName?: string;
+  contactPhone?: string;
+  deliveryInstructions?: string;
+}
+
+export interface UpdateAddressRequest extends Partial<CreateAddressRequest> {}
+
 export interface CreateRouteRequest {
   name: string;
   plannedStart?: string;
   plannedEnd?: string;
-  shipmentIds: string[]; 
+  shipmentIds: string[];
 }
 
 export interface AssignDriverRequest {
@@ -77,12 +111,11 @@ export interface DispatchRouteRequest {
   actor: ActorDTO;
 }
 
-// --- Exception Operations ---
 export interface CreateExceptionRequest {
   shipmentId: string;
   routeId?: string;
-  type: 'VEHICLE_BREAKDOWN' | 'WEATHER_DELAY' | 'CUSTOMER_UNAVAILABLE' | 'OTHER';
-  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  type: ShipmentExceptionType;
+  severity: ExceptionSeverity;
   description: string;
   actor: ActorDTO;
 }
@@ -93,7 +126,6 @@ export interface ResolveExceptionRequest {
   notes?: string;
 }
 
-// --- Proof of Delivery Operations ---
 export interface SubmitPODRequest {
   shipmentId: string;
   routeStopId?: string;
@@ -104,11 +136,29 @@ export interface SubmitPODRequest {
   notes?: string;
   latitude?: number;
   longitude?: number;
-  deliveryResult: 'SUCCESS' | 'FAILED_REJECTED' | 'FAILED_NOT_FOUND';
+  deliveryResult: DeliveryResult;
   actor: ActorDTO;
 }
 
-// --- Tracking Operations ---
+export interface CreateDriverRequest {
+  userId?: string;
+  name: string;
+  phone: string;
+  email: string;
+  status: 'Active' | 'Inactive' | 'On Leave';
+}
+
+export interface UpdateDriverRequest extends Partial<CreateDriverRequest> {}
+
+export interface CreateVehicleRequest {
+  registrationNumber: string;
+  type: string;
+  capacityKg: number;
+  status: 'Active' | 'Maintenance' | 'Retired';
+}
+
+export interface UpdateVehicleRequest extends Partial<CreateVehicleRequest> {}
+
 export interface TrackingEventResponse {
   id: string;
   shipmentId?: string;
@@ -119,5 +169,7 @@ export interface TrackingEventResponse {
   longitude: number;
   speed?: number;
   heading?: number;
+  accuracy?: number;
   timestamp: string;
+  source: 'GPS_DEVICE' | 'DRIVER_APP' | 'SYSTEM';
 }
