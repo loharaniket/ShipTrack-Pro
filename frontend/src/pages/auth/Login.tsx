@@ -20,9 +20,9 @@ export function Login() {
     let name = 'Demo User';
     
     if (email.includes('admin')) { role = 'Administrator'; name = 'Admin User'; }
-    else if (email.includes('business')) { role = 'BusinessClient'; name = 'Business User'; }
-    else if (email.includes('driver')) { role = 'Driver'; name = 'Driver User'; }
-    else if (email.includes('customer')) { role = 'Customer'; name = 'Customer User'; }
+    else if (email.includes('business')) { role = 'BusinessClient'; name = 'Acme Retail'; }
+    else if (email.includes('driver')) { role = 'Driver'; name = 'Rahul Sharma'; }
+    else if (email.includes('customer')) { role = 'Customer'; name = 'Nova Electronics'; }
 
     // Simulate API call
     setTimeout(() => {

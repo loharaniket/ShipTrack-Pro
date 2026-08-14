@@ -3,40 +3,32 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
-import { MapPin, Navigation, Truck, User, Calendar, Map, CheckCircle2, AlertTriangle, Play, FileText, CheckCircle } from 'lucide-react';
+import { MapPin, Navigation, Truck, User, Calendar, Map, CheckCircle2, AlertTriangle, FileText, CheckCircle, FastForward } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { MOCK_SHIPMENTS } from '@/services/mockData';
+import { useShipments } from '@/context/ShipmentContext';
 
 export function ShipmentDetail() {
   const { id } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
   
-  const shipment = MOCK_SHIPMENTS.find(s => s.id === id || s.tracking === id);
+  const { shipments, drivers, vehicles, updateShipmentStatus, addTimelineEvent, assignFleet } = useShipments();
+  
+  const shipment = shipments.find(s => s.id === id || s.tracking === id);
   
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
-
-  // We are not saving this back to the global state for this frontend-only mock, 
-  // but we keep local state for the edit forms to feel real.
-  const [editedPriority, setEditedPriority] = useState(shipment?.priority || 'Standard');
-  const [editedWeight, setEditedWeight] = useState('12.5');
-  const [editedDescription, setEditedDescription] = useState('General Goods');
-  const [editedIsFragile, setEditedIsFragile] = useState(false);
-  const [editedInstructions, setEditedInstructions] = useState('Leave at front desk');
-  
-  const [newStatus, setNewStatus] = useState(shipment?.status || 'Draft');
-  const [newDriver, setNewDriver] = useState(shipment?.driver || '');
-
-  // Timeline State
-  const [timelineEvents, setTimelineEvents] = useState([
-    { id: 1, title: `${shipment?.status}`, time: shipment?.lastUpdated || 'Just now', loc: shipment?.origin || 'Hub', status: 'current' },
-    { id: 2, title: 'Shipment Created', time: '06:00 PM Yesterday', loc: 'System', status: 'past' },
-  ]);
   const [isTimelineModalOpen, setIsTimelineModalOpen] = useState(false);
+
+  const [newStatus, setNewStatus] = useState(shipment?.status || 'Draft');
+  const [newDriver, setNewDriver] = useState(shipment?.driverId || '');
   const [newTimelineTitle, setNewTimelineTitle] = useState('');
   const [newTimelineLoc, setNewTimelineLoc] = useState('');
+
+  // Derived Info
+  const driver = drivers.find(d => d.id === shipment?.driverId);
+  const vehicle = vehicles.find(v => v.id === shipment?.vehicleId);
 
   if (!shipment) {
     return (
@@ -52,7 +44,18 @@ export function ShipmentDetail() {
   const isAdmin = user?.role === 'Administrator';
   const isDriver = user?.role === 'Driver';
   
-  const isAssignedToCurrentDriver = isDriver && shipment.driver === user?.name;
+  const isAssignedToCurrentDriver = isDriver && driver?.name === user?.name;
+
+  const handleNextStatus = () => {
+    let nextStatus: any = null;
+    if (shipment.status === 'Assigned') nextStatus = 'Picked Up';
+    else if (shipment.status === 'Picked Up') nextStatus = 'In Transit';
+    else if (shipment.status === 'In Transit') nextStatus = 'Out for Delivery';
+    
+    if (nextStatus) {
+      updateShipmentStatus(shipment.id, nextStatus, 'Advanced from detail view');
+    }
+  };
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
@@ -73,11 +76,11 @@ export function ShipmentDetail() {
           
           {isAssignedToCurrentDriver && (
             <>
-               {(shipment.status === 'Assigned' || shipment.status === 'Planned' || shipment.status === 'Ready for Planning') && (
-                 <Button onClick={() => {}}><Play className="h-4 w-4 mr-2" /> Start Pickup</Button>
+               {(['Assigned', 'Picked Up', 'In Transit'].includes(shipment.status)) && (
+                 <Button onClick={handleNextStatus}><FastForward className="h-4 w-4 mr-2" /> Advance Status</Button>
                )}
-               {shipment.status === 'In Transit' && (
-                 <Button onClick={() => navigate('/pod/signature')}><CheckCircle className="h-4 w-4 mr-2" /> Mark Delivered</Button>
+               {shipment.status === 'Out for Delivery' && (
+                 <Button onClick={() => navigate('/pod/signature')} className="bg-success-600 hover:bg-success-700 text-white"><CheckCircle className="h-4 w-4 mr-2" /> Mark Delivered</Button>
                )}
                {shipment.status === 'Delivered' && (
                  <Button variant="outline"><FileText className="h-4 w-4 mr-2" /> View POD</Button>
@@ -202,7 +205,7 @@ export function ShipmentDetail() {
             <div className="px-6 py-4 border-t border-navy-100 bg-navy-50 flex justify-end space-x-3">
               <Button variant="outline" onClick={() => setIsStatusModalOpen(false)}>Cancel</Button>
               <Button onClick={() => {
-                setCurrentStatus(newStatus);
+                updateShipmentStatus(shipment.id, newStatus as any, 'Status manually overridden');
                 setIsStatusModalOpen(false);
               }}>Confirm</Button>
             </div>
@@ -230,16 +233,21 @@ export function ShipmentDetail() {
                   value={newDriver}
                   onChange={(e) => setNewDriver(e.target.value)}
                 >
-                  <option value="Rahul Sharma">Rahul Sharma (MH-12-AB-4821)</option>
-                  <option value="Amit Singh">Amit Singh (MH-14-XY-9922)</option>
-                  <option value="Suresh Kumar">Suresh Kumar (MH-01-AB-1234)</option>
+                  <option value="" disabled>Select driver...</option>
+                  {drivers.filter(d => d.status === 'Active' && d.vehicleId).map(d => {
+                     const v = vehicles.find(vh => vh.id === d.vehicleId);
+                     return <option key={d.id} value={d.id}>{d.name} ({v?.registration})</option>;
+                  })}
                 </select>
               </div>
             </div>
             <div className="px-6 py-4 border-t border-navy-100 bg-navy-50 flex justify-end space-x-3">
               <Button variant="outline" onClick={() => setIsAssignModalOpen(false)}>Cancel</Button>
               <Button onClick={() => {
-                setAssignedDriver(newDriver);
+                const derivedVehicle = drivers.find(d => d.id === newDriver)?.vehicleId;
+                if (derivedVehicle) {
+                  assignFleet([shipment.id], newDriver, derivedVehicle);
+                }
                 setIsAssignModalOpen(false);
               }}>Assign</Button>
             </div>
@@ -285,15 +293,7 @@ export function ShipmentDetail() {
               <Button variant="outline" onClick={() => setIsTimelineModalOpen(false)}>Cancel</Button>
               <Button onClick={() => {
                 if (newTimelineTitle) {
-                  const updatedEvents = timelineEvents.map(e => ({ ...e, status: 'past' }));
-                  const newEvent = {
-                    id: Date.now(),
-                    title: newTimelineTitle,
-                    time: 'Just now',
-                    loc: newTimelineLoc || 'In Route',
-                    status: 'current'
-                  };
-                  setTimelineEvents([newEvent, ...updatedEvents]);
+                  addTimelineEvent(shipment.id, newTimelineTitle, newTimelineLoc || 'In Route');
                   setNewTimelineTitle('');
                   setNewTimelineLoc('');
                   setIsTimelineModalOpen(false);
@@ -364,15 +364,16 @@ export function ShipmentDetail() {
             </CardHeader>
             <CardContent>
               <div className="relative border-l border-navy-200 ml-3 space-y-8 pb-4">
-                {timelineEvents.map((event, i) => (
+                {shipment.statusHistory?.map((event, i) => (
                   <div key={event.id} className="relative pl-6">
-                    {event.status === 'current' ? (
+                    {i === 0 ? (
                       <span className="absolute -left-1.5 top-1 h-3 w-3 rounded-full bg-primary-500 ring-4 ring-primary-50" />
                     ) : (
                       <span className="absolute -left-1.5 top-1 h-3 w-3 rounded-full bg-navy-300" />
                     )}
-                    <h4 className={`text-sm font-semibold ${event.status === 'current' ? 'text-primary-700' : 'text-navy-900'}`}>{event.title}</h4>
-                    <p className="text-sm text-navy-500 mt-0.5">{event.time} • {event.loc}</p>
+                    <h4 className={`text-sm font-semibold ${i === 0 ? 'text-primary-700' : 'text-navy-900'}`}>{event.status}</h4>
+                    <p className="text-sm text-navy-500 mt-0.5">{event.timestamp} • {event.location}</p>
+                    {event.note && <p className="text-sm text-navy-600 italic mt-1">{event.note}</p>}
                   </div>
                 ))}
               </div>
@@ -391,8 +392,8 @@ export function ShipmentDetail() {
                   <User className="h-5 w-5 text-navy-600" />
                 </div>
                 <div className="ml-3">
-                  <p className="text-sm font-medium text-navy-900">{shipment.driver || 'Not Assigned'}</p>
-                  <p className="text-xs text-navy-500">+91 98765 43210</p>
+                  <p className="text-sm font-medium text-navy-900">{driver?.name || 'Not Assigned'}</p>
+                  <p className="text-xs text-navy-500">{driver?.phone || '-'}</p>
                 </div>
               </div>
               <div className="flex items-center mt-4 pt-4 border-t border-navy-100">
@@ -400,8 +401,8 @@ export function ShipmentDetail() {
                   <Truck className="h-5 w-5 text-navy-600" />
                 </div>
                 <div className="ml-3">
-                  <p className="text-sm font-medium text-navy-900">{shipment.vehicle || 'Not Assigned'}</p>
-                  <p className="text-xs text-navy-500">Heavy Truck (Refrigerated)</p>
+                  <p className="text-sm font-medium text-navy-900">{vehicle?.registration || 'Not Assigned'}</p>
+                  <p className="text-xs text-navy-500">{vehicle?.type || '-'}</p>
                 </div>
               </div>
             </CardContent>
@@ -415,14 +416,14 @@ export function ShipmentDetail() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-xs text-navy-500">Contents</p>
-                  <p className="text-sm font-medium text-navy-900">{editedDescription}</p>
+                  <p className="text-sm font-medium text-navy-900">General Goods</p>
                 </div>
                 <div>
                   <p className="text-xs text-navy-500">Weight</p>
-                  <p className="text-sm font-medium text-navy-900">{editedWeight} kg</p>
+                  <p className="text-sm font-medium text-navy-900">12.5 kg</p>
                 </div>
               </div>
-              {editedIsFragile && (
+              {false && (
                 <div className="flex items-center text-danger-600 bg-danger-50 p-2 rounded text-sm font-medium">
                   <AlertTriangle className="h-4 w-4 mr-2" />
                   Fragile Content
@@ -431,7 +432,7 @@ export function ShipmentDetail() {
               <div>
                 <p className="text-xs text-navy-500">Delivery Instructions</p>
                 <p className="text-sm font-medium text-navy-900 bg-navy-50 p-2 rounded mt-1">
-                  {editedInstructions || "None provided"}
+                  Leave at front desk
                 </p>
               </div>
             </CardContent>

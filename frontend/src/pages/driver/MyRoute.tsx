@@ -2,24 +2,41 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
-import { CheckCircle, Navigation } from 'lucide-react';
+import { CheckCircle, Navigation, FastForward } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { MOCK_SHIPMENTS } from '@/services/mockData';
+import { useShipments } from '@/context/ShipmentContext';
 
 export function MyRoute() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { shipments, drivers, vehicles, updateShipmentStatus } = useShipments();
+  
+  const driverRecord = drivers.find(d => d.name === user?.name) || drivers[0];
+  
+  const handleNextStatus = (id: string, currentStatus: string) => {
+    let nextStatus: any = null;
+    if (currentStatus === 'Assigned') nextStatus = 'Picked Up';
+    else if (currentStatus === 'Picked Up') nextStatus = 'In Transit';
+    else if (currentStatus === 'In Transit') nextStatus = 'Out for Delivery';
+    
+    if (nextStatus) {
+      updateShipmentStatus(id, nextStatus, 'Status updated from My Route');
+    }
+  };
   
   // Filter shipments assigned to the current driver
-  const routeShipments = MOCK_SHIPMENTS.filter(s => s.driver === user?.name && s.route);
-  const routeId = routeShipments.length > 0 ? routeShipments[0].route : 'N/A';
-  const vehicle = routeShipments.length > 0 ? routeShipments[0].vehicle : 'N/A';
+  const routeShipments = shipments.filter(s => s.driverId === driverRecord.id && (s.routeId || s.status !== 'Draft'));
+  const routeId = routeShipments.length > 0 ? (routeShipments[0].routeId || 'N/A') : 'N/A';
+  
+  const vehicleObj = routeShipments.length > 0 ? vehicles.find(v => v.id === routeShipments[0].vehicleId) : null;
+  const vehicle = vehicleObj ? vehicleObj.registration : 'N/A';
+  
   const totalStops = routeShipments.length;
   const completedStops = routeShipments.filter(s => s.status === 'Delivered').length;
   const progress = totalStops > 0 ? Math.round((completedStops / totalStops) * 100) : 0;
   
-  const isRouteActive = routeShipments.some(s => s.status === 'In Transit' || s.status === 'Out for Delivery');
+  const isRouteActive = routeShipments.some(s => s.status === 'Picked Up' || s.status === 'In Transit' || s.status === 'Out for Delivery');
 
   if (routeShipments.length === 0) {
     return (
@@ -88,8 +105,9 @@ export function MyRoute() {
               <div className="divide-y divide-navy-100">
                 {routeShipments.map((shipment, index) => {
                   const isCompleted = shipment.status === 'Delivered';
-                  const isCurrent = shipment.status === 'In Transit' || shipment.status === 'Out for Delivery';
+                  const isCurrent = ['Picked Up', 'In Transit', 'Out for Delivery'].includes(shipment.status);
                   const isUpcoming = !isCompleted && !isCurrent;
+                  const canAdvance = ['Assigned', 'Picked Up', 'In Transit'].includes(shipment.status);
                   
                   return (
                     <div 
@@ -121,10 +139,21 @@ export function MyRoute() {
                         </div>
                         <p className="text-sm text-navy-600 mb-3">{shipment.destination}</p>
                         
-                        {isCurrent && (
-                          <div className="flex space-x-3">
-                            <Button onClick={() => navigate(`/shipments/${shipment.id}`)}>View Details</Button>
-                            <Button variant="outline"><Navigation className="h-4 w-4 mr-2" /> Navigate</Button>
+                        {(isCurrent || isUpcoming) && (
+                          <div className="flex space-x-3 mt-4">
+                            {canAdvance && (
+                              <Button size="sm" onClick={() => handleNextStatus(shipment.id, shipment.status)}>
+                                <FastForward className="h-4 w-4 mr-2" /> Advance Status
+                              </Button>
+                            )}
+                            {shipment.status === 'Out for Delivery' && (
+                              <Button size="sm" className="bg-success-600 hover:bg-success-700 text-white" onClick={() => navigate('/pod/signature')}>
+                                <CheckCircle className="h-4 w-4 mr-2" /> Deliver
+                              </Button>
+                            )}
+                            <Button variant="outline" size="sm" onClick={() => navigate(`/shipments/${shipment.tracking}`)}>
+                              View Details
+                            </Button>
                           </div>
                         )}
                       </div>

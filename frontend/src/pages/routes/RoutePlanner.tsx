@@ -4,21 +4,22 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { LiveMap } from '@/components/maps/LiveMap';
 import { ShipmentPlanningCard } from './components/ShipmentPlanningCard';
-import { ShipmentData, MOCK_SHIPMENTS } from '@/services/mockData';
+import { ShipmentData } from '@/services/mockData';
 import { ShipmentSelectionPanel } from './components/ShipmentSelectionPanel';
 import { SelectedShipmentList } from './components/SelectedShipmentList';
 import { RouteSummaryPanel } from './components/RouteSummaryPanel';
 import { CheckCircle } from 'lucide-react';
+import { useShipments } from '@/context/ShipmentContext';
 
 
 
 export function RoutePlanner() {
+  const { shipments, drivers, vehicles, assignFleet } = useShipments();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [isOptimized, setIsOptimized] = useState(false);
-  const [assignedDriver, setAssignedDriver] = useState<string | null>(null);
-  const [assignedVehicle, setAssignedVehicle] = useState<string | null>(null);
+  const [assignedDriverId, setAssignedDriverId] = useState<string | null>(null);
   
   const [isRouteCreated, setIsRouteCreated] = useState(false);
 
@@ -56,27 +57,28 @@ export function RoutePlanner() {
     }, 1500);
   };
 
+  const driver = drivers.find(d => d.id === assignedDriverId);
+  const derivedVehicle = driver && driver.vehicleId ? vehicles.find(v => v.id === driver.vehicleId) : null;
+
   const handleCreateRoute = () => {
+    if (!assignedDriverId || !derivedVehicle) return;
     setIsRouteCreated(true);
-    // Real implementation would POST to backend and reset or navigate
+    assignFleet(selectedIds, assignedDriverId, derivedVehicle.id);
     setTimeout(() => {
       setIsRouteCreated(false);
       setSelectedIds([]);
-      setAssignedDriver(null);
-      setAssignedVehicle(null);
+      setAssignedDriverId(null);
       setIsOptimized(false);
-      // alert("Route Created");
     }, 2000);
   };
 
-  // Reorder MOCK_SHIPMENTS to match selectedIds order for the SelectedShipmentList
-  const selectedShipments = selectedIds.map(id => MOCK_SHIPMENTS.find(s => s.id === id)).filter(Boolean) as ShipmentData[];
+  const selectedShipments = selectedIds.map(id => shipments.find(s => s.id === id)).filter(Boolean) as ShipmentData[];
 
   return (
     <div className="flex h-[calc(100vh-5rem)] -m-4 lg:-m-6 overflow-hidden bg-navy-50">
       {/* Left Panel - Shipments Selection */}
       <ShipmentSelectionPanel 
-        shipments={MOCK_SHIPMENTS} 
+        shipments={shipments} 
         selectedIds={selectedIds} 
         onToggleShipment={handleToggleShipment} 
       />
@@ -107,17 +109,17 @@ export function RoutePlanner() {
           onCreateRoute={handleCreateRoute}
           isOptimizing={isOptimizing}
           isOptimized={isOptimized}
-          assignedDriver={assignedDriver}
-          setAssignedDriver={setAssignedDriver}
-          assignedVehicle={assignedVehicle}
-          setAssignedVehicle={setAssignedVehicle}
+          assignedDriver={assignedDriverId}
+          setAssignedDriver={setAssignedDriverId}
+          derivedVehicle={derivedVehicle}
+          drivers={drivers}
         />
       </div>
       
       {/* Mobile Footer Overlay */}
       <div className="md:hidden absolute bottom-0 inset-x-0 p-4 bg-white border-t border-navy-200 z-50 flex justify-between items-center">
         <span className="text-sm font-semibold text-navy-900">{selectedIds.length} Shipments Selected</span>
-        <Button onClick={handleCreateRoute} disabled={!assignedDriver || !assignedVehicle || selectedIds.length === 0}>Create Route</Button>
+        <Button onClick={handleCreateRoute} disabled={!assignedDriverId || !derivedVehicle || selectedIds.length === 0}>Create Route</Button>
       </div>
     </div>
   );

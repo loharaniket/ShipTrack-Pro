@@ -2,7 +2,7 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
-import { Navigation, Users, CheckCircle, Car } from 'lucide-react';
+import { Navigation, Users, CheckCircle, Car, AlertTriangle } from 'lucide-react';
 import { ShipmentData } from '@/services/mockData';
 import { SelectedShipmentList } from './SelectedShipmentList';
 
@@ -16,8 +16,8 @@ interface RouteSummaryPanelProps {
   isOptimized: boolean;
   assignedDriver: string | null;
   setAssignedDriver: (driver: string) => void;
-  assignedVehicle: string | null;
-  setAssignedVehicle: (vehicle: string) => void;
+  derivedVehicle: any;
+  drivers: any[];
 }
 
 export function RouteSummaryPanel({ 
@@ -30,8 +30,8 @@ export function RouteSummaryPanel({
   isOptimized, 
   assignedDriver,
   setAssignedDriver,
-  assignedVehicle,
-  setAssignedVehicle
+  derivedVehicle,
+  drivers
 }: RouteSummaryPanelProps) {
   
   const estimatedDistance = selectedShipments.length * 15.5; // dummy calc
@@ -43,6 +43,9 @@ export function RouteSummaryPanel({
     const m = mins % 60;
     return `${h}h ${m}m`;
   };
+
+  const totalLoad = selectedShipments.reduce((sum, s) => sum + (s.packageCount || 0), 0);
+  const isCapacityExceeded = derivedVehicle ? totalLoad > (derivedVehicle.capacity / 10) : false; // Dummy conversion for packages to capacity
 
   return (
     <div className="flex flex-col h-full bg-white border-l border-navy-200 shadow-sm z-10 w-full">
@@ -102,22 +105,33 @@ export function RouteSummaryPanel({
               onChange={(e) => setAssignedDriver(e.target.value)}
             >
               <option value="" disabled>Select a driver...</option>
-              <option value="Rahul Sharma">Rahul Sharma</option>
-              <option value="Amit Patel">Amit Patel</option>
-              <option value="Suresh Kumar">Suresh Kumar</option>
+              {drivers.filter(d => d.status === 'Active').map(d => (
+                <option key={d.id} value={d.id}>{d.name}</option>
+              ))}
             </select>
 
-            <label className="block text-sm font-medium text-navy-700 mb-1">Assign Vehicle</label>
-            <select 
-              className="w-full h-10 px-3 py-2 border border-navy-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm mb-2"
-              value={assignedVehicle || ''}
-              onChange={(e) => setAssignedVehicle(e.target.value)}
-            >
-              <option value="" disabled>Select a vehicle...</option>
-              <option value="MH-12-AB-4821">MH-12-AB-4821 (Heavy Truck)</option>
-              <option value="DL-4C-AF-2938">DL-4C-AF-2938 (Medium Truck)</option>
-              <option value="KA-01-MJ-9912">KA-01-MJ-9912 (Refrigerated)</option>
-            </select>
+            {assignedDriver && (
+              <div className="mt-2 p-3 bg-navy-50 rounded-lg border border-navy-100">
+                <p className="text-xs font-semibold text-navy-500 uppercase tracking-wide mb-1">Automatically Assigned Vehicle</p>
+                {derivedVehicle ? (
+                  <div>
+                    <p className="text-sm font-bold text-navy-900">{derivedVehicle.registration}</p>
+                    <p className="text-xs text-navy-600">{derivedVehicle.type}</p>
+                    <div className="mt-2 text-xs flex justify-between items-center border-t border-navy-200 pt-2">
+                      <span className="text-navy-500">Route Load:</span>
+                      <span className={`font-semibold ${isCapacityExceeded ? 'text-danger-600' : 'text-success-600'}`}>
+                        {totalLoad} / {derivedVehicle.capacity / 10} pkgs
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-start text-danger-600">
+                    <AlertTriangle className="w-4 h-4 mr-2 mt-0.5 shrink-0" />
+                    <span className="text-xs font-medium">Selected driver does not have an assigned vehicle. Planning is disabled.</span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -140,7 +154,7 @@ export function RouteSummaryPanel({
         <Button 
           className="w-full bg-primary-600 hover:bg-primary-700 text-white border-0" 
           onClick={onCreateRoute}
-          disabled={!assignedDriver || selectedShipments.length === 0}
+          disabled={!assignedDriver || !derivedVehicle || isCapacityExceeded || selectedShipments.length === 0}
         >
           Dispatch Route
         </Button>

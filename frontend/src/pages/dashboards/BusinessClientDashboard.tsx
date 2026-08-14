@@ -7,18 +7,18 @@ import { Package, Truck, CheckCircle2, Clock, FileDown, Plus, Trash2 } from 'luc
 import { useNavigate } from 'react-router-dom';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
-import { MOCK_SHIPMENTS, ShipmentData } from '@/services/mockData';
+import { ShipmentData } from '@/services/mockData';
+import { useAuth } from '@/context/AuthContext';
+import { useShipments } from '@/context/ShipmentContext';
 
 export function BusinessClientDashboard() {
+  const { user } = useAuth();
+  const { shipments, addShipment, updateShipmentStatus } = useShipments();
   const navigate = useNavigate();
-  const customerName = 'Acme Retail'; // Mock BusinessClient org
   
-  // Initialize with central mock data, filtered for this business client
-  const [shipments, setShipments] = useState<ShipmentData[]>([]);
-
-  useEffect(() => {
-    setShipments(MOCK_SHIPMENTS.filter(s => s.customer === customerName));
-  }, []);
+  // Real security filtering
+  const customerName = user?.name || 'Acme Retail';
+  const myShipments = shipments.filter(s => s.customer === customerName);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newShipment, setNewShipment] = useState({ dest: '' });
@@ -28,7 +28,7 @@ export function BusinessClientDashboard() {
   const handleAddShipment = () => {
     if (!newShipment.dest) return;
     const newId = `STP-2026-10${480 + shipments.length + 1}`;
-    setShipments([{
+    addShipment({
       id: Date.now().toString(),
       tracking: newId,
       customer: customerName,
@@ -36,22 +36,21 @@ export function BusinessClientDashboard() {
       destination: newShipment.dest,
       status: 'Draft',
       priority: 'Standard',
-      driver: null,
-      route: null,
-      vehicle: null,
+      driverId: null,
+      routeId: null,
+      vehicleId: null,
       eta: 'Pending',
       lastUpdated: 'Just now',
-      progress: 0
-    }, ...shipments]);
+      progress: 0,
+      statusHistory: []
+    });
     setIsModalOpen(false);
     setNewShipment({ dest: '' });
   };
 
   const confirmCancel = () => {
     if (shipmentToCancel !== null) {
-      setShipments(shipments.map(s => 
-        s.id === shipmentToCancel ? { ...s, status: 'Cancelled' as const } : s
-      ));
+      updateShipmentStatus(shipmentToCancel, 'Cancelled', 'Cancelled by business client');
       setShipmentToCancel(null);
     }
   };
@@ -64,9 +63,9 @@ export function BusinessClientDashboard() {
     }, 1500);
   };
 
-  const totalShipments = shipments.length;
-  const activeShipmentsCount = shipments.filter(s => s.status !== 'Delivered' && s.status !== 'Cancelled').length;
-  const deliveredCount = shipments.filter(s => s.status === 'Delivered').length;
+  const totalShipments = myShipments.length;
+  const activeShipmentsCount = myShipments.filter(s => s.status !== 'Delivered' && s.status !== 'Cancelled').length;
+  const deliveredCount = myShipments.filter(s => s.status === 'Delivered').length;
 
   const canCancel = (status: string) => {
     return ['Draft', 'Ready for Planning', 'Planned'].includes(status);
@@ -147,14 +146,14 @@ export function BusinessClientDashboard() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {shipments.length === 0 ? (
+              {myShipments.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-8 text-navy-500">
                     No shipments found. Create a new one to get started.
                   </TableCell>
                 </TableRow>
               ) : (
-                shipments.map((s) => (
+                myShipments.map((s) => (
                   <TableRow key={s.id}>
                     <TableCell className="font-medium text-primary-600">{s.tracking}</TableCell>
                     <TableCell>{s.origin}</TableCell>

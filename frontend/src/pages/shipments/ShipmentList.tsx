@@ -54,7 +54,6 @@ export function ShipmentList() {
   };
 
   const isDriver = user?.role === 'Driver';
-  const isBusinessClient = user?.role === 'BusinessClient';
   const canCreate = ['Administrator', 'BusinessClient'].includes(user?.role || '');
   
   const filteredShipments = shipments.filter(s => {

@@ -4,19 +4,20 @@ import { Button } from '@/components/ui/Button';
 import { Search, MapPin, Navigation, Clock, Package, Truck, CheckCircle2, Box } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
 import { useAuth } from '@/context/AuthContext';
+import { useShipments } from '@/context/ShipmentContext';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/Badge';
-import { MOCK_SHIPMENTS } from '@/services/mockData';
 
 export function CustomerDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { shipments } = useShipments();
 
   const [trackingInput, setTrackingInput] = React.useState('');
   
-  // Mock customer context
-  const customerName = 'Nova Electronics';
-  const customerShipments = MOCK_SHIPMENTS.filter(s => s.customer === customerName);
+  // Real security filtering
+  const customerName = user?.name || 'Nova Electronics';
+  const customerShipments = shipments.filter(s => s.customer === customerName);
   
   const activeShipments = customerShipments.filter(s => s.status !== 'Delivered' && s.status !== 'Cancelled');
   const inTransitCount = customerShipments.filter(s => s.status === 'In Transit').length;

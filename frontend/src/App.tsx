@@ -1,6 +1,7 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { AuthProvider } from '@/context/AuthContext';
+import { ShipmentProvider } from '@/context/ShipmentContext';
 import { DashboardLayout } from '@/layouts/DashboardLayout';
 import { AuthLayout } from '@/layouts/AuthLayout';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
@@ -36,11 +37,12 @@ import { NotFound } from '@/pages/NotFound';
 function App() {
   return (
     <AuthProvider>
-      <Routes>
-        <Route path="/auth" element={<AuthLayout />}>
-          <Route path="login" element={<Login />} />
-          <Route path="forgot-password" element={<ForgotPassword />} />
-        </Route>
+      <ShipmentProvider>
+        <Routes>
+          <Route path="/auth" element={<AuthLayout />}>
+            <Route path="login" element={<Login />} />
+            <Route path="forgot-password" element={<ForgotPassword />} />
+          </Route>
         
         {/* Core Authenticated Routes (Accessible to everyone, but content might differ) */}
         <Route element={<ProtectedRoute />}>
@@ -105,7 +107,8 @@ function App() {
         </Route>
         
         <Route path="*" element={<NotFound />} />
-      </Routes>
+        </Routes>
+      </ShipmentProvider>
     </AuthProvider>
   );
 }

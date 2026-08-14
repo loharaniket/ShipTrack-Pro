@@ -1,38 +1,43 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Navigation, CheckCircle, Package, Truck, AlertTriangle, Play } from 'lucide-react';
+import { Navigation, CheckCircle, Package, Truck, AlertTriangle, Play, FastForward } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { MOCK_SHIPMENTS } from '@/services/mockData';
 import { Badge } from '@/components/ui/Badge';
 import { useAuth } from '@/context/AuthContext';
+import { useShipments } from '@/context/ShipmentContext';
 
 export function DriverDashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const driverName = user?.name || 'Rahul Sharma';
+  const { shipments, drivers, updateShipmentStatus } = useShipments();
   
-  const [refreshKey, setRefreshKey] = useState(0);
-
-  const handleStatusChange = (id: string, newStatus: string) => {
-    const shipment = MOCK_SHIPMENTS.find(s => s.id === id);
-    if (shipment) {
-      shipment.status = newStatus;
-      setRefreshKey(prev => prev + 1);
+  // For demo, find the driver record that matches the user name or default to DRV-001
+  const driverRecord = drivers.find(d => d.name === user?.name) || drivers[0];
+  const driverName = driverRecord.name;
+  
+  const handleNextStatus = (id: string, currentStatus: string) => {
+    let nextStatus: any = null;
+    if (currentStatus === 'Assigned') nextStatus = 'Picked Up';
+    else if (currentStatus === 'Picked Up') nextStatus = 'In Transit';
+    else if (currentStatus === 'In Transit') nextStatus = 'Out for Delivery';
+    
+    if (nextStatus) {
+      updateShipmentStatus(id, nextStatus, 'Status updated from Driver Dashboard');
     }
   };
 
-  const driverShipments = MOCK_SHIPMENTS.filter(s => s.driver === driverName);
+  const driverShipments = shipments.filter(s => s.driverId === driverRecord.id);
   const assignedCount = driverShipments.filter(s => ['Assigned', 'Picked Up', 'In Transit', 'Out for Delivery'].includes(s.status)).length;
   const inProgressCount = driverShipments.filter(s => ['Picked Up', 'In Transit', 'Out for Delivery'].includes(s.status)).length;
   const completedCount = driverShipments.filter(s => s.status === 'Delivered').length;
   const exceptionCount = driverShipments.filter(s => s.status === 'Exceptions').length;
 
-  const activeShipment = driverShipments.find(s => ['In Transit', 'Out for Delivery'].includes(s.status));
+  const activeShipment = driverShipments.find(s => ['Picked Up', 'In Transit', 'Out for Delivery'].includes(s.status));
   const upcomingStops = driverShipments.filter(s => s.status === 'Assigned' || s.status === 'Ready for Planning' || s.status === 'Planned');
 
   return (
-    <div className="space-y-6" key={refreshKey}>
+    <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-navy-900">Driver Dashboard</h1>
         <p className="text-navy-500">Welcome back, {driverName}. Here is your delivery queue for today.</p>
@@ -123,10 +128,10 @@ export function DriverDashboard() {
                 </div>
 
                 <div className="flex space-x-3">
-                  <Button className="flex-1" size="lg" onClick={() => navigate('/my-route')}>
-                    <Navigation className="h-5 w-5 mr-2" /> Open My Route
+                  <Button className="flex-1 bg-info-600 hover:bg-info-700 text-white" size="lg" onClick={() => handleNextStatus(activeShipment.id, activeShipment.status)}>
+                    <FastForward className="h-5 w-5 mr-2" /> Advance Status
                   </Button>
-                  <Button className="flex-1 bg-success-600 hover:bg-success-700 text-white border-0" size="lg" onClick={() => navigate('/pod/signature')}>
+                  <Button className="flex-1 bg-success-600 hover:bg-success-700 text-white border-0" size="lg" onClick={() => navigate('/pod/signature')} disabled={activeShipment.status !== 'Out for Delivery'}>
                     <CheckCircle className="h-5 w-5 mr-2" /> Mark Delivered
                   </Button>
                   <Button variant="outline" size="lg" onClick={() => navigate(`/shipments/${activeShipment.tracking}`)}>
@@ -138,7 +143,7 @@ export function DriverDashboard() {
           ) : (
             <Card>
               <CardContent className="p-8 text-center text-navy-500">
-                No active shipments in transit. Select "Start Pickup" on an upcoming stop to begin.
+                No active shipments in progress. Select "Start Pickup" on an upcoming stop to begin.
               </CardContent>
             </Card>
           )}
@@ -161,7 +166,7 @@ export function DriverDashboard() {
                     <p className="text-sm text-navy-600 truncate">{stop.destination}</p>
                     <p className="text-xs text-navy-400 mt-1">{stop.customer}</p>
                     <div className="mt-2">
-                      <Button size="sm" variant="outline" className="w-full text-xs py-1 h-7" onClick={() => handleStatusChange(stop.id, 'In Transit')}>
+                      <Button size="sm" variant="outline" className="w-full text-xs py-1 h-7" onClick={() => handleNextStatus(stop.id, stop.status)}>
                         <Play className="h-3 w-3 mr-1" /> Start Pickup
                       </Button>
                     </div>
@@ -205,10 +210,10 @@ export function DriverDashboard() {
                         </Badge>
                       </td>
                       <td className="px-6 py-4 text-right space-x-2">
-                        {(s.status === 'Assigned' || s.status === 'Ready for Planning' || s.status === 'Planned') && (
-                          <Button size="sm" onClick={() => handleStatusChange(s.id, 'In Transit')}>Start</Button>
+                        {['Assigned', 'Picked Up', 'In Transit'].includes(s.status) && (
+                          <Button size="sm" onClick={() => handleNextStatus(s.id, s.status)}>Advance</Button>
                         )}
-                        {(s.status === 'In Transit' || s.status === 'Out for Delivery') && (
+                        {(s.status === 'Out for Delivery') && (
                           <Button size="sm" className="bg-success-600 hover:bg-success-700 text-white" onClick={() => navigate('/pod/signature')}>Deliver</Button>
                         )}
                         <Button variant="ghost" size="sm" onClick={() => navigate(`/shipments/${s.tracking}`)}>View</Button>
