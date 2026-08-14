@@ -13,7 +13,7 @@ import { ShipmentDetail } from '@/pages/shipments/ShipmentDetail';
 import { TrackingPage } from '@/pages/shipments/TrackingPage';
 import { LiveDelivery } from '@/pages/operations/LiveDelivery';
 import { DriverManagement } from '@/pages/operations/DriverManagement';
-import { DriverApp } from '@/pages/mobile/DriverApp';
+import { MyRoute } from '@/pages/driver/MyRoute';
 import { RoutePlanner } from '@/pages/routes/RoutePlanner';
 import { RouteOptimization } from '@/pages/routes/RouteOptimization';
 import { Geofencing } from '@/pages/routes/Geofencing';
@@ -80,9 +80,9 @@ function App() {
               <Route path="/communications/logs" element={<CommunicationLogs />} />
             </Route>
             
-            {/* Driver Only (Mobile app views in reality, but here for demo) */}
+            {/* Driver Only Web Views */}
             <Route element={<ProtectedRoute allowedRoles={['Driver', 'Administrator']} />}>
-              <Route path="/driver-app" element={<DriverApp />} />
+              <Route path="/my-route" element={<MyRoute />} />
               <Route path="/pod/signature" element={<DigitalSignature />} />
             </Route>
 

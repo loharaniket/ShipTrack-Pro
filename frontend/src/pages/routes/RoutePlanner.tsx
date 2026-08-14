@@ -81,74 +81,12 @@ export function RoutePlanner() {
 
   return (
     <div className="flex h-[calc(100vh-5rem)] -m-4 lg:-m-6 overflow-hidden bg-navy-50">
-      
-      {/* Left Panel - Dynamic Steps */}
-      {currentStep === 1 && (
-        <ShipmentSelectionPanel 
-          shipments={MOCK_SHIPMENTS} 
-          selectedIds={selectedIds} 
-          onToggleShipment={handleToggleShipment} 
-        />
-      )}
-
-      {currentStep === 2 && (
-        <div className="flex flex-col h-full bg-white border-r border-navy-200 shadow-sm z-10 w-96 shrink-0">
-          <div className="p-4 border-b border-navy-200">
-            <h2 className="text-xl font-semibold text-navy-900">Step 2: Sequence Route</h2>
-            <p className="text-sm text-navy-500 mb-4">Review and reorder the selected stops</p>
-          </div>
-          <div className="flex-1 overflow-y-auto p-4 bg-navy-50">
-            <SelectedShipmentList 
-              selectedShipments={selectedShipments}
-              onRemove={handleToggleShipment}
-              onReorder={handleReorderShipment}
-            />
-          </div>
-        </div>
-      )}
-
-      {currentStep === 3 && (
-        <div className="flex flex-col h-full bg-white border-r border-navy-200 shadow-sm z-10 w-96 shrink-0">
-          <div className="p-4 border-b border-navy-200">
-            <h2 className="text-xl font-semibold text-navy-900">Step 3: Assign Fleet Unit</h2>
-            <p className="text-sm text-navy-500 mb-4">Select the vehicle and driver for this route</p>
-          </div>
-          <div className="flex-1 overflow-y-auto p-4 bg-navy-50 space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-navy-700 mb-1">Assign Fleet Unit (Vehicle + Driver)</label>
-              <select 
-                className="w-full h-10 px-3 py-2 border border-navy-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
-                value={assignedDriver || ''}
-                onChange={(e) => setAssignedDriver(e.target.value)}
-              >
-                <option value="" disabled>Select a vehicle...</option>
-                <option value="Rahul Sharma (MH-12-AB-4821)">MH-12-AB-4821 (Driver: Rahul Sharma)</option>
-                <option value="Amit Patel (DL-4C-AF-2938)">DL-4C-AF-2938 (Driver: Amit Patel)</option>
-                <option value="Suresh Kumar (KA-01-MJ-9912)">KA-01-MJ-9912 (Driver: Suresh Kumar)</option>
-              </select>
-              <p className="text-xs text-navy-500 mt-2">Assigning a vehicle automatically assigns its permanently linked driver. Do not assign them separately.</p>
-            </div>
-          </div>
-        </div>
-      )}
-      
-      {currentStep === 4 && (
-        <div className="flex flex-col h-full bg-white border-r border-navy-200 shadow-sm z-10 w-96 shrink-0">
-          <div className="p-4 border-b border-navy-200">
-            <h2 className="text-xl font-semibold text-navy-900">Step 4: Confirm</h2>
-            <p className="text-sm text-navy-500 mb-4">Final review of the drafted route</p>
-          </div>
-          <div className="flex-1 overflow-y-auto p-4 bg-navy-50 flex items-center justify-center">
-             <div className="text-center space-y-4">
-                <div className="w-16 h-16 bg-primary-100 text-primary-600 rounded-full flex items-center justify-center mx-auto">
-                   <CheckCircle className="w-8 h-8" />
-                </div>
-                <h3 className="text-lg font-semibold text-navy-900">Route Ready</h3>
-                <p className="text-sm text-navy-600">The route is ready to be dispatched to {assignedDriver ? assignedDriver.split('(')[0] : 'the driver'}.</p>
-             </div>
-          </div>
-        </div>
-      )}
+      {/* Left Panel - Shipments Selection */}
+      <ShipmentSelectionPanel 
+        shipments={MOCK_SHIPMENTS} 
+        selectedIds={selectedIds} 
+        onToggleShipment={handleToggleShipment} 
+      />
 
       {/* Center - Map */}
       <div className="flex-1 relative flex flex-col hidden lg:flex">
@@ -157,7 +95,7 @@ export function RoutePlanner() {
             <div className="bg-white p-6 rounded-xl shadow-2xl flex flex-col items-center">
               <CheckCircle className="w-12 h-12 text-success-500 mb-4" />
               <h2 className="text-xl font-bold text-navy-900">Route Created</h2>
-              <p className="text-navy-500 mt-2">The driver has been notified.</p>
+              <p className="text-navy-500 mt-2">The route has been dispatched.</p>
             </div>
           </div>
         )}
@@ -166,39 +104,25 @@ export function RoutePlanner() {
         </div>
       </div>
 
-      {/* Right Panel - Summary */}
-      <div className="hidden md:block">
+      {/* Right Panel - Summary & Assignment */}
+      <div className="hidden md:block w-[400px] shrink-0 border-l border-navy-200 bg-white flex flex-col h-full">
         <RouteSummaryPanel 
           selectedShipments={selectedShipments}
+          onRemoveShipment={handleToggleShipment}
+          onReorderShipment={handleReorderShipment}
           onOptimize={handleOptimize}
           onCreateRoute={handleCreateRoute}
           isOptimizing={isOptimizing}
           isOptimized={isOptimized}
           assignedDriver={assignedDriver}
-          currentStep={currentStep}
-          totalSteps={totalSteps}
-          onNextStep={() => setCurrentStep(prev => Math.min(totalSteps, prev + 1))}
-          onPrevStep={() => setCurrentStep(prev => Math.max(1, prev - 1))}
-          onAssignDriver={() => setCurrentStep(3)}
+          setAssignedDriver={setAssignedDriver}
         />
       </div>
       
       {/* Mobile Footer Overlay */}
-      <div className="md:hidden absolute bottom-0 inset-x-0 p-4 bg-white border-t border-navy-200 z-50">
-        <div className="flex justify-between items-center mb-4">
-          <span className="text-sm font-semibold text-navy-900">{selectedIds.length} Shipments</span>
-          <span className="text-sm text-navy-500">Step {currentStep} of {totalSteps}</span>
-        </div>
-        <div className="flex space-x-2">
-           {currentStep > 1 && (
-             <Button variant="outline" onClick={() => setCurrentStep(prev => prev - 1)}>Back</Button>
-           )}
-           {currentStep < totalSteps ? (
-             <Button className="flex-1" onClick={() => setCurrentStep(prev => prev + 1)} disabled={selectedIds.length === 0}>Continue</Button>
-           ) : (
-             <Button className="flex-1" onClick={handleCreateRoute} disabled={!assignedDriver}>Create Route</Button>
-           )}
-        </div>
+      <div className="md:hidden absolute bottom-0 inset-x-0 p-4 bg-white border-t border-navy-200 z-50 flex justify-between items-center">
+        <span className="text-sm font-semibold text-navy-900">{selectedIds.length} Shipments Selected</span>
+        <Button onClick={handleCreateRoute} disabled={!assignedDriver || selectedIds.length === 0}>Create Route</Button>
       </div>
     </div>
   );

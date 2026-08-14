@@ -20,9 +20,9 @@ export function ShipmentList() {
   const [shipments, setShipments] = useState([
     { id: 1, tracking: 'STP-2026-10481', cust: 'Acme Retail', origin: 'Mumbai DC', dest: 'Pune Business Park', stat: 'In Transit', eta: 'Today, 2:30 PM', driverAssigned: 'Rahul Sharma' },
     { id: 2, tracking: 'STP-2026-10482', cust: 'Nova Electronics', origin: 'Delhi Hub', dest: 'Gurgaon', stat: 'Delivered', eta: '-', driverAssigned: 'Amit Singh' },
-    { id: 3, tracking: 'STP-2026-10483', cust: 'UrbanCart', origin: 'Bangalore', dest: 'Chennai', stat: 'Delayed', eta: 'Tomorrow, 10:00 AM', driverAssigned: 'Rahul Sharma' },
+    { id: 3, tracking: 'STP-2026-10483', cust: 'UrbanCart', origin: 'Bangalore', dest: 'Chennai', stat: 'Exceptions', eta: 'Tomorrow, 10:00 AM', driverAssigned: 'Rahul Sharma' },
     { id: 4, tracking: 'STP-2026-10484', cust: 'FreshFoods', origin: 'Hyderabad', dest: 'Pune Business Park', stat: 'Delivered', eta: '-', driverAssigned: 'Suresh Kumar' },
-    { id: 5, tracking: 'STP-2026-10485', cust: 'Acme Retail', origin: 'Mumbai DC', dest: 'Surat', stat: 'In Transit', eta: 'Today, 6:15 PM', driverAssigned: 'Unassigned' },
+    { id: 5, tracking: 'STP-2026-10485', cust: 'Acme Retail', origin: 'Mumbai DC', dest: 'Surat', stat: 'Ready for Planning', eta: '-', driverAssigned: 'Unassigned' },
   ]);
 
   const confirmCancel = () => {
@@ -107,9 +107,11 @@ export function ShipmentList() {
               onChange={(e) => setFilterStatus(e.target.value)}
             >
               <option>All Statuses</option>
+              <option>Ready for Planning</option>
+              <option>Assigned</option>
               <option>In Transit</option>
               <option>Delivered</option>
-              <option>Delayed</option>
+              <option>Exceptions</option>
             </select>
           </div>
         </div>
@@ -161,7 +163,7 @@ export function ShipmentList() {
                   <TableCell>{s.origin}</TableCell>
                   <TableCell>{s.dest}</TableCell>
                   <TableCell>
-                    <Badge variant={s.stat === 'Delayed' ? 'warning' : s.stat === 'Delivered' ? 'success' : 'info'}>
+                    <Badge variant={s.stat === 'Exceptions' ? 'danger' : s.stat === 'Ready for Planning' ? 'warning' : s.stat === 'Delivered' ? 'success' : 'info'}>
                       {s.stat}
                     </Badge>
                   </TableCell>

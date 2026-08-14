@@ -98,7 +98,7 @@ export function DriverDashboard() {
               </div>
 
               <div className="flex space-x-3">
-                <Button className="flex-1" size="lg" onClick={() => navigate('/driver-app')}>
+                <Button className="flex-1" size="lg" onClick={() => navigate('/my-route')}>
                   <Navigation className="h-5 w-5 mr-2" /> Start Navigation
                 </Button>
                 <Button variant="outline" size="lg" onClick={() => navigate('/shipments/ST1005')}>
@@ -130,6 +130,42 @@ export function DriverDashboard() {
             </CardContent>
           </Card>
         </div>
+      </div>
+
+      {/* Today's Assigned Shipments Table */}
+      <div className="mt-8 space-y-4">
+        <h2 className="text-lg font-semibold text-navy-900">Today's Assigned Shipments</h2>
+        <Card>
+          <CardContent className="p-0 overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead className="bg-navy-50 text-navy-500 font-medium">
+                <tr>
+                  <th className="px-6 py-3">ID</th>
+                  <th className="px-6 py-3">Customer</th>
+                  <th className="px-6 py-3">Destination</th>
+                  <th className="px-6 py-3">Status</th>
+                  <th className="px-6 py-3 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-navy-100 text-navy-900">
+                <tr>
+                  <td className="px-6 py-4 font-bold">ST1005</td>
+                  <td className="px-6 py-4">Acme Corp</td>
+                  <td className="px-6 py-4">Pune Business Park</td>
+                  <td className="px-6 py-4"><span className="inline-flex px-2 py-1 bg-primary-100 text-primary-700 text-xs rounded font-medium">In Progress</span></td>
+                  <td className="px-6 py-4 text-right"><Button variant="ghost" size="sm" onClick={() => navigate('/shipments/ST1005')}>View</Button></td>
+                </tr>
+                <tr>
+                  <td className="px-6 py-4 font-bold">ST1006</td>
+                  <td className="px-6 py-4">XYZ Ltd</td>
+                  <td className="px-6 py-4">Hinjewadi Phase 2</td>
+                  <td className="px-6 py-4"><span className="inline-flex px-2 py-1 bg-navy-100 text-navy-700 text-xs rounded font-medium">Assigned</span></td>
+                  <td className="px-6 py-4 text-right"><Button variant="ghost" size="sm" onClick={() => navigate('/shipments/ST1006')}>View</Button></td>
+                </tr>
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
