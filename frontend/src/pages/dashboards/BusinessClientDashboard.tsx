@@ -9,6 +9,8 @@ import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
 import { useAuth } from '@/context/AuthContext';
 import { useDomain } from '@/context/DomainContext';
+import { organizationApi, OrganizationResponse } from '@/services/api/organizationApi';
+import { useEffect } from 'react';
 
 export function BusinessClientDashboard() {
   const { user } = useAuth();
@@ -16,8 +18,18 @@ export function BusinessClientDashboard() {
   const navigate = useNavigate();
   
   // Real security filtering
-  const customerName = user?.organizationId || 'Acme Retail';
-  const myShipments = shipments.filter(s => s.organizationId === customerName);
+  const [currentOrg, setCurrentOrg] = useState<OrganizationResponse | null>(null);
+  
+  useEffect(() => {
+    organizationApi.getCurrent()
+      .then(org => setCurrentOrg(org))
+      .catch(err => console.error("Could not fetch current organization", err));
+  }, []);
+
+  const customerName = currentOrg ? currentOrg.name : 'Acme Retail';
+  const customerId = currentOrg ? currentOrg.id : 'ORG-1';
+  
+  const myShipments = shipments.filter(s => s.organizationId === customerId || s.organizationId === customerName);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newShipment, setNewShipment] = useState({ dest: '' });
@@ -29,7 +41,7 @@ export function BusinessClientDashboard() {
     const newId = `STP-2026-10${480 + shipments.length + 1}`;
     addShipment({
       trackingNumber: newId,
-      organizationId: customerName,
+      organizationId: customerId,
       serviceType: 'Express',
       originAddressId: 'ADDR-1',
       destinationAddressId: 'ADDR-2',
@@ -78,7 +90,7 @@ export function BusinessClientDashboard() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-navy-900">Business Dashboard</h1>
+          <h1 className="text-2xl font-semibold text-navy-900">{customerName} Dashboard</h1>
           <p className="text-navy-500 mt-1">Monitor your enterprise shipments and KPIs</p>
         </div>
         <div className="flex space-x-3 w-full sm:w-auto">

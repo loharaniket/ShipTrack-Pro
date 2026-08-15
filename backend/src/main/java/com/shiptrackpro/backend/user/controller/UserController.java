@@ -10,6 +10,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
@@ -24,6 +25,7 @@ public class UserController {
     private final UserService userService;
 
     @GetMapping
+    @PreAuthorize("hasRole('ADMINISTRATOR')")
     public ResponseEntity<ApiResponse<Page<UserResponse>>> getUsers(
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String status,
@@ -33,16 +35,19 @@ public class UserController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMINISTRATOR') or principal.user.id == #id")
     public ResponseEntity<ApiResponse<UserResponse>> getUser(@PathVariable UUID id) {
         return ResponseEntity.ok(ApiResponse.success("User retrieved", userService.getUser(id)));
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMINISTRATOR')")
     public ResponseEntity<ApiResponse<UserResponse>> createUser(@Valid @RequestBody CreateUserRequest request) {
         return ResponseEntity.ok(ApiResponse.success("User created", userService.createUser(request)));
     }
 
     @PatchMapping("/{id}")
+    @PreAuthorize("hasRole('ADMINISTRATOR') or principal.user.id == #id")
     public ResponseEntity<ApiResponse<UserResponse>> updateUser(
             @PathVariable UUID id,
             @RequestBody UpdateUserRequest request) {

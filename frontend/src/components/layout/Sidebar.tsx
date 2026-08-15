@@ -33,7 +33,8 @@ export function Sidebar({ isMobileOpen, closeMobile }: { isMobileOpen?: boolean;
       case 'Administrator':
         return [
           { name: 'Admin Dashboard', path: '/', icon: LayoutDashboard },
-          { name: 'Organizations', path: '/customers', icon: Users },
+          { name: 'Organizations', path: '/organizations', icon: Users },
+          { name: 'Customers', path: '/customers', icon: Users },
           { name: 'Users', path: '/users', icon: Users },
           { name: 'Roles & Permissions', path: '/roles', icon: ShieldAlert },
           { name: 'Shipments', path: '/shipments', icon: Package },

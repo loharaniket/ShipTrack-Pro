@@ -31,7 +31,8 @@ import { Users } from '@/pages/admin/Users';
 import { Roles } from '@/pages/admin/Roles';
 import { AuditLogs } from '@/pages/admin/AuditLogs';
 import { SystemHealth } from '@/pages/admin/SystemHealth';
-import { Customers } from '@/pages/customers/Customers';
+import { Organizations } from '@/pages/admin/Organizations';
+import { Customers } from '@/pages/admin/Customers';
 import { Profile } from '@/pages/auth/Profile';
 import { NotFound } from '@/pages/NotFound';
 
@@ -97,6 +98,7 @@ function App() {
             {/* Admin Only */}
             <Route element={<ProtectedRoute allowedRoles={['Administrator']} />}>
               <Route path="/settings" element={<SystemSettings />} />
+              <Route path="/organizations" element={<Organizations />} />
               <Route path="/users" element={<Users />} />
               <Route path="/roles" element={<Roles />} />
               <Route path="/audit" element={<AuditLogs />} />

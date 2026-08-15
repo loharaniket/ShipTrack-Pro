@@ -37,6 +37,30 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
 
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleResourceNotFoundException(ResourceNotFoundException ex, WebRequest request) {
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(getTimestamp())
+                .status(HttpStatus.NOT_FOUND.value())
+                .error("NOT_FOUND")
+                .message(ex.getMessage())
+                .path(getPath(request))
+                .build();
+        return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(ResourceConflictException.class)
+    public ResponseEntity<ErrorResponse> handleResourceConflictException(ResourceConflictException ex, WebRequest request) {
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(getTimestamp())
+                .status(HttpStatus.CONFLICT.value())
+                .error("CONFLICT")
+                .message(ex.getMessage())
+                .path(getPath(request))
+                .build();
+        return new ResponseEntity<>(errorResponse, HttpStatus.CONFLICT);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleException(Exception ex, WebRequest request) {
         ErrorResponse errorResponse = ErrorResponse.builder()

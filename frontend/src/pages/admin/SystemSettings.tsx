@@ -1,21 +1,64 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Save, Check } from 'lucide-react';
+import { organizationApi, OrganizationResponse } from '@/services/api/organizationApi';
 
 export function SystemSettings() {
   const [isSaving, setIsSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [org, setOrg] = useState<OrganizationResponse | null>(null);
 
-  const handleSave = () => {
+  // Form State
+  const [orgName, setOrgName] = useState('');
+  const [orgEmail, setOrgEmail] = useState('');
+
+  useEffect(() => {
+    const fetchOrg = async () => {
+      try {
+        const data = await organizationApi.getCurrent();
+        setOrg(data);
+        setOrgName(data.name || '');
+        setOrgEmail(data.email || '');
+      } catch (err) {
+        console.error('Failed to fetch organization settings', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchOrg();
+  }, []);
+
+  const handleSave = async () => {
+    if (!org) return;
     setIsSaving(true);
-    setTimeout(() => {
-      setIsSaving(false);
+    try {
+      await organizationApi.update(org.id, {
+        name: orgName,
+        email: orgEmail,
+        // Send existing unmodified fields so they aren't erased if backend requires full patch or we want to be safe
+        phone: org.phone,
+        addressLine1: org.addressLine1,
+        addressLine2: org.addressLine2,
+        city: org.city,
+        state: org.state,
+        postalCode: org.postalCode,
+        country: org.country
+      });
       setIsSaved(true);
       setTimeout(() => setIsSaved(false), 2000);
-    }, 1000);
+    } catch (err) {
+      console.error('Failed to update organization', err);
+    } finally {
+      setIsSaving(false);
+    }
   };
+
+  if (isLoading) {
+    return <div className="p-8 text-center text-navy-500">Loading settings...</div>;
+  }
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
@@ -45,8 +88,16 @@ export function SystemSettings() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid md:grid-cols-2 gap-4">
-                <Input label="Organization Name" defaultValue="Acme Logistics Corp" />
-                <Input label="Support Email" defaultValue="support@acme-logistics.com" />
+                <Input 
+                  label="Organization Name" 
+                  value={orgName} 
+                  onChange={(e) => setOrgName(e.target.value)} 
+                />
+                <Input 
+                  label="Support Email" 
+                  value={orgEmail} 
+                  onChange={(e) => setOrgEmail(e.target.value)} 
+                />
                 
                 <div>
                   <label className="block text-sm font-medium text-navy-700 mb-1">Time Zone</label>
