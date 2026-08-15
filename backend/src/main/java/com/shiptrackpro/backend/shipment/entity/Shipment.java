@@ -1,7 +1,7 @@
 package com.shiptrackpro.backend.shipment.entity;
 
-import com.shiptrackpro.backend.user.entity.AppUser;
-import com.shiptrackpro.backend.user.entity.Company;
+import com.shiptrackpro.backend.user.entity.User;
+// import com.shiptrackpro.backend.user.entity.Company;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -21,9 +21,9 @@ public class Shipment {
     @Column(nullable = false, unique = true)
     private String trackingNumber;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "company_id")
-    private Company company;
+    // @ManyToOne(fetch = FetchType.LAZY)
+    // @JoinColumn(name = "company_id")
+    // private Company company;
 
     @Column(nullable = false)
     private String origin;
@@ -44,7 +44,7 @@ public class Shipment {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by", nullable = false)
-    private AppUser createdBy;
+    private User createdBy;
 
     @Column(updatable = false)
     private ZonedDateTime createdAt = ZonedDateTime.now();

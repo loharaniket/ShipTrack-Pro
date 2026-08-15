@@ -1,6 +1,6 @@
 package com.shiptrackpro.backend.notifications.entity;
 
-import com.shiptrackpro.backend.user.entity.AppUser;
+import com.shiptrackpro.backend.user.entity.User;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -19,7 +19,7 @@ public class Notification {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
-    private AppUser user;
+    private User user;
 
     @Column(nullable = false)
     private String title;

@@ -64,8 +64,8 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
             <div className="py-1">
               <Link to="/profile" className="block px-4 py-2 text-sm text-navy-700 hover:bg-navy-50">Profile Settings</Link>
               <button 
-                onClick={() => {
-                  logout();
+                onClick={async () => {
+                  await logout();
                   window.location.href = '/auth/login';
                 }}
                 className="w-full text-left px-4 py-2 text-sm text-danger-600 hover:bg-danger-50"

@@ -2,7 +2,7 @@ package com.shiptrackpro.backend.tracking.entity;
 
 import com.shiptrackpro.backend.shipment.entity.Shipment;
 import com.shiptrackpro.backend.shipment.entity.ShipmentStatus;
-import com.shiptrackpro.backend.user.entity.AppUser;
+import com.shiptrackpro.backend.user.entity.User;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -42,7 +42,7 @@ public class ShipmentTrackingEvent {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by")
-    private AppUser createdBy;
+    private User createdBy;
 
     @Column(updatable = false)
     private ZonedDateTime createdAt = ZonedDateTime.now();

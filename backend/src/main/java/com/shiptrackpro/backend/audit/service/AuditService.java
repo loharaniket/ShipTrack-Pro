@@ -4,7 +4,7 @@ import com.shiptrackpro.backend.audit.dto.AuditLogDto;
 import com.shiptrackpro.backend.audit.entity.AuditAction;
 import com.shiptrackpro.backend.audit.entity.AuditLog;
 import com.shiptrackpro.backend.audit.repository.AuditLogRepository;
-import com.shiptrackpro.backend.user.entity.AppUser;
+import com.shiptrackpro.backend.user.entity.User;
 import com.shiptrackpro.backend.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -22,7 +22,7 @@ public class AuditService {
     public void logAction(UUID userId, AuditAction action, String entityName, UUID entityId) {
         if (userId == null) return;
         
-        AppUser user = userRepository.findById(userId).orElse(null);
+        User user = userRepository.findById(userId).orElse(null);
         if (user != null) {
             AuditLog log = new AuditLog();
             log.setUser(user);

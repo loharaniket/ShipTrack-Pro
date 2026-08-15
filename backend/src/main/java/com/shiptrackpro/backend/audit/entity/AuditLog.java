@@ -1,6 +1,6 @@
 package com.shiptrackpro.backend.audit.entity;
 
-import com.shiptrackpro.backend.user.entity.AppUser;
+import com.shiptrackpro.backend.user.entity.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -28,7 +28,7 @@ public class AuditLog {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
-    private AppUser user;
+    private User user;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

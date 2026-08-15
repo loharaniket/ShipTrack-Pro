@@ -1,67 +1,65 @@
 package com.shiptrackpro.backend.user.controller;
 
-import lombok.RequiredArgsConstructor;
-
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.Pageable;
-import java.util.Collections;
-import java.util.List;
-import java.util.UUID;
-
+import com.shiptrackpro.backend.common.config.security.CustomUserDetails;
 import com.shiptrackpro.backend.common.response.ApiResponse;
-import com.shiptrackpro.backend.user.dto.UpdateUserProfileRequest;
-import com.shiptrackpro.backend.user.dto.UserDto;
+import com.shiptrackpro.backend.user.dto.*;
 import com.shiptrackpro.backend.user.service.UserService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/users")
 @RequiredArgsConstructor
 public class UserController {
+
     private final UserService userService;
 
-    @GetMapping("/me")
-    public ResponseEntity<ApiResponse<UserDto>> getProfile(Authentication auth) {
-        return ResponseEntity.ok(ApiResponse.success("Users fetched successfully", userService.getProfile(auth)));
-    }
-
-    @PutMapping("/me")
-    public ResponseEntity<ApiResponse<String>> updateMyProfile(Authentication auth,
-            @RequestBody UpdateUserProfileRequest UpdateUserProfileRequest) {
-        userService.updateMyProfile(UpdateUserProfileRequest, auth);
-        return ResponseEntity.ok(ApiResponse.success("Profile Update Successfully",null));
-    }
-
-    @PutMapping("/me/password")
-    public ResponseEntity<ApiResponse<String>> updatePassword(Authentication auth, @RequestBody Object passwordRequest) {
-        return ResponseEntity.ok(ApiResponse.success("Password updated", null));
-    }
-
     @GetMapping
-    public ResponseEntity<ApiResponse<Page<UserDto>>> getUsers(Pageable pageable) {
-        return ResponseEntity.ok(ApiResponse.success("Users retrieved", new PageImpl<>(Collections.emptyList(), pageable, 0)));
+    public ResponseEntity<ApiResponse<Page<UserResponse>>> getUsers(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String role,
+            Pageable pageable) {
+        return ResponseEntity.ok(ApiResponse.success("Users retrieved", userService.getUsers(search, status, role, pageable)));
     }
 
-    @PostMapping("/invite")
-    public ResponseEntity<ApiResponse<UserDto>> inviteUser(@RequestBody Object request) {
-        return ResponseEntity.ok(ApiResponse.success("User invited", UserDto.builder().build()));
+    @GetMapping("/{id}")
+    public ResponseEntity<ApiResponse<UserResponse>> getUser(@PathVariable UUID id) {
+        return ResponseEntity.ok(ApiResponse.success("User retrieved", userService.getUser(id)));
     }
 
-    @PutMapping("/{id}/status")
-    public ResponseEntity<ApiResponse<String>> updateStatus(@PathVariable UUID id, @RequestBody Object statusRequest) {
-        return ResponseEntity.ok(ApiResponse.success("Status updated", null));
+    @PostMapping
+    public ResponseEntity<ApiResponse<UserResponse>> createUser(@Valid @RequestBody CreateUserRequest request) {
+        return ResponseEntity.ok(ApiResponse.success("User created", userService.createUser(request)));
     }
 
-    @PutMapping("/{id}/roles")
-    public ResponseEntity<ApiResponse<String>> updateRoles(@PathVariable UUID id, @RequestBody Object rolesRequest) {
-        return ResponseEntity.ok(ApiResponse.success("Roles updated", null));
+    @PatchMapping("/{id}")
+    public ResponseEntity<ApiResponse<UserResponse>> updateUser(
+            @PathVariable UUID id,
+            @RequestBody UpdateUserRequest request) {
+        return ResponseEntity.ok(ApiResponse.success("User updated", userService.updateUser(id, request)));
     }
 
-    @GetMapping("/audit-logs")
-    public ResponseEntity<ApiResponse<List<Object>>> getAuditLogs() {
-        return ResponseEntity.ok(ApiResponse.success("Audit logs retrieved", Collections.emptyList()));
+    @PatchMapping("/{id}/password")
+    public ResponseEntity<ApiResponse<Void>> changePassword(
+            @PathVariable UUID id,
+            @Valid @RequestBody ChangePasswordRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        
+        if (!userDetails.getUser().getId().equals(id)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only change your own password");
+        }
+        
+        userService.changePassword(id, request);
+        return ResponseEntity.ok(ApiResponse.success("Password changed successfully", null));
     }
 }

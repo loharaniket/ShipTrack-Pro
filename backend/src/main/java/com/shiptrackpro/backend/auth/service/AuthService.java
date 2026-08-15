@@ -1,177 +1,195 @@
 package com.shiptrackpro.backend.auth.service;
 
-import com.shiptrackpro.backend.admin.repository.CompanyRepository;
-import com.shiptrackpro.backend.auth.dto.AuthResponse;
-import com.shiptrackpro.backend.auth.dto.ForgotPasswordRequest;
-import com.shiptrackpro.backend.auth.dto.LoginRequest;
-import com.shiptrackpro.backend.auth.dto.OAuth2LoginRequest;
-import com.shiptrackpro.backend.auth.dto.RefreshTokenRequest;
-import com.shiptrackpro.backend.auth.dto.RegisterRequest;
-import com.shiptrackpro.backend.auth.dto.ResetPasswordRequest;
-import com.shiptrackpro.backend.security.CustomUserDetailsService;
-import com.shiptrackpro.backend.security.JwtService;
-import com.shiptrackpro.backend.user.entity.AppRole;
-import com.shiptrackpro.backend.user.entity.AppUser;
-import com.shiptrackpro.backend.user.entity.Company;
-import com.shiptrackpro.backend.user.entity.UserSession;
+import com.shiptrackpro.backend.auth.dto.*;
+import com.shiptrackpro.backend.auth.entity.RefreshToken;
+import com.shiptrackpro.backend.auth.repository.RefreshTokenRepository;
+import com.shiptrackpro.backend.common.config.security.CustomUserDetails;
+import com.shiptrackpro.backend.common.config.security.JwtService;
+import com.shiptrackpro.backend.user.entity.Role;
+import com.shiptrackpro.backend.user.entity.RoleName;
+import com.shiptrackpro.backend.user.entity.User;
+import com.shiptrackpro.backend.user.entity.UserStatus;
+import com.shiptrackpro.backend.user.repository.RoleRepository;
 import com.shiptrackpro.backend.user.repository.UserRepository;
-import com.shiptrackpro.backend.user.repository.UserSessionRepository;
-
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.time.ZonedDateTime;
+import java.util.Base64;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class AuthService {
 
-    private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
-    private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
-    private final CustomUserDetailsService userDetailsService;
-    private final UserSessionRepository userSessionRepository;
-    private final CompanyRepository companyRepository;
+    private final JwtService jwtService;
+    private final RefreshTokenRepository refreshTokenRepository;
+    private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    public AuthResponse register(RegisterRequest request) {
+    @Value("${jwt.access.expiration:900000}")
+    private long jwtExpirationMs;
 
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new IllegalArgumentException("Email is already in use");
+    @Value("${jwt.refresh.expiration:604800000}")
+    private long refreshTokenDurationMs;
+
+    @Transactional
+    public LoginResponse login(LoginRequest request) {
+        Authentication authentication;
+        try {
+            authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(request.getEmail().toLowerCase(), request.getPassword()));
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid email or password");
         }
 
-        AppUser user = new AppUser();
-        user.setEmail(request.getEmail());
-        user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
-        user.setFirstName(request.getFirstName());
-        user.setLastName(request.getLastName());
-        user.setRole(AppRole.CUSTOMER);
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
 
-        if (request.getCompanyName() != null
-                && !companyRepository.existsByCompanyName(request.getCompanyName().toUpperCase())) {
-            Company company = new Company();
-            company.setCompanyName(request.getCompanyName().toUpperCase());
-            company.setEmail(request.getEmail());
-            company.setPhone(request.getPhone());
-            company.setWebsite(request.getWebsite());
-            companyRepository.save(company);
-            user.setRole(AppRole.BUSINESS_CLIENT);
-            user.setCompany(company);
+        if (userDetails.getUser().getStatus() != UserStatus.ACTIVE) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User is not active");
         }
 
+        String jwt = jwtService.generateToken(userDetails);
+        String rawRefreshToken = UUID.randomUUID().toString();
+
+        createRefreshToken(userDetails.getUser(), rawRefreshToken);
+
+        User user = userDetails.getUser();
+        user.setLastLoginAt(ZonedDateTime.now());
         userRepository.save(user);
 
-        UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
-        String jwtToken = jwtService.generateToken(userDetails);
-        String refreshToken = jwtService.generateRefreshToken(userDetails);
-        saveUserSession(user, refreshToken);
-
-        return new AuthResponse(jwtToken, refreshToken, toUserDto(user));
-    }
-
-    public AuthResponse login(LoginRequest request) {
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        request.getEmail(),
-                        request.getPassword()));
-
-        UserDetails userDetails = userDetailsService.loadUserByUsername(request.getEmail());
-        String jwtToken = jwtService.generateToken(userDetails);
-        String refreshToken = jwtService.generateRefreshToken(userDetails);
-
-        AppUser user = userRepository.findByEmail(request.getEmail()).orElseThrow();
-        saveUserSession(user, refreshToken);
-
-        return new AuthResponse(jwtToken, refreshToken, toUserDto(user));
-    }
-
-    public AuthResponse oauth2Login(OAuth2LoginRequest request) {
-        // Mock finding user by provider and code
-        String email = "oauth2@example.com";
-
-        AppUser user = userRepository.findByEmail(email).orElseGet(() -> {
-            AppUser newUser = new AppUser();
-            newUser.setEmail(email);
-            newUser.setPasswordHash("");
-            newUser.setFirstName("OAuth2");
-            newUser.setLastName("User");
-            newUser.setRole(com.shiptrackpro.backend.user.entity.AppRole.CUSTOMER);
-            return userRepository.save(newUser);
-        });
-
-        UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
-        String jwtToken = jwtService.generateToken(userDetails);
-        String refreshToken = jwtService.generateRefreshToken(userDetails);
-        saveUserSession(user, refreshToken);
-
-        return new AuthResponse(jwtToken, refreshToken, toUserDto(user));
-    }
-
-    public String forgotPassword(ForgotPasswordRequest request) {
-        AppUser user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
-
-        UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
-        return jwtService.generateToken(userDetails);
-    }
-
-    public void resetPassword(ResetPasswordRequest request) {
-        String email = jwtService.extractUsername(request.getToken());
-        UserDetails userDetails = userDetailsService.loadUserByUsername(email);
-
-        if (jwtService.isTokenValid(request.getToken(), userDetails)) {
-            AppUser user = userRepository.findByEmail(email)
-                    .orElseThrow(() -> new IllegalArgumentException("User not found"));
-            user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
-            userRepository.save(user);
-        } else {
-            throw new IllegalArgumentException("Invalid token");
-        }
-    }
-
-    public AuthResponse refreshToken(RefreshTokenRequest request) {
-        String refreshToken = request.getRefreshToken();
-        String email = jwtService.extractUsername(refreshToken);
-
-        if (email != null) {
-            UserDetails userDetails = userDetailsService.loadUserByUsername(email);
-
-            if (jwtService.isTokenValid(refreshToken, userDetails)) {
-                UserSession session = userSessionRepository.findByRefreshToken(refreshToken)
-                        .orElseThrow(() -> new IllegalArgumentException("Invalid refresh token"));
-                System.out.println(session.getUser().getEmail());
-                String accessToken = jwtService.generateToken(userDetails);
-                return new AuthResponse(accessToken, refreshToken, null);
-            }
-        }
-        throw new IllegalArgumentException("Invalid refresh token");
+        return LoginResponse.builder()
+                .accessToken(jwt)
+                .refreshToken(rawRefreshToken)
+                .tokenType("Bearer")
+                .expiresIn(jwtExpirationMs / 1000)
+                .user(mapToCurrentUserResponse(user))
+                .build();
     }
 
     @Transactional
-    public void logout(String email) {
-        AppUser user = userRepository.findByEmail(email).orElseThrow();
-        userSessionRepository.deleteByUserId(user.getId());
+    public LoginResponse register(RegisterRequest request) {
+        String email = request.getEmail().toLowerCase();
+        if (userRepository.existsByEmail(email)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email already in use");
+        }
+
+        Role customerRole = roleRepository.findByName(RoleName.CUSTOMER)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Default role not found"));
+
+        User user = User.builder()
+                .email(email)
+                .passwordHash(passwordEncoder.encode(request.getPassword()))
+                .firstName(request.getFirstName())
+                .lastName(request.getLastName())
+                .phone(request.getPhone())
+                .status(UserStatus.ACTIVE)
+                .roles(java.util.Set.of(customerRole))
+                .build();
+
+        userRepository.save(user);
+
+        // Automatically log them in after registration
+        LoginRequest loginRequest = new LoginRequest();
+        loginRequest.setEmail(email);
+        loginRequest.setPassword(request.getPassword());
+        return login(loginRequest);
     }
 
-    private void saveUserSession(AppUser user, String refreshToken) {
-        UserSession session = new UserSession();
-        session.setUser(user);
-        session.setRefreshToken(refreshToken);
-        session.setExpiresAt(java.time.ZonedDateTime.now().plusDays(7));
-        userSessionRepository.save(session);
+    @Transactional
+    public RefreshTokenResponse refresh(RefreshTokenRequest request) {
+        String tokenHash = hashToken(request.getRefreshToken());
+        
+        RefreshToken refreshToken = refreshTokenRepository.findByTokenHash(tokenHash)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid refresh token"));
+
+        if (refreshToken.getRevokedAt() != null || refreshToken.getExpiresAt().isBefore(ZonedDateTime.now())) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid or expired refresh token");
+        }
+
+        User user = refreshToken.getUser();
+        if (user.getStatus() != UserStatus.ACTIVE) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User is not active");
+        }
+
+        CustomUserDetails userDetails = new CustomUserDetails(user);
+        String jwt = jwtService.generateToken(userDetails);
+
+        return RefreshTokenResponse.builder()
+                .accessToken(jwt)
+                .tokenType("Bearer")
+                .expiresIn(jwtExpirationMs / 1000)
+                .build();
     }
 
-    private com.shiptrackpro.backend.user.dto.UserDto toUserDto(AppUser user) {
-        return com.shiptrackpro.backend.user.dto.UserDto.builder()
+    @Transactional
+    public void logout(LogoutRequest request) {
+        String tokenHash = hashToken(request.getRefreshToken());
+        refreshTokenRepository.findByTokenHash(tokenHash).ifPresent(token -> {
+            token.setRevokedAt(ZonedDateTime.now());
+            refreshTokenRepository.save(token);
+        });
+    }
+
+    public CurrentUserResponse getCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !(authentication.getPrincipal() instanceof CustomUserDetails)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated");
+        }
+
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+        return mapToCurrentUserResponse(userDetails.getUser());
+    }
+
+    private void createRefreshToken(User user, String rawToken) {
+        RefreshToken refreshToken = RefreshToken.builder()
+                .user(user)
+                .tokenHash(hashToken(rawToken))
+                .expiresAt(ZonedDateTime.now().plusSeconds(refreshTokenDurationMs / 1000))
+                .build();
+        refreshTokenRepository.save(refreshToken);
+    }
+
+    private String hashToken(String token) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] encodedhash = digest.digest(token.getBytes(StandardCharsets.UTF_8));
+            return Base64.getEncoder().encodeToString(encodedhash);
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("Failed to hash token", e);
+        }
+    }
+
+    private CurrentUserResponse mapToCurrentUserResponse(User user) {
+        List<String> roles = user.getRoles().stream()
+                .map(role -> role.getName().name())
+                .collect(Collectors.toList());
+
+        return CurrentUserResponse.builder()
                 .id(user.getId())
+                .email(user.getEmail())
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
-                .email(user.getEmail())
-                .isActive(user.getIsActive())
-                .role(user.getRole())
+                .phone(user.getPhone())
+                .status(user.getStatus().name())
+                .roles(roles)
                 .build();
     }
 }

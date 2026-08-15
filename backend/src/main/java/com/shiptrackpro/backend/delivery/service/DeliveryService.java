@@ -8,7 +8,7 @@ import com.shiptrackpro.backend.delivery.repository.*;
 import com.shiptrackpro.backend.shipment.entity.Shipment;
 import com.shiptrackpro.backend.shipment.entity.ShipmentStatus;
 import com.shiptrackpro.backend.shipment.repository.ShipmentRepository;
-import com.shiptrackpro.backend.user.entity.AppUser;
+import com.shiptrackpro.backend.user.entity.User;
 import com.shiptrackpro.backend.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
@@ -36,7 +36,7 @@ public class DeliveryService {
     }
 
     public DriverDto getDriverProfile(Authentication auth) {
-        AppUser user = userRepository.findByEmail(auth.getName())
+        User user = userRepository.findByEmail(auth.getName())
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
         
         Driver driver = driverRepository.findByUserId(user.getId())
@@ -46,7 +46,7 @@ public class DeliveryService {
     }
 
     public List<AssignmentDto> getDriverAssignments(Authentication auth) {
-        AppUser user = userRepository.findByEmail(auth.getName())
+        User user = userRepository.findByEmail(auth.getName())
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
         
         Driver driver = driverRepository.findByUserId(user.getId())
@@ -67,7 +67,7 @@ public class DeliveryService {
         Driver driver = driverRepository.findById(request.getDriverId())
                 .orElseThrow(() -> new IllegalArgumentException("Driver not found"));
 
-        AppUser adminUser = userRepository.findByEmail(auth.getName())
+        User adminUser = userRepository.findByEmail(auth.getName())
                 .orElseThrow(() -> new IllegalArgumentException("Admin not found"));
 
         ShipmentAssignment assignment = new ShipmentAssignment();

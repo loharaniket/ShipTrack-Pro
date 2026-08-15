@@ -7,6 +7,7 @@ import { AuthLayout } from '@/layouts/AuthLayout';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { Dashboard } from '@/pages/Dashboard';
 import { Login } from '@/pages/auth/Login';
+import { Register } from '@/pages/auth/Register';
 import { ForgotPassword } from '@/pages/auth/ForgotPassword';
 import { ShipmentList } from '@/pages/shipments/ShipmentList';
 import { CreateShipment } from '@/pages/shipments/CreateShipment';
@@ -41,6 +42,7 @@ function App() {
         <Routes>
           <Route path="/auth" element={<AuthLayout />}>
             <Route path="login" element={<Login />} />
+            <Route path="register" element={<Register />} />
             <Route path="forgot-password" element={<ForgotPassword />} />
           </Route>
         

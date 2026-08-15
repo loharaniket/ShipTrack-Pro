@@ -1,7 +1,7 @@
 package com.shiptrackpro.backend.delivery.entity;
 
 import com.shiptrackpro.backend.shipment.entity.Shipment;
-import com.shiptrackpro.backend.user.entity.AppUser;
+import com.shiptrackpro.backend.user.entity.User;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -29,7 +29,7 @@ public class ShipmentAssignment {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "assigned_by")
-    private AppUser assignedBy;
+    private User assignedBy;
 
     @Column(updatable = false)
     private ZonedDateTime assignedAt = ZonedDateTime.now();

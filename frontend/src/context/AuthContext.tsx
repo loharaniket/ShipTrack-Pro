@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, Role, Permission } from '@/types/domain';
+import { authService } from '@/services/authService';
 
 interface AuthContextType {
   user: User | null;
@@ -40,9 +41,29 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [isInitializing, setIsInitializing] = useState(true);
+
+  useEffect(() => {
+    const initAuth = async () => {
+      try {
+        const currentUser = await authService.getCurrentUser();
+        if (currentUser) {
+          setUser(currentUser);
+        }
+      } catch (e) {
+        console.error("Failed to fetch user", e);
+      } finally {
+        setIsInitializing(false);
+      }
+    };
+    initAuth();
+  }, []);
 
   const login = (newUser: User) => setUser(newUser);
-  const logout = () => setUser(null);
+  const logout = async () => {
+    await authService.logout();
+    setUser(null);
+  };
 
   const hasPermission = (permission: Permission) => {
     if (!user) return false;
@@ -50,6 +71,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const permissions = ROLE_PERMISSIONS[user.role] || [];
     return permissions.includes(permission);
   };
+
+  if (isInitializing) {
+    return <div>Loading...</div>; // Could be a better loading spinner
+  }
 
   return (
     <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, logout, hasPermission }}>

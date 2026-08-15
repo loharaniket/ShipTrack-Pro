@@ -5,7 +5,7 @@ import com.shiptrackpro.backend.shipment.repository.ShipmentRepository;
 import com.shiptrackpro.backend.tracking.dto.*;
 import com.shiptrackpro.backend.tracking.entity.ShipmentTrackingEvent;
 import com.shiptrackpro.backend.tracking.repository.ShipmentTrackingEventRepository;
-import com.shiptrackpro.backend.user.entity.AppUser;
+import com.shiptrackpro.backend.user.entity.User;
 import com.shiptrackpro.backend.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
@@ -46,7 +46,7 @@ public class TrackingService {
         Shipment shipment = shipmentRepository.findByTrackingNumber(trackingNumber)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid tracking number"));
 
-        AppUser user = userRepository.findByEmail(auth.getName())
+        User user = userRepository.findByEmail(auth.getName())
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
         ShipmentTrackingEvent event = new ShipmentTrackingEvent();

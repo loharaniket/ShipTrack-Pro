@@ -1,6 +1,6 @@
 package com.shiptrackpro.backend.shipment.entity;
 
-import com.shiptrackpro.backend.user.entity.AppUser;
+import com.shiptrackpro.backend.user.entity.User;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -29,7 +29,7 @@ public class ShipmentHistory {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "changed_by")
-    private AppUser changedBy;
+    private User changedBy;
 
     @Column(updatable = false)
     private ZonedDateTime recordedAt = ZonedDateTime.now();

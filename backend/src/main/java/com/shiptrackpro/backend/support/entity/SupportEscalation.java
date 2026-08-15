@@ -1,6 +1,6 @@
 package com.shiptrackpro.backend.support.entity;
 
-import com.shiptrackpro.backend.user.entity.AppUser;
+import com.shiptrackpro.backend.user.entity.User;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -26,7 +26,7 @@ public class SupportEscalation {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "assigned_to")
-    private AppUser assignedTo;
+    private User assignedTo;
 
     private String status = "OPEN"; // OPEN, IN_PROGRESS, RESOLVED
 

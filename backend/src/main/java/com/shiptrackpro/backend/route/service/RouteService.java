@@ -11,7 +11,7 @@ import com.shiptrackpro.backend.route.repository.RouteRepository;
 import com.shiptrackpro.backend.route.repository.RouteStopRepository;
 import com.shiptrackpro.backend.shipment.entity.Shipment;
 import com.shiptrackpro.backend.shipment.repository.ShipmentRepository;
-import com.shiptrackpro.backend.user.entity.AppUser;
+import com.shiptrackpro.backend.user.entity.User;
 import com.shiptrackpro.backend.user.repository.UserRepository;
 import org.springframework.security.core.Authentication;
 import lombok.RequiredArgsConstructor;
@@ -43,7 +43,7 @@ public class RouteService {
     }
 
     public List<RouteDto> getMyRoutes(Authentication auth) {
-        AppUser user = userRepository.findByEmail(auth.getName())
+        User user = userRepository.findByEmail(auth.getName())
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
         
         Driver driver = driverRepository.findByUserId(user.getId())

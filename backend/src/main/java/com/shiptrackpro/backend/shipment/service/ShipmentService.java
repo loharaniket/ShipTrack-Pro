@@ -4,8 +4,8 @@ import com.shiptrackpro.backend.shipment.dto.*;
 import com.shiptrackpro.backend.shipment.entity.Package;
 import com.shiptrackpro.backend.shipment.entity.*;
 import com.shiptrackpro.backend.shipment.repository.*;
-import com.shiptrackpro.backend.user.entity.AppRole;
-import com.shiptrackpro.backend.user.entity.AppUser;
+import com.shiptrackpro.backend.user.entity.RoleName;
+import com.shiptrackpro.backend.user.entity.User;
 import com.shiptrackpro.backend.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -29,7 +29,7 @@ public class ShipmentService {
     private final UserRepository userRepository;
 
     public ShipmentDto createShipment(CreateShipmentRequest request, Authentication auth) {
-        AppUser user = userRepository.findByEmail(auth.getName())
+        User user = userRepository.findByEmail(auth.getName())
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
         // 2. Create Shipment
@@ -40,9 +40,11 @@ public class ShipmentService {
         shipment.setPriority(request.getPriority() != null ? request.getPriority() : ShipmentPriority.NORMAL);
         shipment.setCreatedBy(user);
 
-        if (user.getRole() == AppRole.BUSINESS_CLIENT && user.getCompany() != null) {
+        /*
+        if (user.getRole() == RoleName.BUSINESS_CLIENT && user.getCompany() != null) {
             shipment.setCompany(user.getCompany());
         }
+        */
 
         Shipment savedShipment = shipmentRepository.save(shipment);
 
@@ -71,19 +73,21 @@ public class ShipmentService {
     }
 
     public Page<ShipmentSummaryDto> getAllShipments(Boolean assigned, Pageable pageable, Authentication auth) {
-        AppUser user = userRepository.findByEmail(auth.getName())
+        User user = userRepository.findByEmail(auth.getName())
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-        if (user.getRole() == AppRole.BUSINESS_CLIENT && user.getCompany() != null) {
+        /*
+        if (user.getRole() == RoleName.BUSINESS_CLIENT && user.getCompany() != null) {
             return shipmentRepository.findAllByCompanyIdWithFilters(user.getCompany().getId(), assigned, pageable)
                     .map(this::toSummaryDto);
-        } else if (user.getRole() == AppRole.CUSTOMER) {
+        } else if (user.getRole() == RoleName.CUSTOMER) {
             return shipmentRepository.findAllByCreatedByIdWithFilters(user.getId(), assigned, pageable)
                     .map(this::toSummaryDto);
-        } else if (user.getRole() == AppRole.LOGISTICS_OPERATOR) {
+        } else if (user.getRole() == RoleName.LOGISTICS_OPERATOR) {
             return shipmentRepository.findAllAssignedToDriverUserId(user.getId(), pageable)
                     .map(this::toSummaryDto);
         }
+        */
 
 
         // Admin or Support Agent sees all
@@ -106,7 +110,7 @@ public class ShipmentService {
         Shipment shipment = shipmentRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Shipment not found"));
 
-        AppUser user = userRepository.findByEmail(auth.getName()).orElse(null);
+        User user = userRepository.findByEmail(auth.getName()).orElse(null);
 
         shipment.setStatus(ShipmentStatus.CANCELLED);
         shipment.setDeletedAt(ZonedDateTime.now());
@@ -146,7 +150,7 @@ public class ShipmentService {
 
     // --- Helper Methods ---
 
-    private void logHistory(Shipment shipment, ShipmentStatus status, String remarks, AppUser user) {
+    private void logHistory(Shipment shipment, ShipmentStatus status, String remarks, User user) {
         ShipmentHistory history = new ShipmentHistory();
         history.setShipment(shipment);
         history.setStatus(status);
@@ -186,7 +190,7 @@ public class ShipmentService {
         return ShipmentDto.builder()
                 .id(s.getId())
                 .trackingNumber(s.getTrackingNumber())
-                .companyId(s.getCompany() != null ? s.getCompany().getId() : null)
+                // .companyId(s.getCompany() != null ? s.getCompany().getId() : null)
                 .origin(s.getOrigin())
                 .destination(s.getDestination())
                 .status(s.getStatus())

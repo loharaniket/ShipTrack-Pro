@@ -94,24 +94,7 @@ export function Sidebar({ isMobileOpen, closeMobile }: { isMobileOpen?: boolean;
         ))}
       </nav>
 
-      {/* Demo Account Switcher */}
-      <div className="p-4 border-t border-navy-800 bg-navy-950">
-        <div className="text-xs font-semibold text-navy-400 uppercase tracking-wider mb-2">Demo Switcher</div>
-        <select 
-          className="w-full bg-navy-900 border border-navy-700 text-sm text-white rounded p-2 focus:ring-primary-500 focus:border-primary-500"
-          value={user.role}
-          onChange={(e) => {
-            const role = e.target.value as any;
-            login({ ...user, role });
-            navigate('/');
-          }}
-        >
-          <option value="Customer">Customer Demo</option>
-          <option value="BusinessClient">Business Client Demo</option>
-          <option value="Driver">Driver Demo</option>
-          <option value="Administrator">Administrator Demo</option>
-        </select>
-      </div>
+
     </div>
   );
 }

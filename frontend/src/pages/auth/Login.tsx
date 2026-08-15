@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { MOCK_USERS } from '@/services/mockData';
+import { authService } from '@/services/authService';
 
 export function Login() {
   const [email, setEmail] = useState('');
@@ -12,20 +12,19 @@ export function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
-    // Within handleSubmit:
-    const mockUser = MOCK_USERS.find(u => 
-      email.includes(u.role.toLowerCase().replace('client', ''))
-    ) || MOCK_USERS[0];
 
-    // Simulate API call
-    setTimeout(() => {
-      login(mockUser);
+    try {
+      const { user } = await authService.login(email, password);
+      login(user);
       navigate('/');
-    }, 1000);
+    } catch (err) {
+      alert("Invalid email or password");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -74,20 +73,11 @@ export function Login() {
         </Button>
       </form>
       
-      <div className="mt-6">
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-navy-300" />
-          </div>
-          <div className="relative flex justify-center text-sm">
-            <span className="px-2 bg-white text-navy-500">Or continue with</span>
-          </div>
-        </div>
-
-        <div className="mt-6 grid grid-cols-2 gap-3">
-          <Button variant="outline" className="w-full">Google</Button>
-          <Button variant="outline" className="w-full">Enterprise SSO</Button>
-        </div>
+      <div className="mt-6 text-center text-sm">
+        <span className="text-navy-500">Don't have an account? </span>
+        <Link to="/auth/register" className="font-medium text-primary-600 hover:text-primary-500">
+          Sign up
+        </Link>
       </div>
     </div>
   );
