@@ -29,7 +29,8 @@ export function BusinessClientDashboard() {
   const customerName = currentOrg ? currentOrg.name : 'Acme Retail';
   const customerId = currentOrg ? currentOrg.id : 'ORG-1';
   
-  const myShipments = shipments.filter(s => s.organizationId === customerId || s.organizationId === customerName);
+  // Shipments are already securely filtered by the backend based on the authenticated user's organization
+  const myShipments = shipments;
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newShipment, setNewShipment] = useState({ dest: '' });
@@ -98,6 +99,9 @@ export function BusinessClientDashboard() {
             <FileDown className={`h-4 w-4 mr-2 ${isDownloading ? 'animate-bounce' : ''}`} /> 
             {isDownloading ? 'Downloading...' : 'Download Report'}
           </Button>
+          <Button onClick={() => navigate('/shipments/create')} className="flex-1 sm:flex-none">
+            <Plus className="h-4 w-4 mr-2" /> Create Shipment
+          </Button>
         </div>
       </div>
 
@@ -150,6 +154,8 @@ export function BusinessClientDashboard() {
             <TableHeader>
               <TableRow>
                 <TableHead>Tracking ID</TableHead>
+                <TableHead>Customer / Sender</TableHead>
+                <TableHead>Recipient</TableHead>
                 <TableHead>Origin</TableHead>
                 <TableHead>Destination</TableHead>
                 <TableHead>Status</TableHead>
@@ -160,7 +166,7 @@ export function BusinessClientDashboard() {
             <TableBody>
               {myShipments.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-navy-500">
+                  <TableCell colSpan={8} className="text-center py-8 text-navy-500">
                     No shipments found. Create a new one to get started.
                   </TableCell>
                 </TableRow>
@@ -170,6 +176,8 @@ export function BusinessClientDashboard() {
                   return (
                   <TableRow key={s.id}>
                     <TableCell className="font-medium text-primary-600">{s.trackingNumber}</TableCell>
+                    <TableCell>{s.senderName || 'Unknown Customer'}</TableCell>
+                    <td className="px-6 py-4 text-sm text-navy-900">{s.recipientName || 'Destination Facility'}</td>
                     <TableCell>{view?.originAddressLabel}</TableCell>
                     <TableCell>{view?.destinationAddressLabel}</TableCell>
                     <TableCell>

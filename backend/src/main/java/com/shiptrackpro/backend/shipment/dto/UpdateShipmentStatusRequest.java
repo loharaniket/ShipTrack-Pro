@@ -2,16 +2,10 @@ package com.shiptrackpro.backend.shipment.dto;
 
 import com.shiptrackpro.backend.shipment.entity.ShipmentStatus;
 import lombok.Data;
-import java.time.ZonedDateTime;
-import java.util.UUID;
 
 @Data
-public class ShipmentHistoryDto {
-    private UUID id;
-    private ShipmentStatus previousStatus;
+public class UpdateShipmentStatusRequest {
     private ShipmentStatus newStatus;
-    private UUID changedBy;
-    private ZonedDateTime changeTimestamp;
     private String location;
     private String note;
 }

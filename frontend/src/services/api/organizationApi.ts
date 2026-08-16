@@ -58,6 +58,14 @@ export interface OrganizationMemberListResponse {
   totalPages: number;
 }
 
+export interface OrganizationListResponse {
+  content: OrganizationResponse[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+}
+
 export const organizationApi = {
   getAll: async (page: number = 0, size: number = 20): Promise<OrganizationListResponse> => {
     return apiClient.get(`/organizations?page=${page}&size=${size}`);

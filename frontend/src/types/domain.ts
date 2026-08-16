@@ -133,6 +133,8 @@ export interface Shipment {
   priority: Priority;
   originAddressId: string;
   destinationAddressId: string;
+  originAddressLabel?: string;
+  destinationAddressLabel?: string;
   senderName?: string;
   senderPhone?: string;
   recipientName?: string;
@@ -145,6 +147,8 @@ export interface Shipment {
   scheduledPickup?: string;
   scheduledDelivery?: string;
   deliveryInstructions?: string;
+  history?: ShipmentStatusEvent[];
+  packages?: ShipmentPackage[];
 }
 
 export interface ShipmentView extends Shipment {

@@ -6,5 +6,5 @@ import java.util.List;
 import java.util.UUID;
 
 public interface ShipmentHistoryRepository extends JpaRepository<ShipmentHistory, UUID> {
-    List<ShipmentHistory> findAllByShipmentIdOrderByRecordedAtAsc(UUID shipmentId);
+    List<ShipmentHistory> findAllByShipmentIdOrderByChangeTimestampAsc(UUID shipmentId);
 }

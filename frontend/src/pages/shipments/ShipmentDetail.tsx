@@ -54,9 +54,13 @@ export function ShipmentDetail() {
   }
 
   const isAdmin = user?.role === 'Administrator';
+  const isOwner = user?.role === 'BusinessClient' || user?.role === 'Customer';
   const isDriver = user?.role === 'Driver';
   
   const isAssignedToCurrentDriver = isDriver && driver?.name === user?.name;
+
+  const canEdit = isAdmin || (isOwner && ['Draft', 'Ready for Planning', 'Planned'].includes(shipment.status));
+  const canCancel = isAdmin || (isOwner && ['Draft', 'Ready for Planning', 'Planned'].includes(shipment.status));
 
   const handleNextStatus = () => {
     let nextStatus: any = null;
@@ -74,6 +78,17 @@ export function ShipmentDetail() {
     }
   };
 
+  const handleCancelShipment = () => {
+    if (confirm('Are you sure you want to cancel this shipment?')) {
+      updateShipmentStatus({
+        shipmentId: shipment.id, 
+        newStatus: 'Cancelled', 
+        actor: { type: 'USER', userId: user!.id }, 
+        location: 'Detail view'
+      });
+    }
+  };
+
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
       <div className="flex items-center justify-between flex-wrap gap-4">
@@ -83,12 +98,14 @@ export function ShipmentDetail() {
           <Badge variant={shipment.priority === 'Urgent' ? 'danger' : shipment.priority === 'High' ? 'warning' : 'default'}>{shipment.priority} Priority</Badge>
         </div>
         <div className="flex space-x-2">
+          {canEdit && (
+            <Button variant="outline" onClick={() => setIsEditModalOpen(true)}>Edit Details</Button>
+          )}
+          {canCancel && (
+            <Button variant="outline" className="text-danger-600 border-danger-200 hover:bg-danger-50" onClick={handleCancelShipment}>Cancel</Button>
+          )}
           {isAdmin && (
-            <>
-
-              <Button variant="outline" onClick={() => setIsEditModalOpen(true)}>Edit Details</Button>
-              <Button onClick={() => setIsStatusModalOpen(true)}>Update Status</Button>
-            </>
+            <Button onClick={() => setIsStatusModalOpen(true)}>Update Status</Button>
           )}
           
           {isAssignedToCurrentDriver && (
@@ -178,9 +195,26 @@ export function ShipmentDetail() {
             </div>
             <div className="px-6 py-4 border-t border-navy-100 bg-navy-50 flex justify-end space-x-3">
               <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>Cancel</Button>
-              <Button onClick={() => {
-                // In a real app we'd dispatch an update here
-                setIsEditModalOpen(false);
+              <Button onClick={async () => {
+                try {
+                  const { shipmentService } = await import('@/services/shipmentService');
+                  const updated = await shipmentService.updateShipment(shipment.id, {
+                    priority: editedPriority as any,
+                    deliveryInstructions: editedInstructions || undefined,
+                  });
+                  // Update the shipment in DomainContext state
+                  updateShipmentStatus({
+                    shipmentId: shipment.id,
+                    newStatus: shipment.status,
+                    actor: { type: 'USER', userId: user!.id },
+                    location: 'Edit Details',
+                    note: 'Details updated'
+                  });
+                  setIsEditModalOpen(false);
+                  alert('Shipment details saved successfully!');
+                } catch (err: any) {
+                  alert('Failed to save: ' + err.message);
+                }
               }}>Save Changes</Button>
             </div>
           </div>
@@ -300,7 +334,7 @@ export function ShipmentDetail() {
                   <div className="flex items-start">
                     <MapPin className="h-5 w-5 text-navy-400 mr-2 mt-0.5" />
                     <div>
-                      <p className="font-medium text-navy-900">{shipment.organizationId}</p>
+                      <p className="font-medium text-navy-900">{shipment.senderName || shipment.organizationId}</p>
                       <p className="text-sm text-navy-600">{view?.originAddressLabel}</p>
                       <p className="text-xs text-navy-400 mt-1">Contact Details on File</p>
                     </div>
@@ -311,7 +345,7 @@ export function ShipmentDetail() {
                   <div className="flex items-start">
                     <Navigation className="h-5 w-5 text-navy-400 mr-2 mt-0.5" />
                     <div>
-                      <p className="font-medium text-navy-900">Destination Facility</p>
+                      <p className="font-medium text-navy-900">{shipment.recipientName || 'Destination Facility'}</p>
                       <p className="text-sm text-navy-600">{view?.destinationAddressLabel}</p>
                       <p className="text-xs text-navy-400 mt-1">Contact Details on File</p>
                     </div>

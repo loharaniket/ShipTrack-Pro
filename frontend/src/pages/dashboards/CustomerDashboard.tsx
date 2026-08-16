@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { MapPin, Navigation, Clock, Package, Truck, CheckCircle2, Box } from 'lucide-react';
+import { MapPin, Navigation, Clock, Package, Truck, CheckCircle2, Box, Plus } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
 import { useAuth } from '@/context/AuthContext';
 import { useDomain } from '@/context/DomainContext';
@@ -16,9 +16,8 @@ export function CustomerDashboard() {
 
   const [trackingInput, setTrackingInput] = React.useState('');
   
-  // Real security filtering
-  const organizationId = user?.organizationId || 'CUST-002'; // Nova Electronics fallback
-  const customerShipments = shipments.filter(s => s.organizationId === organizationId);
+  // Shipments are already filtered securely by the backend based on the authenticated user's organization
+  const customerShipments = shipments;
   
   const activeShipments = customerShipments.filter(s => s.status !== 'Delivered' && s.status !== 'Cancelled');
   const inTransitCount = customerShipments.filter(s => s.status === 'In Transit').length;
@@ -38,16 +37,21 @@ export function CustomerDashboard() {
           <h1 className="text-2xl font-semibold text-navy-900">Good morning, {user?.name}</h1>
           <p className="text-navy-500 mt-1">Track your recent shipments</p>
         </div>
-        <div className="flex w-full sm:w-auto">
-          <Input 
-            placeholder="Track by Shipment ID" 
-            className="h-10 rounded-r-none border-r-0 max-w-[200px]"
-            value={trackingInput}
-            onChange={(e) => setTrackingInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleTrack()}
-          />
-          <Button className="h-10 rounded-l-none" onClick={handleTrack} disabled={!trackingInput.trim()}>
-            Track
+        <div className="flex w-full sm:w-auto space-x-3">
+          <div className="flex">
+            <Input 
+              placeholder="Track by Shipment ID" 
+              className="h-10 rounded-r-none border-r-0 max-w-[200px]"
+              value={trackingInput}
+              onChange={(e) => setTrackingInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleTrack()}
+            />
+            <Button className="h-10 rounded-l-none" onClick={handleTrack} disabled={!trackingInput.trim()}>
+              Track
+            </Button>
+          </div>
+          <Button onClick={() => navigate('/shipments/create')} className="h-10">
+            <Plus className="h-4 w-4 mr-2" /> Create Shipment
           </Button>
         </div>
       </div>
@@ -99,7 +103,7 @@ export function CustomerDashboard() {
                     <div>
                       <CardTitle className="text-base font-bold text-navy-900">{s.trackingNumber}</CardTitle>
                       <p className="text-xs text-navy-500 mt-0.5 flex items-center">
-                        <Clock className="h-3 w-3 mr-1" /> Updated {getShipmentStatusHistory(s.id)?.[0]?.timestamp ? formatRelativeTime(getShipmentStatusHistory(s.id)?.[0]?.timestamp) : 'N/A'}
+                        <Clock className="h-3 w-3 mr-1" /> Updated {s.updatedAt ? formatRelativeTime(s.updatedAt) : 'N/A'}
                       </p>
                     </div>
                   </div>
@@ -122,13 +126,13 @@ export function CustomerDashboard() {
                       <div className="h-full bg-info-500" style={{ width: `${getShipmentView(s.id)?.progressPercentage}%` }} />
                     </div>
                   </div>
-                  <div className="flex items-center justify-between pt-2">
-                    <div className="flex items-center text-sm font-medium text-navy-900">
-                      <Clock className="h-4 w-4 mr-2 text-primary-500" />
-                      ETA: {getShipmentView(s.id)?.eta || formatFriendlyDate(s.scheduledDelivery)}
+                    <div className="flex items-center justify-between pt-2">
+                      <div className="flex items-center text-sm font-medium text-navy-900">
+                        <Clock className="h-4 w-4 mr-2 text-primary-500" />
+                        ETA: {getShipmentView(s.id)?.eta || (s.scheduledDelivery ? formatFriendlyDate(s.scheduledDelivery) : 'Pending')}
+                      </div>
+                      <Button variant="outline" size="sm" onClick={() => navigate(`/shipments/${s.trackingNumber}`)}>Track</Button>
                     </div>
-                    <Button variant="outline" size="sm" onClick={() => navigate(`/shipments/${s.trackingNumber}`)}>Track</Button>
-                  </div>
                 </CardContent>
               </Card>
             ))}
@@ -145,23 +149,26 @@ export function CustomerDashboard() {
             <thead className="bg-navy-50 text-navy-500 font-medium">
               <tr>
                 <th className="px-6 py-3">Shipment</th>
+                <th className="px-6 py-3">Customer / Sender</th>
+                <th className="px-6 py-3">Recipient</th>
                 <th className="px-6 py-3">Origin</th>
                 <th className="px-6 py-3">Destination</th>
                 <th className="px-6 py-3">Status</th>
                 <th className="px-6 py-3">ETA</th>
-                <th className="px-6 py-3">Last Updated</th>
                 <th className="px-6 py-3 text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-navy-100 text-navy-900">
               {customerShipments.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-8 text-center text-navy-500">No shipments found.</td>
+                  <td colSpan={8} className="px-6 py-8 text-center text-navy-500">No shipments found.</td>
                 </tr>
               ) : (
                 customerShipments.map(s => (
                   <tr key={s.id} className="hover:bg-navy-50">
                     <td className="px-6 py-4 font-medium">{s.trackingNumber}</td>
+                    <td className="px-6 py-4">{s.senderName || 'Unknown Customer'}</td>
+                    <td className="px-6 py-4">{s.recipientName || 'Destination Facility'}</td>
                     <td className="px-6 py-4">{getShipmentView(s.id)?.originAddressLabel}</td>
                     <td className="px-6 py-4">{getShipmentView(s.id)?.destinationAddressLabel}</td>
                     <td className="px-6 py-4">
@@ -169,8 +176,7 @@ export function CustomerDashboard() {
                         {s.status}
                       </Badge>
                     </td>
-                    <td className="px-6 py-4">{getShipmentView(s.id)?.eta || formatFriendlyDate(s.scheduledDelivery)}</td>
-                    <td className="px-6 py-4 text-navy-500">{getShipmentStatusHistory(s.id)?.[0]?.timestamp ? formatFriendlyDate(getShipmentStatusHistory(s.id)?.[0]?.timestamp) : 'Unknown'}</td>
+                    <td className="px-6 py-4">{getShipmentView(s.id)?.eta || (s.scheduledDelivery ? formatFriendlyDate(s.scheduledDelivery) : 'Pending')}</td>
                     <td className="px-6 py-4 text-right">
                       <Button variant="ghost" size="sm" onClick={() => navigate(`/tracking/${s.trackingNumber}`)}>Track</Button>
                     </td>

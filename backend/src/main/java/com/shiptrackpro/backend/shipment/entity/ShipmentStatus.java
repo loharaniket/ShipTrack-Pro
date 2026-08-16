@@ -1,12 +1,12 @@
 package com.shiptrackpro.backend.shipment.entity;
 
 public enum ShipmentStatus {
-    CREATED,
-    PICKED_UP,
+    DRAFT,
+    READY_FOR_PLANNING,
+    READY_FOR_DISPATCH,
     IN_TRANSIT,
     OUT_FOR_DELIVERY,
     DELIVERED,
-    FAILED,
     RETURNED,
     CANCELLED
 }

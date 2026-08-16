@@ -1,10 +1,14 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table';
+import { Button } from '@/components/ui/Button';
 import { Package, Truck, AlertTriangle, Route, Users, MapPin, CheckCircle, Clock } from 'lucide-react';
 import { useDomain } from '@/context/DomainContext';
+import { useNavigate } from 'react-router-dom';
+import { formatRelativeTime } from '@/utils/dateFormatter';
 
 export function AdministratorDashboard() {
+  const navigate = useNavigate();
   const { shipments, exceptions: domainExceptions, routes, drivers, getShipmentView, getVehicleForDriver, getShipmentStatusHistory } = useDomain();
   
   const totalShipments = shipments.length;
@@ -89,83 +93,91 @@ export function AdministratorDashboard() {
         </Card>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader className="border-b border-navy-100 pb-3">
-            <CardTitle className="text-lg">Recent Shipments</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0 overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Shipment ID</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Route</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {shipments.slice(0, 5).map((s) => (
-                  <TableRow key={s.id}>
-                    <TableCell className="font-medium">{s.trackingNumber}</TableCell>
-                    <TableCell>{s.organizationId}</TableCell>
-                    <TableCell>{getShipmentView(s.id)?.originAddressLabel} → {getShipmentView(s.id)?.destinationAddressLabel}</TableCell>
-                    <TableCell>
-                      <Badge variant={
-                        s.status === 'Delivered' ? 'success' : 
-                        s.status === 'Failed' ? 'danger' : 
-                        s.status === 'Ready for Planning' ? 'warning' : 'info'
-                      }>
-                        {s.status}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="border-b border-navy-100 pb-3">
-            <CardTitle className="text-lg">Driver Availability</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0 overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Driver</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Location</TableHead>
-                  <TableHead>Vehicle</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {mockDrivers.map(d => (
-                  <TableRow key={d.id}>
-                    <TableCell>
-                      <div className="flex items-center">
-                        <div className="h-8 w-8 rounded-full bg-navy-100 flex items-center justify-center mr-3 text-sm font-semibold text-navy-700">
-                          {d.name.substring(0, 2).toUpperCase()}
-                        </div>
-                        {d.name}
+      <Card>
+        <CardHeader className="border-b border-navy-100 pb-3">
+          <CardTitle className="text-lg">Active Drivers</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0 overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Driver</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Last Location</TableHead>
+                <TableHead>Vehicle</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {drivers.slice(0, 5).map((d) => (
+                <TableRow key={d.id}>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <div className="h-8 w-8 rounded-full bg-navy-200 flex items-center justify-center text-xs font-medium">
+                        {d.name?.split(' ').map(n => n[0]).join('') || '?'}
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={d.status === 'Active' ? 'success' : 'info'}>
-                        {d.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-navy-500">Not Tracked</TableCell>
-                    <TableCell>{getVehicleForDriver(d.id)?.registrationNumber || 'No Vehicle'}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      </div>
+                      {d.name}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={d.status === 'Active' ? 'success' : 'info'}>
+                      {d.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-navy-500">Not Tracked</TableCell>
+                  <TableCell>{getVehicleForDriver(d.id)?.registrationNumber || 'No Vehicle'}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
       
+      {/* Recent Shipments */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardTitle className="text-lg">Recent Shipments</CardTitle>
+          <Button variant="outline" size="sm" onClick={() => navigate('/shipments')}>View All</Button>
+        </CardHeader>
+        <CardContent className="p-0 overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Tracking #</TableHead>
+                <TableHead>Sender</TableHead>
+                <TableHead>Recipient</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Last Updated</TableHead>
+                <TableHead className="text-right">Action</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {shipments.slice(0, 5).map(s => (
+                <TableRow key={s.id}>
+                  <TableCell className="font-medium text-primary-700">{s.trackingNumber}</TableCell>
+                  <TableCell>{s.senderName || s.organizationId}</TableCell>
+                  <TableCell>{s.recipientName || 'Unknown'}</TableCell>
+                  <TableCell>
+                    <Badge variant={s.status === 'Delivered' ? 'success' : s.status === 'Failed' ? 'danger' : 'info'}>
+                      {s.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-navy-500">
+                    {s.updatedAt ? formatRelativeTime(s.updatedAt) : 'N/A'}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button variant="ghost" size="sm" onClick={() => navigate(`/shipments/${s.trackingNumber}`)}>Manage</Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {shipments.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-4 text-navy-500">No recent shipments</TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
       {/* Exceptions and Alerts row */}
       {exceptions > 0 && (
         <Card className="border-danger-200">
@@ -194,7 +206,7 @@ export function AdministratorDashboard() {
                     <TableCell>{s.driverId || '-'}</TableCell>
                     <TableCell className="font-medium">Delivery Delayed / Address Issue</TableCell>
                     <TableCell className="flex items-center text-navy-500">
-                      <Clock className="h-3 w-3 mr-1" /> {getShipmentStatusHistory(s.id)?.[0]?.timestamp || 'N/A'}
+                      <Clock className="h-3 w-3 mr-1" /> {s.updatedAt ? formatRelativeTime(s.updatedAt) : 'N/A'}
                     </TableCell>
                   </TableRow>
                 ))}

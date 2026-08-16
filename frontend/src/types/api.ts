@@ -42,6 +42,7 @@ export interface CreateShipmentRequest {
   senderPhone?: string;
   recipientName?: string;
   recipientPhone?: string;
+  pickupAddress?: string;
   deliveryInstructions?: string;
   scheduledPickup?: string;
   scheduledDelivery?: string;

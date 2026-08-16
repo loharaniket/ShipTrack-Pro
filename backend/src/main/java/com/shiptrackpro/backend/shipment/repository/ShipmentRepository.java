@@ -1,43 +1,64 @@
 package com.shiptrackpro.backend.shipment.repository;
 
 import com.shiptrackpro.backend.shipment.entity.Shipment;
+import com.shiptrackpro.backend.shipment.entity.ShipmentStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+
 import java.util.Optional;
 import java.util.UUID;
 
-
 public interface ShipmentRepository extends JpaRepository<Shipment, UUID> {
+
+    Optional<Shipment> findByIdAndOrganizationId(UUID id, UUID organizationId);
+
+    Optional<Shipment> findByTrackingNumberAndOrganizationId(String trackingNumber, UUID organizationId);
+
     Optional<Shipment> findByTrackingNumber(String trackingNumber);
 
-//    Page<Shipment> findAllByCompanyId(UUID companyId, Pageable pageable);
+    boolean existsByTrackingNumber(String trackingNumber);
 
-    Page<Shipment> findAllByCreatedById(UUID userId, Pageable pageable);
+    Page<Shipment> findAllByOrganizationId(UUID organizationId, Pageable pageable);
 
+    @Query("SELECT s FROM Shipment s WHERE s.organization.id = :orgId AND " +
+           "(LOWER(s.trackingNumber) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "LOWER(s.customerName) LIKE LOWER(CONCAT('%', :search, '%')))")
+    Page<Shipment> findAllByOrganizationIdAndSearch(
+            @Param("orgId") UUID orgId, 
+            @Param("search") String search, 
+            Pageable pageable);
 
-    @Query("SELECT sa.shipment FROM ShipmentAssignment sa WHERE sa.driver.user.id = :userId")
-    Page<Shipment> findAllAssignedToDriverUserId(@Param("userId") UUID userId, Pageable pageable);
+    @Query("SELECT s FROM Shipment s WHERE s.organization.id = :orgId AND " +
+           "(LOWER(s.trackingNumber) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "LOWER(s.customerName) LIKE LOWER(CONCAT('%', :search, '%'))) AND " +
+           "s.status = :status")
+    Page<Shipment> findAllByOrganizationIdAndSearchAndStatus(
+            @Param("orgId") UUID orgId, 
+            @Param("search") String search, 
+            @Param("status") ShipmentStatus status,
+            Pageable pageable);
+
+    Page<Shipment> findAllByOrganizationIdAndStatus(UUID orgId, ShipmentStatus status, Pageable pageable);
+
+    // Admin-level queries (no org filter)
+    @Query("SELECT s FROM Shipment s WHERE " +
+           "LOWER(s.trackingNumber) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "LOWER(s.customerName) LIKE LOWER(CONCAT('%', :search, '%'))")
+    Page<Shipment> findAllBySearch(
+            @Param("search") String search,
+            Pageable pageable);
 
     @Query("SELECT s FROM Shipment s WHERE " +
-           "(:assigned IS NULL OR " +
-           "(:assigned = true AND (EXISTS (SELECT 1 FROM ShipmentAssignment sa WHERE sa.shipment = s) OR EXISTS (SELECT 1 FROM RouteStop rs WHERE rs.shipment = s))) OR " +
-           "(:assigned = false AND NOT EXISTS (SELECT 1 FROM ShipmentAssignment sa WHERE sa.shipment = s) AND NOT EXISTS (SELECT 1 FROM RouteStop rs WHERE rs.shipment = s)))")
-    Page<Shipment> findAllWithFilters(@Param("assigned") Boolean assigned, Pageable pageable);
+           "(LOWER(s.trackingNumber) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "LOWER(s.customerName) LIKE LOWER(CONCAT('%', :search, '%'))) AND " +
+           "s.status = :status")
+    Page<Shipment> findAllBySearchAndStatus(
+            @Param("search") String search,
+            @Param("status") ShipmentStatus status,
+            Pageable pageable);
 
-//    @Query("SELECT s FROM Shipment s WHERE s.company.id = :companyId AND " +
-//           "(:assigned IS NULL OR " +
-//           "(:assigned = true AND (EXISTS (SELECT 1 FROM ShipmentAssignment sa WHERE sa.shipment = s) OR EXISTS (SELECT 1 FROM RouteStop rs WHERE rs.shipment = s))) OR " +
-//           "(:assigned = false AND NOT EXISTS (SELECT 1 FROM ShipmentAssignment sa WHERE sa.shipment = s) AND NOT EXISTS (SELECT 1 FROM RouteStop rs WHERE rs.shipment = s)))")
-//    Page<Shipment> findAllByCompanyIdWithFilters(@Param("companyId") UUID companyId, @Param("assigned") Boolean assigned, Pageable pageable);
-
-    @Query("SELECT s FROM Shipment s WHERE s.createdBy.id = :userId AND " +
-           "(:assigned IS NULL OR " +
-           "(:assigned = true AND (EXISTS (SELECT 1 FROM ShipmentAssignment sa WHERE sa.shipment = s) OR EXISTS (SELECT 1 FROM RouteStop rs WHERE rs.shipment = s))) OR " +
-           "(:assigned = false AND NOT EXISTS (SELECT 1 FROM ShipmentAssignment sa WHERE sa.shipment = s) AND NOT EXISTS (SELECT 1 FROM RouteStop rs WHERE rs.shipment = s)))")
-    Page<Shipment> findAllByCreatedByIdWithFilters(@Param("userId") UUID userId, @Param("assigned") Boolean assigned, Pageable pageable);
-
-    Optional<Shipment> findById(UUID id);
+    Page<Shipment> findAllByStatus(ShipmentStatus status, Pageable pageable);
 }

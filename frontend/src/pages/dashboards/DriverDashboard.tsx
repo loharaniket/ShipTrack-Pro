@@ -190,7 +190,9 @@ export function DriverDashboard() {
               <thead className="bg-navy-50 text-navy-500 font-medium">
                 <tr>
                   <th className="px-6 py-3">Tracking ID</th>
-                  <th className="px-6 py-3">Customer</th>
+                  <th className="px-6 py-3">Customer / Sender</th>
+                  <th className="px-6 py-3">Recipient</th>
+                  <th className="px-6 py-3">Origin</th>
                   <th className="px-6 py-3">Destination</th>
                   <th className="px-6 py-3">Status</th>
                   <th className="px-6 py-3 text-right">Action</th>
@@ -199,13 +201,15 @@ export function DriverDashboard() {
               <tbody className="divide-y divide-navy-100 text-navy-900">
                 {driverShipments.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-6 py-8 text-center text-navy-500">No shipments assigned today.</td>
+                    <td colSpan={7} className="px-6 py-8 text-center text-navy-500">No shipments assigned today.</td>
                   </tr>
                 ) : (
                   driverShipments.map(s => (
                     <tr key={s.id} className="hover:bg-navy-50 transition-colors">
                       <td className="px-6 py-4 font-bold text-primary-600">{s.trackingNumber}</td>
-                      <td className="px-6 py-4">{s.organizationId}</td>
+                      <td className="px-6 py-4">{s.senderName || 'Unknown Customer'}</td>
+                      <td className="px-6 py-4">{s.recipientName || 'Destination Facility'}</td>
+                      <td className="px-6 py-4">{getShipmentView(s.id)?.originAddressLabel}</td>
                       <td className="px-6 py-4">{getShipmentView(s.id)?.destinationAddressLabel}</td>
                       <td className="px-6 py-4">
                         <Badge variant={s.status === 'Failed' ? 'danger' : s.status === 'Delivered' ? 'success' : (s.status === 'Assigned' || s.status === 'Ready for Planning' || s.status === 'Planned') ? 'warning' : 'info'}>

@@ -42,6 +42,8 @@ public class AuthService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
+    private final com.shiptrackpro.backend.organization.repository.OrganizationRepository organizationRepository;
+    private final com.shiptrackpro.backend.organization.repository.OrganizationMemberRepository organizationMemberRepository;
 
     @Value("${jwt.access.expiration:900000}")
     private long jwtExpirationMs;
@@ -105,6 +107,23 @@ public class AuthService {
                 .build();
 
         userRepository.save(user);
+
+        // Auto-create personal organization for the user
+        String orgCode = "ORG-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        com.shiptrackpro.backend.organization.entity.Organization org = com.shiptrackpro.backend.organization.entity.Organization.builder()
+                .name(request.getFirstName() + "'s Organization")
+                .code(orgCode)
+                .status(com.shiptrackpro.backend.organization.entity.OrganizationStatus.ACTIVE)
+                .email(request.getEmail())
+                .phone(request.getPhone())
+                .build();
+        organizationRepository.save(org);
+
+        com.shiptrackpro.backend.organization.entity.OrganizationMember member = com.shiptrackpro.backend.organization.entity.OrganizationMember.builder()
+                .organization(org)
+                .user(user)
+                .build();
+        organizationMemberRepository.save(member);
 
         // Automatically log them in after registration
         LoginRequest loginRequest = new LoginRequest();

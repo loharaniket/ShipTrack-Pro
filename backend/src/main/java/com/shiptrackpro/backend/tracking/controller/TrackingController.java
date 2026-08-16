@@ -36,7 +36,7 @@ public class TrackingController {
     }
 
     @PostMapping("/events")
-    @PreAuthorize("hasAnyRole('LOGISTICS_OPERATOR', 'ADMINISTRATOR')")
+    @PreAuthorize("hasAnyRole('DRIVER', 'ADMINISTRATOR')")
     public ResponseEntity<ApiResponse<TrackingEventDto>> addTrackingEvent(
             @RequestBody CreateTrackingEventRequest request,
             Authentication auth) {

@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
+import { useAuth } from '@/context/AuthContext';
 import { 
   MOCK_SHIPMENTS, MOCK_DRIVERS, MOCK_VEHICLES, MOCK_ROUTES, MOCK_ROUTE_STOPS, MOCK_EXCEPTIONS, MOCK_PODS,
   MOCK_ADDRESSES, MOCK_PACKAGES, MOCK_ORGANIZATIONS, MOCK_STATUS_EVENTS, MOCK_TRACKING_EVENTS, MOCK_DRIVER_VEHICLE_ASSIGNMENTS
@@ -8,7 +9,6 @@ import {
   ShipmentStatusEvent, OptimizationResult,
   Address, ShipmentPackage, Vehicle, Organization, TrackingEvent, ShipmentView, DriverVehicleAssignment
 } from '@/types/domain';
-import { createShipment, updateShipmentStatus } from '@/services/shipmentService';
 import { createRoute, updateRouteStatus, updateRouteStopStatus, assignDriverToRoute, dispatchRoute } from '@/services/routeService';
 import { submitPOD } from '@/services/podService';
 import { createException } from '@/services/exceptionService';
@@ -69,9 +69,10 @@ interface DomainContextType {
 const DomainContext = createContext<DomainContextType | undefined>(undefined);
 
 export function DomainProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
   const [organizations] = useState<Organization[]>(MOCK_ORGANIZATIONS);
   const [addresses] = useState<Address[]>(MOCK_ADDRESSES);
-  const [shipments, setShipments] = useState<Shipment[]>(MOCK_SHIPMENTS);
+  const [shipments, setShipments] = useState<Shipment[]>([]);
   const [packages, setPackages] = useState<ShipmentPackage[]>(MOCK_PACKAGES);
   const [drivers, setDrivers] = useState<Driver[]>(MOCK_DRIVERS);
   const [vehicles, setVehicles] = useState<Vehicle[]>(MOCK_VEHICLES);
@@ -82,6 +83,19 @@ export function DomainProvider({ children }: { children: ReactNode }) {
   const [trackingEvents] = useState<TrackingEvent[]>(MOCK_TRACKING_EVENTS);
   const [exceptions, setExceptions] = useState<ShipmentException[]>(MOCK_EXCEPTIONS);
   const [pods, setPods] = useState<ProofOfDelivery[]>(MOCK_PODS);
+
+  React.useEffect(() => {
+    // Fetch shipments from API when user logs in
+    if (user) {
+      import('@/services/shipmentService').then(({ shipmentService }) => {
+        shipmentService.getShipments(0, 100).then(res => {
+          setShipments(res.content);
+        }).catch(err => console.error("Failed to fetch shipments:", err));
+      });
+    } else {
+      setShipments([]);
+    }
+  }, [user]);
 
   // --- Selectors ---
   
@@ -95,7 +109,14 @@ export function DomainProvider({ children }: { children: ReactNode }) {
     return s ? addresses.find(a => a.id === s.destinationAddressId) : undefined;
   };
 
-  const getShipmentPackages = (shipmentId: string) => packages.filter(p => p.shipmentId === shipmentId);
+  const getShipmentPackages = (shipmentId: string) => {
+    const s = shipments.find(s => s.id === shipmentId || s.trackingNumber === shipmentId);
+    if (s && s.packages && s.packages.length > 0) {
+      return s.packages;
+    }
+    return packages.filter(p => p.shipmentId === shipmentId);
+  };
+  
   const getVehicleForDriver = (driverId: string) => {
     const assignment = driverVehicleAssignments
       .filter(
@@ -127,7 +148,13 @@ export function DomainProvider({ children }: { children: ReactNode }) {
   };
   const getRouteStopsByRoute = (routeId: string) => routeStops.filter(s => s.routeId === routeId).sort((a, b) => a.sequence - b.sequence);
   
-  const getShipmentStatusHistory = (shipmentId: string) => statusEvents.filter(e => e.shipmentId === shipmentId).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  const getShipmentStatusHistory = (shipmentId: string) => {
+    const s = shipments.find(s => s.id === shipmentId || s.trackingNumber === shipmentId);
+    if (s && s.history && s.history.length > 0) {
+      return [...s.history].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    }
+    return statusEvents.filter(e => e.shipmentId === shipmentId).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  };
 
   const getShipmentView = (shipmentId: string): ShipmentView | undefined => {
     const shipment = shipments.find(s => s.id === shipmentId || s.trackingNumber === shipmentId);
@@ -145,8 +172,8 @@ export function DomainProvider({ children }: { children: ReactNode }) {
 
     return {
       ...shipment,
-      originAddressLabel: origin ? `${origin.city}, ${origin.state}` : 'Unknown',
-      destinationAddressLabel: dest ? `${dest.city}, ${dest.state}` : 'Unknown',
+      originAddressLabel: origin ? `${origin.city}, ${origin.state}` : shipment.originAddressLabel || 'Unknown',
+      destinationAddressLabel: dest ? `${dest.city}, ${dest.state}` : shipment.destinationAddressLabel || 'Unknown',
       progressPercentage: progress
     };
   };
@@ -154,11 +181,13 @@ export function DomainProvider({ children }: { children: ReactNode }) {
   // --- Actions ---
 
   const handleUpdateShipmentStatus = (req: UpdateShipmentStatusRequest) => {
-    try {
-      const result = updateShipmentStatus(req, { shipments, statusEvents });
-      setShipments(result.shipments);
-      setStatusEvents(result.statusEvents);
-    } catch (err: any) { console.error(err); alert(err.message); }
+    import('@/services/shipmentService').then(({ shipmentService }) => {
+      shipmentService.updateShipmentStatus(req)
+        .then(updatedShipment => {
+           setShipments(prev => prev.map(s => s.id === updatedShipment.id ? updatedShipment : s));
+        })
+        .catch(err => { console.error(err); alert(err.message); });
+    });
   };
 
   const handleCreateRoute = (req: CreateRouteRequest, driverId?: string) => {
@@ -246,11 +275,13 @@ export function DomainProvider({ children }: { children: ReactNode }) {
   };
 
   const handleAddShipment = (req: CreateShipmentRequest) => {
-    try {
-      const result = createShipment(req, { shipments, packages });
-      setShipments(result.shipments);
-      setPackages(result.packages);
-    } catch (err: any) { console.error(err); alert(err.message); }
+    import('@/services/shipmentService').then(({ shipmentService }) => {
+      shipmentService.createShipment(req)
+        .then(newShipment => {
+          setShipments(prev => [newShipment, ...prev]);
+        })
+        .catch(err => { console.error(err); alert(err.message); });
+    });
   };
 
   const addDriver = (driver: Driver, vehicle?: Vehicle) => {

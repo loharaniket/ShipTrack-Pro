@@ -26,9 +26,9 @@ export function ShipmentList() {
   if (user?.role === 'Driver') {
     const driverRecord = drivers.find(d => d.email === user?.email) || drivers.find(d => d.name === user?.name) || drivers[0];
     visibleShipments = visibleShipments.filter(s => s.driverId === driverRecord.id);
-  } else if (user?.role === 'BusinessClient' || user?.role === 'Customer') {
-    visibleShipments = visibleShipments.filter(s => s.organizationId === user?.organizationId);
   }
+  // Note: BusinessClient and Customer shipments are already securely filtered by the backend API.
+  // There is no need to manually filter by user.organizationId here.
     
   const confirmCancel = () => {
     if (shipmentToCancel !== null) {
@@ -173,7 +173,7 @@ export function ShipmentList() {
                         {s.trackingNumber}
                       </Link>
                     </TableCell>
-                    <TableCell>{s.organizationId}</TableCell>
+                    <TableCell>{s.senderName || 'Unknown Customer'}</TableCell>
                     <TableCell>{view?.originAddressLabel}</TableCell>
                     <TableCell>{view?.destinationAddressLabel}</TableCell>
                     <TableCell>

@@ -22,15 +22,23 @@ public class ShipmentHistory {
     private Shipment shipment;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private ShipmentStatus status;
+    @Column(name = "previous_status", length = 30)
+    private ShipmentStatus previousStatus;
 
-    private String statusRemarks;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "new_status", nullable = false, length = 30)
+    private ShipmentStatus newStatus;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "changed_by")
     private User changedBy;
 
-    @Column(updatable = false)
-    private ZonedDateTime recordedAt = ZonedDateTime.now();
+    @Column(name = "change_timestamp", nullable = false)
+    private ZonedDateTime changeTimestamp = ZonedDateTime.now();
+
+    @Column(length = 255)
+    private String location;
+
+    @Column(columnDefinition = "TEXT")
+    private String note;
 }

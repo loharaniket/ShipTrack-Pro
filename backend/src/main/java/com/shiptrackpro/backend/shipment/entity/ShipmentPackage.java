@@ -9,8 +9,8 @@ import java.util.UUID;
 @Data
 @NoArgsConstructor
 @Entity
-@Table(name = "packages")
-public class Package {
+@Table(name = "shipment_packages")
+public class ShipmentPackage {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -20,19 +20,26 @@ public class Package {
     @JoinColumn(name = "shipment_id", nullable = false)
     private Shipment shipment;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 255)
+    private String description;
+
+    @Column(name = "weight_kg")
     private Double weightKg;
 
-    @Column(nullable = false)
-    private String dimensionsCm;
+    @Column(name = "length_cm")
+    private Double lengthCm;
 
-    @Column(nullable = false)
-    private String contentDescription;
+    @Column(name = "width_cm")
+    private Double widthCm;
 
-    @Column(updatable = false)
+    @Column(name = "height_cm")
+    private Double heightCm;
+
+    @Column(name = "created_at", updatable = false)
     private ZonedDateTime createdAt = ZonedDateTime.now();
 
-    private ZonedDateTime updatedAt;
+    @Column(name = "updated_at")
+    private ZonedDateTime updatedAt = ZonedDateTime.now();
 
     @PreUpdate
     protected void onUpdate() {

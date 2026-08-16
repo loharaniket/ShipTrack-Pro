@@ -7,7 +7,7 @@ import {
 
 import { SubmitPODRequest } from '../types/api';
 
-import { updateShipmentStatus } from './shipmentService';
+
 import { updateRouteStopStatus } from './routeService';
 
 interface PODServiceState {
@@ -81,21 +81,21 @@ export const submitPOD = (
       ? 'Delivered'
       : 'Failed';
 
-  const shipmentStateUpdate =
-    updateShipmentStatus(
-      {
-        shipmentId: shipment.id,
-        newStatus: targetStatus,
-        actor: req.actor,
-        note: req.notes
-      },
-      {
-        shipments,
-        statusEvents
-      }
-    );
+  const updatedShipment = { ...shipment, status: targetStatus as Shipment['status'] };
+  const newShipments = shipments.map(s => s.id === updatedShipment.id ? updatedShipment : s);
 
-    let routeStopsResult = routeStops;
+  const newStatusEvent: ShipmentStatusEvent = {
+    id: `SE-${Date.now()}`,
+    shipmentId: shipment.id,
+    previousStatus: shipment.status,
+    newStatus: targetStatus as Shipment['status'],
+    actorType: req.actor.type,
+    actorUserId: req.actor.userId,
+    timestamp: now,
+    note: req.notes
+  };
+
+  let routeStopsResult = routeStops;
 
   if (req.routeStopId && req.deliveryResult === 'SUCCESS') {
     const rsResult = updateRouteStopStatus(
@@ -107,9 +107,8 @@ export const submitPOD = (
 
   return {
     pods: [newPOD, ...pods],
-    shipments: shipmentStateUpdate.shipments,
-    statusEvents:
-      shipmentStateUpdate.statusEvents,
+    shipments: newShipments,
+    statusEvents: [newStatusEvent, ...statusEvents],
     routeStops: routeStopsResult
   };
 };

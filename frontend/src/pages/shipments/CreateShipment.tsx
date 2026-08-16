@@ -4,16 +4,19 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Check, Plus, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useDomain } from '@/context/DomainContext';
 
 export function CreateShipment() {
   const [step, setStep] = useState(1);
   const navigate = useNavigate();
+  const { addShipment } = useDomain();
 
   const [customerName, setCustomerName] = useState('');
   const [shipmentType, setShipmentType] = useState('Standard Delivery (3-5 Days)');
   const [priority, setPriority] = useState('Standard');
   const [recipientName, setRecipientName] = useState('');
   const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [pickupAddress, setPickupAddress] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -45,6 +48,33 @@ export function CreateShipment() {
 
   const handleCreate = () => {
     setIsSubmitting(true);
+    const mapPriority = (p: string) => {
+      if (p === 'Urgent') return 'URGENT';
+      if (p === 'High') return 'HIGH';
+      return 'NORMAL'; // Standard maps to NORMAL
+    };
+
+    addShipment({
+      trackingNumber: '',
+      organizationId: '',
+      serviceType: shipmentType,
+      priority: mapPriority(priority) as any,
+      originAddressId: '',
+      destinationAddressId: '',
+      senderName: customerName,
+      recipientName: recipientName,
+      recipientPhone: phoneNumber,
+      pickupAddress: pickupAddress,
+      deliveryInstructions: deliveryAddress,
+      packages: packages.map(p => ({
+        description: p.description,
+        quantity: 1,
+        weight: parseFloat(p.weight) || 1,
+        packageType: 'BOX',
+        fragile: p.fragile
+      }))
+    });
+
     setTimeout(() => {
       setIsSubmitting(false);
       setIsSuccess(true);
@@ -62,6 +92,12 @@ export function CreateShipment() {
               placeholder="e.g. Acme Corp" 
               value={customerName}
               onChange={e => setCustomerName(e.target.value)}
+            />
+            <Input 
+              label="Pickup Address (Origin)" 
+              placeholder="Street, City, Zip Code" 
+              value={pickupAddress}
+              onChange={e => setPickupAddress(e.target.value)}
             />
             <div>
               <label className="block text-sm font-medium text-navy-700 mb-1">Shipment Type</label>
@@ -178,6 +214,10 @@ export function CreateShipment() {
               <div className="flex justify-between border-b border-navy-100 pb-2">
                 <span className="text-navy-500">Type:</span>
                 <span className="font-medium">{shipmentType}</span>
+              </div>
+              <div className="flex justify-between border-b border-navy-100 pb-2">
+                <span className="text-navy-500">Origin (Pickup):</span>
+                <span className="font-medium text-right max-w-xs">{pickupAddress || 'Not provided'}</span>
               </div>
               <div className="flex justify-between border-b border-navy-100 pb-2">
                 <span className="text-navy-500">Destination:</span>
