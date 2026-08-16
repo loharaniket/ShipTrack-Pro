@@ -7,6 +7,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.time.ZonedDateTime;
 import java.util.UUID;
+import org.hibernate.annotations.NotFound;
+import org.hibernate.annotations.NotFoundAction;
 
 @Data
 @NoArgsConstructor
@@ -49,10 +51,12 @@ public class Shipment {
     @Column(name = "recipient_phone", nullable = false, length = 30)
     private String recipientPhone;
 
+    @NotFound(action = NotFoundAction.IGNORE)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "origin_address_id")
     private Address originAddress;
 
+    @NotFound(action = NotFoundAction.IGNORE)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "destination_address_id", nullable = false)
     private Address destinationAddress;

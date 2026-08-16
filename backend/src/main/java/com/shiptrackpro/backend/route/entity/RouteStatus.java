@@ -1,8 +1,11 @@
 package com.shiptrackpro.backend.route.entity;
 
 public enum RouteStatus {
+    DRAFT,
     PLANNED,
-    ACTIVE,
+    ASSIGNED,
+    DISPATCHED,
+    IN_PROGRESS,
     COMPLETED,
     CANCELLED
 }

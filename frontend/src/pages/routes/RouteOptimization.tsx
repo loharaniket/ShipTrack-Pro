@@ -63,7 +63,7 @@ export function RouteOptimization() {
           }}
         >
           <option value="" disabled>Select a route to optimize...</option>
-          {routes.filter(r => r.status === 'Planned' || r.status === 'In Progress').map(r => (
+          {routes.filter(r => ['Draft', 'Planned', 'Assigned', 'Dispatched', 'In Progress'].includes(r.status)).map(r => (
             <option key={r.id} value={r.id}>{r.name} ({r.id}) - {routeStops.filter(s => s.routeId === r.id).length} stops</option>
           ))}
         </select>

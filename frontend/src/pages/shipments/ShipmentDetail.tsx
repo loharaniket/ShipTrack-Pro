@@ -13,7 +13,7 @@ export function ShipmentDetail() {
   const { user } = useAuth();
   const navigate = useNavigate();
   
-  const { shipments, drivers, updateShipmentStatus, getShipmentView, getShipmentPackages, getVehicleForDriver, getShipmentStatusHistory } = useDomain();
+  const { shipments, drivers, updateShipmentStatus, getShipmentView, getShipmentPackages, getVehicleForDriver, getShipmentStatusHistory, getShipmentDriver } = useDomain();
   
   const shipment = shipments.find(s => s.id === id || s.trackingNumber === id);
   
@@ -39,7 +39,7 @@ export function ShipmentDetail() {
   const [editedIsFragile, setEditedIsFragile] = useState(pkg?.fragile || false);
   const [editedInstructions, setEditedInstructions] = useState(shipment?.deliveryInstructions || '');
 
-  const driver = drivers.find(d => d.id === shipment?.driverId);
+  const driver = getShipmentDriver(shipment?.id || '');
   const vehicle = driver ? getVehicleForDriver(driver.id) : undefined;
 
   if (!shipment) {

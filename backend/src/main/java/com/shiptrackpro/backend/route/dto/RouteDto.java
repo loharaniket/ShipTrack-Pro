@@ -1,18 +1,31 @@
 package com.shiptrackpro.backend.route.dto;
 
 import com.shiptrackpro.backend.route.entity.RouteStatus;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+
 import java.time.ZonedDateTime;
 import java.util.UUID;
 
 @Data
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class RouteDto {
     private UUID id;
-    private UUID driverId;
-    private Double totalDistanceKm;
+    private String name;
+    private UUID organizationId;
+    private String driverId;
     private RouteStatus status;
-    private ZonedDateTime startTime;
-    private ZonedDateTime endTime;
+    private Double totalDistanceKm;
+    private Integer totalDurationMinutes;
+    private ZonedDateTime plannedStart;
+    private ZonedDateTime plannedEnd;
+    private ZonedDateTime actualStart;
+    private ZonedDateTime actualEnd;
+    private Integer stopsCount;
+    private ZonedDateTime createdAt;
+    private ZonedDateTime updatedAt;
 }

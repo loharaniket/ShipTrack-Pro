@@ -10,11 +10,11 @@ import { useDomain } from '@/context/DomainContext';
 export function DriverDashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { shipments, drivers, updateShipmentStatus, getShipmentView } = useDomain();
+  const { shipments, drivers, updateShipmentStatus, getShipmentView, getShipmentDriver } = useDomain();
   
-  // For demo, find the driver record that matches the user name or default to DRV-001
-  const driverRecord = drivers.find(d => d.email === user?.email) || drivers.find(d => d.name === user?.name) || drivers[0];
-  const driverName = driverRecord.name;
+  // For demo, find the driver record that matches the user name
+  const driverRecord = drivers.find(d => d.email === user?.email) || drivers.find(d => d.name === user?.name);
+  const driverName = driverRecord?.name || user?.name || 'Driver';
   
   const handleNextStatus = (id: string, currentStatus: string) => {
     let nextStatus: any = null;
@@ -32,7 +32,7 @@ export function DriverDashboard() {
     }
   };
 
-  const driverShipments = shipments.filter(s => s.driverId === driverRecord.id);
+  const driverShipments = shipments.filter(s => getShipmentDriver(s.id)?.id === driverRecord?.id && driverRecord?.id != null);
   const assignedCount = driverShipments.filter(s => ['Assigned', 'Picked Up', 'In Transit', 'Out for Delivery'].includes(s.status)).length;
   const inProgressCount = driverShipments.filter(s => ['Picked Up', 'In Transit', 'Out for Delivery'].includes(s.status)).length;
   const completedCount = driverShipments.filter(s => s.status === 'Delivered').length;

@@ -22,18 +22,34 @@ public class RouteStop {
     @JoinColumn(name = "route_id", nullable = false)
     private Route route;
 
-    @OneToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "shipment_id", nullable = false)
     private Shipment shipment;
 
-    @Column(nullable = false)
+    @Column(name = "stop_order", nullable = false)
     private Integer stopOrder;
 
-    private ZonedDateTime estimatedArrival;
-    
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 30)
+    private RouteStopStatus status = RouteStopStatus.PENDING;
+
+    @Column(name = "planned_arrival")
+    private ZonedDateTime plannedArrival;
+
+    @Column(name = "actual_arrival")
     private ZonedDateTime actualArrival;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private RouteStopStatus status = RouteStopStatus.PENDING;
+    @Column(name = "actual_departure")
+    private ZonedDateTime actualDeparture;
+
+    @Column(name = "created_at", updatable = false)
+    private ZonedDateTime createdAt = ZonedDateTime.now();
+
+    @Column(name = "updated_at")
+    private ZonedDateTime updatedAt = ZonedDateTime.now();
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = ZonedDateTime.now();
+    }
 }

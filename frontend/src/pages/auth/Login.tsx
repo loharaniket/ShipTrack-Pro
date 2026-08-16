@@ -32,8 +32,9 @@ export function Login() {
       <div>
         <h3 className="text-lg font-medium text-navy-900 text-center mb-1">Sign in to your account</h3>
         <p className="text-xs text-navy-500 text-center">
-          Test different dashboards using these emails (any password):<br/>
-          <span className="font-medium text-primary-600">admin@</span>, <span className="font-medium text-primary-600">business@</span>, <span className="font-medium text-primary-600">driver@</span>, <span className="font-medium text-primary-600">customer@</span>
+          Default test passwords:<br/>
+          <span className="font-medium text-primary-600">admin@</span> (admin123), <span className="font-medium text-primary-600">driver@</span> (admin123), <br/>
+          New drivers created in app: <span className="font-medium text-primary-600">Driver@123</span>
         </p>
       </div>
       <form className="space-y-4" onSubmit={handleSubmit}>

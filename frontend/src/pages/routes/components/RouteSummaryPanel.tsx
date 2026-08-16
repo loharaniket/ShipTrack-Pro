@@ -110,7 +110,7 @@ export function RouteSummaryPanel({
               onChange={(e) => setAssignedDriver(e.target.value)}
             >
               <option value="" disabled>Select a driver...</option>
-              {drivers.filter(d => d.status === 'Active').map(d => (
+              {drivers.filter(d => d.status && d.status.toLowerCase() === 'active').map(d => (
                 <option key={d.id} value={d.id}>{d.name}</option>
               ))}
             </select>

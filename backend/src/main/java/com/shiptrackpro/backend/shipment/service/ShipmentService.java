@@ -108,7 +108,7 @@ public class ShipmentService {
 
     public Page<ShipmentResponse> getShipments(User authUser, Pageable pageable, Optional<String> search, Optional<String> statusStr) {
         boolean isAdmin = authUser.getRoles().stream()
-                .anyMatch(r -> r.getName() == com.shiptrackpro.backend.user.entity.RoleName.ADMINISTRATOR);
+                .anyMatch(r -> r.getName() == com.shiptrackpro.backend.user.entity.RoleName.ADMINISTRATOR || r.getName() == com.shiptrackpro.backend.user.entity.RoleName.DRIVER);
 
         ShipmentStatus status = statusStr.map(s -> {
             try {
@@ -154,7 +154,7 @@ public class ShipmentService {
 
     public ShipmentResponse getShipmentByTrackingNumber(User authUser, String trackingNumber) {
         boolean isAdmin = authUser.getRoles().stream()
-                .anyMatch(r -> r.getName() == com.shiptrackpro.backend.user.entity.RoleName.ADMINISTRATOR);
+                .anyMatch(r -> r.getName() == com.shiptrackpro.backend.user.entity.RoleName.ADMINISTRATOR || r.getName() == com.shiptrackpro.backend.user.entity.RoleName.DRIVER);
 
         Shipment shipment;
         if (isAdmin) {
@@ -170,9 +170,18 @@ public class ShipmentService {
 
     @Transactional
     public ShipmentResponse updateShipment(UUID shipmentId, UpdateShipmentRequest request, User authUser) {
-        UUID orgId = getUserOrganization(authUser).getId();
-        Shipment shipment = shipmentRepository.findByIdAndOrganizationId(shipmentId, orgId)
-                .orElseThrow(() -> new IllegalArgumentException("Shipment not found"));
+        boolean isAdmin = authUser.getRoles().stream()
+                .anyMatch(r -> r.getName() == com.shiptrackpro.backend.user.entity.RoleName.ADMINISTRATOR);
+
+        Shipment shipment;
+        if (isAdmin) {
+            shipment = shipmentRepository.findById(shipmentId)
+                    .orElseThrow(() -> new IllegalArgumentException("Shipment not found"));
+        } else {
+            UUID orgId = getUserOrganization(authUser).getId();
+            shipment = shipmentRepository.findByIdAndOrganizationId(shipmentId, orgId)
+                    .orElseThrow(() -> new IllegalArgumentException("Shipment not found"));
+        }
 
         if (request.getPriority() != null) shipment.setPriority(request.getPriority());
         if (request.getScheduledPickup() != null) shipment.setScheduledPickup(request.getScheduledPickup());
@@ -189,9 +198,18 @@ public class ShipmentService {
 
     @Transactional
     public ShipmentResponse updateShipmentStatus(UUID shipmentId, UpdateShipmentStatusRequest request, User authUser) {
-        UUID orgId = getUserOrganization(authUser).getId();
-        Shipment shipment = shipmentRepository.findByIdAndOrganizationId(shipmentId, orgId)
-                .orElseThrow(() -> new IllegalArgumentException("Shipment not found"));
+        boolean isAdmin = authUser.getRoles().stream()
+                .anyMatch(r -> r.getName() == com.shiptrackpro.backend.user.entity.RoleName.ADMINISTRATOR);
+
+        Shipment shipment;
+        if (isAdmin) {
+            shipment = shipmentRepository.findById(shipmentId)
+                    .orElseThrow(() -> new IllegalArgumentException("Shipment not found"));
+        } else {
+            UUID orgId = getUserOrganization(authUser).getId();
+            shipment = shipmentRepository.findByIdAndOrganizationId(shipmentId, orgId)
+                    .orElseThrow(() -> new IllegalArgumentException("Shipment not found"));
+        }
 
         ShipmentStatus oldStatus = shipment.getStatus();
         shipment.setStatus(request.getNewStatus());

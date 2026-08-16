@@ -42,7 +42,7 @@ public class ShipmentController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'BUSINESS_CLIENT', 'CUSTOMER')")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'BUSINESS_CLIENT', 'CUSTOMER', 'DRIVER')")
     public ResponseEntity<ApiResponse<Page<ShipmentResponse>>> getShipments(
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String status,

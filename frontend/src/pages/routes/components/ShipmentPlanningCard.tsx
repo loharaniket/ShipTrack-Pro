@@ -17,10 +17,11 @@ export function ShipmentPlanningCard({ shipment, isSelected, onToggle }: Shipmen
   const pkg = pkgs.length > 0 ? pkgs[0] : null;
   const view = getShipmentView(shipment.id);
   
-  const isAvailable = shipment.status === 'Ready for Planning';
+  const isAvailable = shipment.status === 'Ready for Planning' || shipment.status === 'Draft';
 
   const getStatusMessage = () => {
     switch (shipment.status) {
+      case 'Draft':
       case 'Ready for Planning':
         return 'Ready for route planning';
       case 'Planned':
@@ -38,6 +39,7 @@ export function ShipmentPlanningCard({ shipment, isSelected, onToggle }: Shipmen
 
   const getStatusColor = () => {
     switch (shipment.status) {
+      case 'Draft':
       case 'Ready for Planning':
         return 'bg-success-50 border-success-200 text-success-700';
       case 'Planned':
