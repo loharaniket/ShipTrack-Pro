@@ -4,5 +4,6 @@ public enum RoleName {
     ADMINISTRATOR,
     BUSINESS_CLIENT,
     DRIVER,
-    CUSTOMER
+    CUSTOMER,
+    SUPPORT_AGENT
 }

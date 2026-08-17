@@ -42,8 +42,6 @@ public class AuthService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
-    private final com.shiptrackpro.backend.organization.repository.OrganizationRepository organizationRepository;
-    private final com.shiptrackpro.backend.organization.repository.OrganizationMemberRepository organizationMemberRepository;
 
     @Value("${jwt.access.expiration:900000}")
     private long jwtExpirationMs;
@@ -65,7 +63,7 @@ public class AuthService {
         CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
 
         if (userDetails.getUser().getStatus() != UserStatus.ACTIVE) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User is not active");
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User account is not active");
         }
 
         String jwt = jwtService.generateToken(userDetails);
@@ -78,23 +76,24 @@ public class AuthService {
         userRepository.save(user);
 
         return LoginResponse.builder()
+                .token(jwt)
                 .accessToken(jwt)
                 .refreshToken(rawRefreshToken)
                 .tokenType("Bearer")
                 .expiresIn(jwtExpirationMs / 1000)
-                .user(mapToCurrentUserResponse(user))
+                .user(mapToAuthUserDto(user))
                 .build();
     }
 
     @Transactional
-    public LoginResponse register(RegisterRequest request) {
+    public RegisterResponse register(RegisterRequest request) {
         String email = request.getEmail().toLowerCase();
         if (userRepository.existsByEmail(email)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email already in use");
         }
 
         Role customerRole = roleRepository.findByName(RoleName.CUSTOMER)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Default role not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Customer role not found"));
 
         User user = User.builder()
                 .email(email)
@@ -108,28 +107,10 @@ public class AuthService {
 
         userRepository.save(user);
 
-        // Auto-create personal organization for the user
-        String orgCode = "ORG-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
-        com.shiptrackpro.backend.organization.entity.Organization org = com.shiptrackpro.backend.organization.entity.Organization.builder()
-                .name(request.getFirstName() + "'s Organization")
-                .code(orgCode)
-                .status(com.shiptrackpro.backend.organization.entity.OrganizationStatus.ACTIVE)
-                .email(request.getEmail())
-                .phone(request.getPhone())
+        return RegisterResponse.builder()
+                .success(true)
+                .message("Registration successful")
                 .build();
-        organizationRepository.save(org);
-
-        com.shiptrackpro.backend.organization.entity.OrganizationMember member = com.shiptrackpro.backend.organization.entity.OrganizationMember.builder()
-                .organization(org)
-                .user(user)
-                .build();
-        organizationMemberRepository.save(member);
-
-        // Automatically log them in after registration
-        LoginRequest loginRequest = new LoginRequest();
-        loginRequest.setEmail(email);
-        loginRequest.setPassword(request.getPassword());
-        return login(loginRequest);
     }
 
     @Transactional
@@ -160,11 +141,13 @@ public class AuthService {
 
     @Transactional
     public void logout(LogoutRequest request) {
-        String tokenHash = hashToken(request.getRefreshToken());
-        refreshTokenRepository.findByTokenHash(tokenHash).ifPresent(token -> {
-            token.setRevokedAt(ZonedDateTime.now());
-            refreshTokenRepository.save(token);
-        });
+        if (request != null && request.getRefreshToken() != null) {
+            String tokenHash = hashToken(request.getRefreshToken());
+            refreshTokenRepository.findByTokenHash(tokenHash).ifPresent(token -> {
+                token.setRevokedAt(ZonedDateTime.now());
+                refreshTokenRepository.save(token);
+            });
+        }
     }
 
     public CurrentUserResponse getCurrentUser() {
@@ -174,7 +157,20 @@ public class AuthService {
         }
 
         CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
-        return mapToCurrentUserResponse(userDetails.getUser());
+        User user = userDetails.getUser();
+        List<String> roles = user.getRoles().stream()
+                .map(role -> role.getName().name())
+                .collect(Collectors.toList());
+
+        return CurrentUserResponse.builder()
+                .id(user.getId())
+                .email(user.getEmail())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .phone(user.getPhone())
+                .status(user.getStatus().name())
+                .roles(roles)
+                .build();
     }
 
     private void createRefreshToken(User user, String rawToken) {
@@ -196,18 +192,19 @@ public class AuthService {
         }
     }
 
-    private CurrentUserResponse mapToCurrentUserResponse(User user) {
+    private AuthUserDto mapToAuthUserDto(User user) {
         List<String> roles = user.getRoles().stream()
                 .map(role -> role.getName().name())
                 .collect(Collectors.toList());
+        String primaryRole = roles.isEmpty() ? RoleName.CUSTOMER.name() : roles.get(0);
 
-        return CurrentUserResponse.builder()
+        return AuthUserDto.builder()
                 .id(user.getId())
-                .email(user.getEmail())
+                .name(user.getFirstName() + " " + user.getLastName())
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
-                .phone(user.getPhone())
-                .status(user.getStatus().name())
+                .email(user.getEmail())
+                .role(primaryRole)
                 .roles(roles)
                 .build();
     }

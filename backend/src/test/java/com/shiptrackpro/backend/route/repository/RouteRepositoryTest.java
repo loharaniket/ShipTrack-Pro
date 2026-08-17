@@ -14,7 +14,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 
 import java.util.UUID;
 
-
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
@@ -54,7 +53,7 @@ public class RouteRepositoryTest {
         // Setup Driver
         Driver driver = new Driver();
         driver.setUser(user);
-        driver.setLicenseNumber("DL12345");
+        driver.setLicenseNumber("DL_" + UUID.randomUUID().toString().substring(0, 8));
         driver.setStatus("Active");
         driver.setOrganization(org);
         driver = driverRepository.save(driver);
