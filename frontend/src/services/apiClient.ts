@@ -123,9 +123,19 @@ async function fetchWithAuth(url: string, options: RequestInit): Promise<Respons
   return response;
 }
 
+const formatUrl = (endpoint: string): string => {
+  if (endpoint.startsWith('http://') || endpoint.startsWith('https://')) {
+    return endpoint;
+  }
+  if (endpoint.startsWith('/api/')) {
+    return endpoint;
+  }
+  return `/api${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
+};
+
 export const apiClient = {
   get: async <T>(endpoint: string): Promise<T> => {
-    const response = await fetchWithAuth(`${API_BASE_URL}${endpoint}`, {
+    const response = await fetchWithAuth(formatUrl(endpoint), {
       method: 'GET',
       headers: getHeaders(),
     });
@@ -133,7 +143,7 @@ export const apiClient = {
   },
 
   post: async <T>(endpoint: string, data?: any): Promise<T> => {
-    const response = await fetchWithAuth(`${API_BASE_URL}${endpoint}`, {
+    const response = await fetchWithAuth(formatUrl(endpoint), {
       method: 'POST',
       headers: getHeaders(),
       body: data ? JSON.stringify(data) : undefined,
@@ -142,7 +152,7 @@ export const apiClient = {
   },
 
   put: async <T>(endpoint: string, data?: any): Promise<T> => {
-    const response = await fetchWithAuth(`${API_BASE_URL}${endpoint}`, {
+    const response = await fetchWithAuth(formatUrl(endpoint), {
       method: 'PUT',
       headers: getHeaders(),
       body: data ? JSON.stringify(data) : undefined,
@@ -151,7 +161,7 @@ export const apiClient = {
   },
 
   patch: async <T>(endpoint: string, data?: any): Promise<T> => {
-    const response = await fetchWithAuth(`${API_BASE_URL}${endpoint}`, {
+    const response = await fetchWithAuth(formatUrl(endpoint), {
       method: 'PATCH',
       headers: getHeaders(),
       body: data ? JSON.stringify(data) : undefined,
@@ -160,7 +170,7 @@ export const apiClient = {
   },
 
   delete: async <T>(endpoint: string): Promise<T> => {
-    const response = await fetchWithAuth(`${API_BASE_URL}${endpoint}`, {
+    const response = await fetchWithAuth(formatUrl(endpoint), {
       method: 'DELETE',
       headers: getHeaders(),
     });
@@ -171,7 +181,7 @@ export const apiClient = {
     const headers = getHeaders('');
     delete (headers as any)['Content-Type'];
     
-    const response = await fetchWithAuth(`${API_BASE_URL}${endpoint}`, {
+    const response = await fetchWithAuth(formatUrl(endpoint), {
       method: 'POST',
       headers,
       body: formData,

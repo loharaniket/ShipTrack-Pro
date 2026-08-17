@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { CustomerDashboard } from './dashboards/CustomerDashboard';
+import { CustomerDashboard } from './customer/CustomerDashboard';
 import { BusinessClientDashboard } from './dashboards/BusinessClientDashboard';
 import { DriverDashboard } from './dashboards/DriverDashboard';
 import { AdministratorDashboard } from './dashboards/AdministratorDashboard';
@@ -20,6 +20,6 @@ export function Dashboard() {
     case 'Administrator':
       return <AdministratorDashboard />;
     default:
-      return <div>Dashboard not found for role {user.role}</div>;
+      return <CustomerDashboard />;
   }
 }

@@ -9,10 +9,13 @@ import { Dashboard } from '@/pages/Dashboard';
 import { Login } from '@/pages/auth/Login';
 import { Register } from '@/pages/auth/Register';
 import { ForgotPassword } from '@/pages/auth/ForgotPassword';
-import { ShipmentList } from '@/pages/shipments/ShipmentList';
-import { CreateShipment } from '@/pages/shipments/CreateShipment';
-import { ShipmentDetail } from '@/pages/shipments/ShipmentDetail';
-import { TrackingPage } from '@/pages/shipments/TrackingPage';
+import { MyShipments } from '@/pages/customer/MyShipments';
+import { CreateShipment } from '@/pages/customer/CreateShipment';
+import { ShipmentDetails } from '@/pages/customer/ShipmentDetails';
+import { TrackShipment } from '@/pages/customer/TrackShipment';
+import { CreateComplaint } from '@/pages/customer/CreateComplaint';
+import { MyTickets } from '@/pages/customer/MyTickets';
+import { TicketDetails } from '@/pages/customer/TicketDetails';
 import { LiveDelivery } from '@/pages/operations/LiveDelivery';
 import { DriverManagement } from '@/pages/operations/DriverManagement';
 import { MyRoute } from '@/pages/driver/MyRoute';
@@ -46,71 +49,76 @@ function App() {
             <Route path="register" element={<Register />} />
             <Route path="forgot-password" element={<ForgotPassword />} />
           </Route>
+
+          {/* Public Track Route (accessible without login) */}
+          <Route path="/track" element={<TrackShipment />} />
+          <Route path="/track/:trackingNumber" element={<TrackShipment />} />
         
-        {/* Core Authenticated Routes (Accessible to everyone, but content might differ) */}
-        <Route element={<ProtectedRoute />}>
-          <Route element={<DashboardLayout />}>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/notifications" element={<NotificationCenter />} />
-            <Route path="/shipments" element={<ShipmentList />} />
-            <Route path="/shipments/:id" element={<ShipmentDetail />} />
-            <Route path="/tracking/:id" element={<TrackingPage />} />
-            
-            {/* Business / Admin Only */}
-            <Route element={<ProtectedRoute allowedRoles={['BusinessClient', 'Administrator']} />}>
-              <Route path="/customers" element={<Customers />} />
-              <Route path="/reports" element={<Reports />} />
-            </Route>
-            
-            {/* Customer / Business / Admin Only */}
-            <Route element={<ProtectedRoute allowedRoles={['Customer', 'BusinessClient', 'Administrator']} />}>
+          {/* Core Authenticated Routes */}
+          <Route element={<ProtectedRoute />}>
+            <Route element={<DashboardLayout />}>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/notifications" element={<NotificationCenter />} />
+
+              {/* Customer Shipment Routes */}
+              <Route path="/shipments" element={<MyShipments />} />
               <Route path="/shipments/create" element={<CreateShipment />} />
-            </Route>
-            
-            {/* Business / Admin Only */}
-            <Route element={<ProtectedRoute allowedRoles={['BusinessClient', 'Administrator']} />}>
-              <Route path="/analytics" element={<ExecutiveAnalytics />} />
-            </Route>
+              <Route path="/shipments/:id" element={<ShipmentDetails />} />
+              <Route path="/tracking" element={<TrackShipment />} />
+              <Route path="/tracking/:trackingNumber" element={<TrackShipment />} />
 
-            {/* Admin Only - Operational Control */}
-            <Route element={<ProtectedRoute allowedRoles={['Administrator']} />}>
-              <Route path="/routes/planner" element={<RoutePlanner />} />
-              <Route path="/routes/optimization" element={<RouteOptimization />} />
-            </Route>
+              {/* Customer Support Routes */}
+              <Route path="/customer/tickets" element={<MyTickets />} />
+              <Route path="/customer/tickets/create" element={<CreateComplaint />} />
+              <Route path="/customer/tickets/:id" element={<TicketDetails />} />
+              
+              {/* Business / Admin Only */}
+              <Route element={<ProtectedRoute allowedRoles={['BusinessClient', 'Administrator']} />}>
+                <Route path="/customers" element={<Customers />} />
+                <Route path="/reports" element={<Reports />} />
+              </Route>
+              
+              {/* Business / Admin Only */}
+              <Route element={<ProtectedRoute allowedRoles={['BusinessClient', 'Administrator']} />}>
+                <Route path="/analytics" element={<ExecutiveAnalytics />} />
+              </Route>
 
-            {/* Admin Only - Operational Control is now just Admin */}
-            <Route element={<ProtectedRoute allowedRoles={['Administrator']} />}>
-              <Route path="/operations" element={<LiveDelivery />} />
-              <Route path="/drivers" element={<DriverManagement />} />
-              <Route path="/routes/geofencing" element={<Geofencing />} />
-              <Route path="/intelligence/eta" element={<ETAPrediction />} />
-              <Route path="/pod" element={<PODDashboard />} />
-              <Route path="/communications/logs" element={<CommunicationLogs />} />
-            </Route>
-            
-            {/* Driver Only Web Views */}
-            <Route element={<ProtectedRoute allowedRoles={['Driver', 'Administrator']} />}>
-              <Route path="/my-route" element={<MyRoute />} />
-              <Route path="/pod/signature" element={<DigitalSignature />} />
-            </Route>
+              {/* Admin Only - Operational Control */}
+              <Route element={<ProtectedRoute allowedRoles={['Administrator']} />}>
+                <Route path="/routes/planner" element={<RoutePlanner />} />
+                <Route path="/routes/optimization" element={<RouteOptimization />} />
+              </Route>
 
-            {/* Admin Only */}
-            <Route element={<ProtectedRoute allowedRoles={['Administrator']} />}>
-              <Route path="/settings" element={<SystemSettings />} />
-              <Route path="/organizations" element={<Organizations />} />
-              <Route path="/users" element={<Users />} />
-              <Route path="/roles" element={<Roles />} />
-              <Route path="/audit" element={<AuditLogs />} />
-              <Route path="/system-health" element={<SystemHealth />} />
+              {/* Admin Only - Operational Control is now just Admin */}
+              <Route element={<ProtectedRoute allowedRoles={['Administrator']} />}>
+                <Route path="/operations" element={<LiveDelivery />} />
+                <Route path="/drivers" element={<DriverManagement />} />
+                <Route path="/routes/geofencing" element={<Geofencing />} />
+                <Route path="/intelligence/eta" element={<ETAPrediction />} />
+                <Route path="/pod" element={<PODDashboard />} />
+                <Route path="/communications/logs" element={<CommunicationLogs />} />
+              </Route>
+              
+              {/* Driver Only Web Views */}
+              <Route element={<ProtectedRoute allowedRoles={['Driver', 'Administrator']} />}>
+                <Route path="/my-route" element={<MyRoute />} />
+                <Route path="/pod/signature" element={<DigitalSignature />} />
+              </Route>
+
+              {/* Admin Only */}
+              <Route element={<ProtectedRoute allowedRoles={['Administrator']} />}>
+                <Route path="/settings" element={<SystemSettings />} />
+                <Route path="/organizations" element={<Organizations />} />
+                <Route path="/users" element={<Users />} />
+                <Route path="/roles" element={<Roles />} />
+                <Route path="/audit" element={<AuditLogs />} />
+                <Route path="/system-health" element={<SystemHealth />} />
+              </Route>
             </Route>
-            
-            {/* Placeholders for future phases */}
-            <Route path="/support" element={<div className="p-4">Support (Pending)</div>} />
           </Route>
-        </Route>
-        
-        <Route path="*" element={<NotFound />} />
+          
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </DomainProvider>
     </AuthProvider>

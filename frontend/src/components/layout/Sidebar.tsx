@@ -3,7 +3,8 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { 
   LayoutDashboard, Package, Map, Truck, Users, Settings, Bell, 
-  BarChart3, FileText, AlertTriangle, Database, ShieldAlert, Key, Route
+  BarChart3, FileText, AlertTriangle, Database, ShieldAlert, Key, Route,
+  HelpCircle, Search, PlusCircle
 } from 'lucide-react';
 
 export function Sidebar({ isMobileOpen, closeMobile }: { isMobileOpen?: boolean; closeMobile?: () => void }) {
@@ -19,6 +20,9 @@ export function Sidebar({ isMobileOpen, closeMobile }: { isMobileOpen?: boolean;
         return [
           { name: 'Dashboard', path: '/', icon: LayoutDashboard },
           { name: 'My Shipments', path: '/shipments', icon: Package },
+          { name: 'Book Shipment', path: '/shipments/create', icon: PlusCircle },
+          { name: 'Track Shipment', path: '/tracking', icon: Search },
+          { name: 'Support Tickets', path: '/customer/tickets', icon: HelpCircle },
           { name: 'Notifications', path: '/notifications', icon: Bell },
         ];
       case 'BusinessClient':
