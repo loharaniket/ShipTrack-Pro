@@ -107,6 +107,77 @@ public class DeliveryService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional
+    public CustomerShipmentDto updateShipmentStatus(UUID shipmentId, ShipmentStatus targetStatus, String description, User user) {
+        Shipment shipment = shipmentRepository.findById(shipmentId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Shipment not found"));
+
+        // Validate that DELIVERED is NOT allowed via this direct status endpoint
+        if (targetStatus == ShipmentStatus.DELIVERED) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "DELIVERED status can only be updated via Proof of Delivery (POD) upload");
+        }
+
+        // Validate driver assignment if not administrator
+        boolean isAdmin = user.getRoles().stream()
+                .anyMatch(r -> r.getName() == RoleName.ADMINISTRATOR);
+
+        if (!isAdmin) {
+            DeliveryAssignment assignment = deliveryAssignmentRepository.findByShipmentId(shipmentId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Shipment is not assigned to any driver"));
+
+            if (!assignment.getDriver().getId().equals(user.getId())) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not assigned to this shipment");
+            }
+        }
+
+        // Validate sequential status flow: ASSIGNED -> PICKED_UP -> IN_TRANSIT -> OUT_FOR_DELIVERY
+        ShipmentStatus currentStatus = shipment.getStatus();
+        boolean isValidTransition = false;
+        if (currentStatus == ShipmentStatus.ASSIGNED && targetStatus == ShipmentStatus.PICKED_UP) {
+            isValidTransition = true;
+        } else if (currentStatus == ShipmentStatus.PICKED_UP && targetStatus == ShipmentStatus.IN_TRANSIT) {
+            isValidTransition = true;
+        } else if (currentStatus == ShipmentStatus.IN_TRANSIT && targetStatus == ShipmentStatus.OUT_FOR_DELIVERY) {
+            isValidTransition = true;
+        }
+
+        if (!isValidTransition) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Invalid status transition from " + currentStatus + " to " + targetStatus);
+        }
+
+        // Update shipment status
+        shipment.setStatus(targetStatus);
+        Shipment updated = shipmentRepository.save(shipment);
+
+        // Append tracking record
+        String updatedByName = user.getFirstName() + " " + user.getLastName();
+        String trackingDesc = (description != null && !description.isBlank())
+                ? description
+                : "Status updated to " + targetStatus;
+
+        ShipmentTracking tracking = ShipmentTracking.builder()
+                .shipment(updated)
+                .status(targetStatus)
+                .description(trackingDesc)
+                .updatedBy(updatedByName)
+                .build();
+        shipmentTrackingRepository.save(tracking);
+
+        // Notify customer
+        if (updated.getCustomer() != null) {
+            notificationService.createNotification(
+                    updated.getCustomer(),
+                    "Shipment Status Updated: " + targetStatus,
+                    "Your shipment " + updated.getTrackingNumber() + " is now " + targetStatus + ". " + trackingDesc,
+                    "SHIPMENT_STATUS_UPDATE"
+            );
+        }
+
+        return shipmentService.mapToCustomerShipmentDto(updated);
+    }
+
     public com.shiptrackpro.backend.admin.dto.AssignmentResponse mapToAssignmentResponse(DeliveryAssignment assignment) {
         return com.shiptrackpro.backend.admin.dto.AssignmentResponse.builder()
                 .id(assignment.getId())
