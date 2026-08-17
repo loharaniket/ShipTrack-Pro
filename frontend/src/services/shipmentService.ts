@@ -60,6 +60,13 @@ export const shipmentService = {
     return apiClient.get<CustomerShipmentItem[]>('/api/customer/shipments');
   },
 
+  async getAllShipments(page: number = 0, size: number = 50): Promise<CustomerShipmentItem[]> {
+    const data: any = await apiClient.get<any>(`/api/shipments?page=${page}&size=${size}`);
+    if (Array.isArray(data)) return data;
+    if (data && Array.isArray(data.content)) return data.content;
+    return [];
+  },
+
   async getShipmentById(id: string): Promise<CustomerShipmentItem> {
     return apiClient.get<CustomerShipmentItem>(`/api/customer/shipments/${id}`);
   },

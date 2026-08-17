@@ -1,56 +1,36 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent } from '@/components/ui/Card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table';
-import { Badge } from '@/components/ui/Badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Plus, Trash2, Loader2 } from 'lucide-react';
-import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
-import { userApi } from '@/services/api/userApi';
-
-const ROLE_DISPLAY_MAP: Record<string, string> = {
-  ADMINISTRATOR: 'Administrator',
-  DRIVER: 'Driver',
-  BUSINESS_CLIENT: 'Business Client',
-  CUSTOMER: 'Customer',
-};
+import { 
+  Users as UsersIcon, Search, Filter, RefreshCw, 
+  AlertCircle, ShieldCheck, Mail, Phone, Calendar 
+} from 'lucide-react';
+import { adminService, SystemUser, PageResponse } from '@/services/adminService';
+import { formatFriendlyDate } from '@/utils/dateFormatter';
 
 export function Users() {
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<SystemUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  const [newUser, setNewUser] = useState({ 
-    firstName: '', 
-    lastName: '', 
-    email: '', 
-    password: '', 
-    role: 'DRIVER' 
-  });
-
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<{
-    id: string;
-    firstName: string;
-    lastName: string;
-    phone: string;
-    role: string;
-    status: string;
-  } | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [roleFilter, setRoleFilter] = useState('ALL');
 
   const fetchUsers = async () => {
     try {
       setLoading(true);
       setError(null);
-      const data: any = await userApi.getAll();
-      // data.content holds the page list based on standard Pageable
-      setUsers(data.content || []);
+      const data = await adminService.getUsers(0, 100, roleFilter !== 'ALL' ? roleFilter : undefined);
+      
+      if (Array.isArray(data)) {
+        setUsers(data);
+      } else if (data && Array.isArray((data as PageResponse<SystemUser>).content)) {
+        setUsers((data as PageResponse<SystemUser>).content);
+      } else {
+        setUsers([]);
+      }
     } catch (err: any) {
-      setError(err.message || 'Failed to fetch users');
-      console.error(err);
+      setError(err.message || 'Failed to fetch platform users');
     } finally {
       setLoading(false);
     }
@@ -58,258 +38,170 @@ export function Users() {
 
   useEffect(() => {
     fetchUsers();
-  }, []);
+  }, [roleFilter]);
 
-  const handleAddUser = async () => {
-    if (!newUser.firstName || !newUser.lastName || !newUser.email || !newUser.password) {
-      alert("Please fill in all required fields.");
-      return;
-    }
+  const filteredUsers = users.filter((u) => {
+    const term = searchTerm.toLowerCase().trim();
+    if (!term) return true;
+    const name = u.name || `${u.firstName || ''} ${u.lastName || ''}`;
+    return (
+      name.toLowerCase().includes(term) ||
+      u.email.toLowerCase().includes(term) ||
+      (u.phone && u.phone.includes(term))
+    );
+  });
 
-    try {
-      setIsSubmitting(true);
-      const createReq = {
-        firstName: newUser.firstName,
-        lastName: newUser.lastName,
-        email: newUser.email,
-        password: newUser.password,
-        roles: [newUser.role]
-      };
+  const getRoleBadge = (user: SystemUser) => {
+    const roles = user.roles || (user.role ? [user.role] : ['CUSTOMER']);
+    const primary = roles[0] || 'CUSTOMER';
 
-      await userApi.create(createReq);
-      
-      // Reset and close
-      setIsModalOpen(false);
-      setNewUser({ firstName: '', lastName: '', email: '', password: '', role: 'DRIVER' });
-      
-      // Refresh list
-      fetchUsers();
-    } catch (err: any) {
-      alert(err.message || "Failed to create user");
-      console.error(err);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!window.confirm("Are you sure you want to deactivate this user?")) return;
-
-    try {
-      // Soft delete by updating status
-      await userApi.update(id, { status: 'INACTIVE' });
-      fetchUsers();
-    } catch (err: any) {
-      alert(err.message || "Failed to delete user");
-      console.error(err);
-    }
-  };
-
-  const openEditModal = (user: any) => {
-    const primaryRole = (user.roles && user.roles.length > 0) ? user.roles[0] : 'CUSTOMER';
-    setEditingUser({
-      id: user.id,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      phone: user.phone || '',
-      role: primaryRole,
-      status: user.status || 'ACTIVE'
-    });
-    setIsEditModalOpen(true);
-  };
-
-  const handleUpdateUser = async () => {
-    if (!editingUser || !editingUser.firstName || !editingUser.lastName) {
-      alert("Please fill in all required fields.");
-      return;
-    }
-
-    try {
-      setIsSubmitting(true);
-      const updateReq = {
-        firstName: editingUser.firstName,
-        lastName: editingUser.lastName,
-        phone: editingUser.phone,
-        status: editingUser.status,
-        roles: [editingUser.role]
-      };
-
-      await userApi.update(editingUser.id, updateReq);
-      
-      setIsEditModalOpen(false);
-      setEditingUser(null);
-      fetchUsers();
-    } catch (err: any) {
-      alert(err.message || "Failed to update user");
-      console.error(err);
-    } finally {
-      setIsSubmitting(false);
+    switch (primary.toUpperCase()) {
+      case 'ADMINISTRATOR':
+      case 'ADMIN':
+        return <span className="px-2 py-0.5 rounded-md text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200">ADMIN</span>;
+      case 'DRIVER':
+        return <span className="px-2 py-0.5 rounded-md text-xs font-bold bg-sky-50 text-sky-700 border border-sky-200">DRIVER</span>;
+      case 'SUPPORT_AGENT':
+      case 'SUPPORT':
+        return <span className="px-2 py-0.5 rounded-md text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">SUPPORT</span>;
+      default:
+        return <span className="px-2 py-0.5 rounded-md text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">CUSTOMER</span>;
     }
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-navy-900">User Management</h1>
-          <p className="text-navy-500 mt-1">Platform-wide user administration</p>
+          <h1 className="text-2xl font-bold text-navy-900">User Management</h1>
+          <p className="text-sm text-navy-500 mt-1">
+            System accounts across Customer, Driver, Support Agent, and Administrator roles
+          </p>
         </div>
-        <Button onClick={() => setIsModalOpen(true)}><Plus className="h-4 w-4 mr-2" /> Invite User</Button>
+        <div className="flex items-center gap-3">
+          <Button variant="outline" onClick={fetchUsers} disabled={loading} className="h-10">
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} /> Refresh
+          </Button>
+        </div>
       </div>
 
       {error && (
-        <div className="bg-red-50 text-red-600 p-4 rounded-md">
-          {error}
+        <div className="flex items-center gap-2 bg-rose-50 text-rose-800 border border-rose-200 p-4 rounded-xl text-sm">
+          <AlertCircle className="h-5 w-5 text-rose-600 flex-shrink-0" />
+          <span>{error}</span>
         </div>
       )}
-      
+
+      {/* Filter & Search Bar */}
       <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>User</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8">
-                    <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary-500" />
-                  </TableCell>
-                </TableRow>
-              ) : users.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-navy-500">No users found.</TableCell>
-                </TableRow>
-              ) : (
-                users.map((r) => {
-                  const primaryRole = (r.roles && r.roles.length > 0) ? r.roles[0] : 'UNKNOWN';
-                  const displayRole = ROLE_DISPLAY_MAP[primaryRole] || primaryRole;
-                  
-                  return (
-                    <TableRow key={r.id}>
-                      <TableCell className="font-medium">{`${r.firstName} ${r.lastName}`}</TableCell>
-                      <TableCell className="text-navy-500">{r.email}</TableCell>
-                      <TableCell><Badge variant="default">{displayRole}</Badge></TableCell>
-                      <TableCell>{r.phone || 'N/A'}</TableCell>
-                      <TableCell>
-                         <Badge variant={r.status === 'ACTIVE' ? 'success' : r.status === 'INACTIVE' ? 'warning' : 'default'}>
-                           {r.status || 'ACTIVE'}
-                         </Badge>
-                      </TableCell>
-                      <TableCell className="text-right flex justify-end space-x-2">
-                        <Button variant="ghost" size="sm" onClick={() => openEditModal(r)}>Edit</Button>
-                        <Button variant="ghost" size="sm" className="text-danger-600 hover:text-danger-700 hover:bg-danger-50" onClick={() => handleDelete(r.id)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
+        <CardContent className="p-4">
+          <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
+            <div className="relative w-full sm:max-w-md">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-navy-400" />
+              <Input
+                placeholder="Search user name, email, phone..."
+                className="pl-9 h-10"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <Filter className="h-4 w-4 text-navy-500 flex-shrink-0" />
+              <select
+                value={roleFilter}
+                onChange={(e) => setRoleFilter(e.target.value)}
+                className="h-10 rounded-lg border border-navy-200 bg-white px-3 py-2 text-sm text-navy-800 focus:outline-none focus:ring-2 focus:ring-primary-500 w-full sm:w-48"
+              >
+                <option value="ALL">All Roles</option>
+                <option value="CUSTOMER">Customers</option>
+                <option value="DRIVER">Drivers</option>
+                <option value="SUPPORT_AGENT">Support Agents</option>
+                <option value="ADMINISTRATOR">Administrators</option>
+              </select>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Invite New User">
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <Input 
-              placeholder="First Name" 
-              value={newUser.firstName} 
-              onChange={(e) => setNewUser({...newUser, firstName: e.target.value})} 
-            />
-            <Input 
-              placeholder="Last Name" 
-              value={newUser.lastName} 
-              onChange={(e) => setNewUser({...newUser, lastName: e.target.value})} 
-            />
-          </div>
-          <Input 
-            placeholder="Email Address" 
-            type="email"
-            value={newUser.email} 
-            onChange={(e) => setNewUser({...newUser, email: e.target.value})} 
-          />
-          <Input 
-            placeholder="Initial Password" 
-            type="password"
-            value={newUser.password} 
-            onChange={(e) => setNewUser({...newUser, password: e.target.value})} 
-          />
-          <select 
-            className="w-full bg-white border border-navy-300 text-navy-900 rounded p-2 focus:ring-primary-500 focus:border-primary-500"
-            value={newUser.role}
-            onChange={(e) => setNewUser({...newUser, role: e.target.value})}
-          >
-            <option value="ADMINISTRATOR">Administrator</option>
-            <option value="DRIVER">Driver</option>
-            <option value="BUSINESS_CLIENT">Business Client</option>
-            <option value="CUSTOMER">Customer</option>
-          </select>
-          <div className="pt-4 flex justify-end space-x-2">
-            <Button variant="outline" onClick={() => setIsModalOpen(false)} disabled={isSubmitting}>Cancel</Button>
-            <Button onClick={handleAddUser} disabled={isSubmitting}>
-              {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              {isSubmitting ? 'Sending...' : 'Send Invite'}
-            </Button>
-          </div>
-        </div>
-      </Modal>
+      {/* Table */}
+      <Card>
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="p-16 text-center text-navy-400">Loading user accounts...</div>
+          ) : filteredUsers.length === 0 ? (
+            <div className="p-16 text-center">
+              <UsersIcon className="h-12 w-12 text-navy-300 mx-auto mb-3" />
+              <h3 className="text-base font-bold text-navy-900">No Users Found</h3>
+              <p className="text-sm text-navy-500 mt-1">No user accounts matched the filter criteria.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm text-navy-800">
+                <thead className="bg-navy-50/70 text-xs font-semibold uppercase text-navy-600 border-b border-navy-100">
+                  <tr>
+                    <th className="px-6 py-3.5">User</th>
+                    <th className="px-6 py-3.5">Email</th>
+                    <th className="px-6 py-3.5">Phone</th>
+                    <th className="px-6 py-3.5">Role</th>
+                    <th className="px-6 py-3.5">Status</th>
+                    <th className="px-6 py-3.5">Created Date</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-navy-100">
+                  {filteredUsers.map((user) => {
+                    const name = user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email;
 
-      <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title="Edit User">
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <Input 
-              placeholder="First Name" 
-              value={editingUser?.firstName || ''} 
-              onChange={(e) => setEditingUser(editingUser ? {...editingUser, firstName: e.target.value} : null)} 
-            />
-            <Input 
-              placeholder="Last Name" 
-              value={editingUser?.lastName || ''} 
-              onChange={(e) => setEditingUser(editingUser ? {...editingUser, lastName: e.target.value} : null)} 
-            />
-          </div>
-          <Input 
-            placeholder="Phone Number" 
-            value={editingUser?.phone || ''} 
-            onChange={(e) => setEditingUser(editingUser ? {...editingUser, phone: e.target.value} : null)} 
-          />
-          <select 
-            className="w-full bg-white border border-navy-300 text-navy-900 rounded p-2 focus:ring-primary-500 focus:border-primary-500"
-            value={editingUser?.role || 'CUSTOMER'}
-            onChange={(e) => setEditingUser(editingUser ? {...editingUser, role: e.target.value} : null)}
-          >
-            <option value="ADMINISTRATOR">Administrator</option>
-            <option value="DRIVER">Driver</option>
-            <option value="BUSINESS_CLIENT">Business Client</option>
-            <option value="CUSTOMER">Customer</option>
-          </select>
-          <select 
-            className="w-full bg-white border border-navy-300 text-navy-900 rounded p-2 focus:ring-primary-500 focus:border-primary-500"
-            value={editingUser?.status || 'ACTIVE'}
-            onChange={(e) => setEditingUser(editingUser ? {...editingUser, status: e.target.value} : null)}
-          >
-            <option value="ACTIVE">Active</option>
-            <option value="INACTIVE">Inactive</option>
-          </select>
-          <div className="pt-4 flex justify-end space-x-2">
-            <Button variant="outline" onClick={() => setIsEditModalOpen(false)} disabled={isSubmitting}>Cancel</Button>
-            <Button onClick={handleUpdateUser} disabled={isSubmitting}>
-              {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              {isSubmitting ? 'Saving...' : 'Save Changes'}
-            </Button>
-          </div>
-        </div>
-      </Modal>
+                    return (
+                      <tr key={user.id} className="hover:bg-navy-50/50 transition-colors">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="h-9 w-9 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center font-bold text-sm">
+                              {name.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <div className="font-bold text-navy-900">{name}</div>
+                              <div className="text-xs font-mono text-navy-400">{user.id.substring(0, 8)}...</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-1.5 text-navy-700">
+                            <Mail className="h-3.5 w-3.5 text-navy-400" />
+                            <span>{user.email}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-xs text-navy-600">
+                          {user.phone ? (
+                            <span className="flex items-center gap-1.5">
+                              <Phone className="h-3.5 w-3.5 text-navy-400" />
+                              {user.phone}
+                            </span>
+                          ) : (
+                            <span className="text-navy-400 italic">—</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4">
+                          {getRoleBadge(user)}
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            {user.status || 'ACTIVE'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-xs text-navy-500">
+                          {formatFriendlyDate(user.createdAt)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

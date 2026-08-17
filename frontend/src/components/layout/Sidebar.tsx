@@ -4,7 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 import { 
   LayoutDashboard, Package, Map, Truck, Users, Settings, Bell, 
   BarChart3, FileText, AlertTriangle, Database, ShieldAlert, Key, Route,
-  HelpCircle, Search, PlusCircle
+  HelpCircle, Search, PlusCircle, Clock
 } from 'lucide-react';
 
 export function Sidebar({ isMobileOpen, closeMobile }: { isMobileOpen?: boolean; closeMobile?: () => void }) {
@@ -36,20 +36,14 @@ export function Sidebar({ isMobileOpen, closeMobile }: { isMobileOpen?: boolean;
         ];
       case 'Administrator':
         return [
-          { name: 'Admin Dashboard', path: '/', icon: LayoutDashboard },
-          { name: 'Organizations', path: '/organizations', icon: Users },
-          { name: 'Customers', path: '/customers', icon: Users },
-          { name: 'Users', path: '/users', icon: Users },
-          { name: 'Roles & Permissions', path: '/roles', icon: ShieldAlert },
-          { name: 'Shipments', path: '/shipments', icon: Package },
-          { name: 'Drivers', path: '/drivers', icon: Users },
-          { name: 'Routes', path: '/routes/planner', icon: Route },
-          { name: 'Geo-fences', path: '/routes/geofencing', icon: Map },
-          { name: 'ETA Prediction', path: '/intelligence/eta', icon: BarChart3 },
-          { name: 'Proof of Delivery', path: '/pod', icon: FileText },
-          { name: 'Audit Logs', path: '/audit', icon: FileText },
-          { name: 'System Health', path: '/system-health', icon: ActivityIcon },
-          { name: 'System Settings', path: '/settings', icon: Settings },
+          { name: 'Dashboard', path: '/', icon: LayoutDashboard },
+          { name: 'Pending Dispatch', path: '/admin/shipments/pending', icon: Clock },
+          { name: 'All Shipments', path: '/shipments', icon: Package },
+          { name: 'Driver Pool', path: '/admin/drivers', icon: Truck },
+          { name: 'User Management', path: '/admin/users', icon: Users },
+          { name: 'Operational Reports', path: '/admin/reports', icon: BarChart3 },
+          { name: 'Support Tickets', path: '/support/tickets', icon: HelpCircle },
+          { name: 'Notifications', path: '/notifications', icon: Bell },
         ];
       case 'Driver':
         return [

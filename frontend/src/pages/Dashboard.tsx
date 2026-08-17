@@ -3,7 +3,7 @@ import { useAuth } from '@/context/AuthContext';
 import { CustomerDashboard } from './customer/CustomerDashboard';
 import { BusinessClientDashboard } from './dashboards/BusinessClientDashboard';
 import { DriverDashboard } from './dashboards/DriverDashboard';
-import { AdministratorDashboard } from './dashboards/AdministratorDashboard';
+import { AdminDashboard } from './admin/AdminDashboard';
 
 export function Dashboard() {
   const { user } = useAuth();
@@ -18,7 +18,7 @@ export function Dashboard() {
     case 'Driver':
       return <DriverDashboard />;
     case 'Administrator':
-      return <AdministratorDashboard />;
+      return <AdminDashboard />;
     default:
       return <CustomerDashboard />;
   }

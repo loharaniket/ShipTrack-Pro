@@ -28,14 +28,10 @@ import { DigitalSignature } from '@/pages/delivery/DigitalSignature';
 import { NotificationCenter } from '@/pages/communications/NotificationCenter';
 import { CommunicationLogs } from '@/pages/communications/CommunicationLogs';
 import { ExecutiveAnalytics } from '@/pages/analytics/ExecutiveAnalytics';
-import { Reports } from '@/pages/analytics/Reports';
-import { SystemSettings } from '@/pages/admin/SystemSettings';
+import { PendingShipments } from '@/pages/admin/PendingShipments';
+import { Drivers } from '@/pages/admin/Drivers';
 import { Users } from '@/pages/admin/Users';
-import { Roles } from '@/pages/admin/Roles';
-import { AuditLogs } from '@/pages/admin/AuditLogs';
-import { SystemHealth } from '@/pages/admin/SystemHealth';
-import { Organizations } from '@/pages/admin/Organizations';
-import { Customers } from '@/pages/admin/Customers';
+import { Reports } from '@/pages/admin/Reports';
 import { Profile } from '@/pages/auth/Profile';
 import { NotFound } from '@/pages/NotFound';
 
@@ -73,47 +69,21 @@ function App() {
               <Route path="/customer/tickets/create" element={<CreateComplaint />} />
               <Route path="/customer/tickets/:id" element={<TicketDetails />} />
               
-              {/* Business / Admin Only */}
-              <Route element={<ProtectedRoute allowedRoles={['BusinessClient', 'Administrator']} />}>
-                <Route path="/customers" element={<Customers />} />
+              {/* Admin Only Routes */}
+              <Route element={<ProtectedRoute allowedRoles={['Administrator']} />}>
+                <Route path="/admin/shipments/pending" element={<PendingShipments />} />
+                <Route path="/admin/drivers" element={<Drivers />} />
+                <Route path="/admin/users" element={<Users />} />
+                <Route path="/admin/reports" element={<Reports />} />
                 <Route path="/reports" element={<Reports />} />
-              </Route>
-              
-              {/* Business / Admin Only */}
-              <Route element={<ProtectedRoute allowedRoles={['BusinessClient', 'Administrator']} />}>
-                <Route path="/analytics" element={<ExecutiveAnalytics />} />
-              </Route>
-
-              {/* Admin Only - Operational Control */}
-              <Route element={<ProtectedRoute allowedRoles={['Administrator']} />}>
-                <Route path="/routes/planner" element={<RoutePlanner />} />
-                <Route path="/routes/optimization" element={<RouteOptimization />} />
-              </Route>
-
-              {/* Admin Only - Operational Control is now just Admin */}
-              <Route element={<ProtectedRoute allowedRoles={['Administrator']} />}>
-                <Route path="/operations" element={<LiveDelivery />} />
-                <Route path="/drivers" element={<DriverManagement />} />
-                <Route path="/routes/geofencing" element={<Geofencing />} />
-                <Route path="/intelligence/eta" element={<ETAPrediction />} />
-                <Route path="/pod" element={<PODDashboard />} />
-                <Route path="/communications/logs" element={<CommunicationLogs />} />
+                <Route path="/users" element={<Users />} />
+                <Route path="/drivers" element={<Drivers />} />
               </Route>
               
               {/* Driver Only Web Views */}
               <Route element={<ProtectedRoute allowedRoles={['Driver', 'Administrator']} />}>
                 <Route path="/my-route" element={<MyRoute />} />
                 <Route path="/pod/signature" element={<DigitalSignature />} />
-              </Route>
-
-              {/* Admin Only */}
-              <Route element={<ProtectedRoute allowedRoles={['Administrator']} />}>
-                <Route path="/settings" element={<SystemSettings />} />
-                <Route path="/organizations" element={<Organizations />} />
-                <Route path="/users" element={<Users />} />
-                <Route path="/roles" element={<Roles />} />
-                <Route path="/audit" element={<AuditLogs />} />
-                <Route path="/system-health" element={<SystemHealth />} />
               </Route>
             </Route>
           </Route>

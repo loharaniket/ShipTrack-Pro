@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/shipments")
+@RequestMapping({"/api/shipments", "/api/v1/shipments", "/api/admin/shipments"})
 @RequiredArgsConstructor
 public class ShipmentController {
 

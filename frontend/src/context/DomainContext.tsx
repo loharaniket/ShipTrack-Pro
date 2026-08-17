@@ -85,55 +85,9 @@ export function DomainProvider({ children }: { children: ReactNode }) {
   const [exceptions, setExceptions] = useState<ShipmentException[]>(MOCK_EXCEPTIONS);
   const [pods, setPods] = useState<ProofOfDelivery[]>(MOCK_PODS);
 
+  // Legacy DomainProvider state preserved for backward compatibility
   React.useEffect(() => {
-    if (user) {
-      // Fetch shipments from API
-      import('@/services/shipmentService').then(({ shipmentService }) => {
-        shipmentService.getShipments(0, 100).then(res => {
-          setShipments(res.content);
-        }).catch(err => console.error("Failed to fetch shipments:", err));
-      });
-
-      // Fetch routes from API
-      routeService.getRoutes().then(async (fetchedRoutes) => {
-        setRoutes(fetchedRoutes);
-        const allStops: RouteStop[] = [];
-        for (const r of fetchedRoutes) {
-          try {
-            const details = await routeService.getRouteDetails(r.id);
-            allStops.push(...details.stops);
-          } catch (e) {
-            console.error("Failed to fetch route details:", e);
-          }
-        }
-        setRouteStops(allStops);
-      }).catch(err => console.error("Failed to fetch routes:", err));
-
-      // Fetch real drivers from API
-      deliveryApi.getDrivers().then(res => {
-        const mappedDrivers: Driver[] = res.map(d => ({
-          id: d.id,
-          name: d.name || 'Unknown Driver',
-          phone: d.phone,
-          email: d.email,
-          status: (d.status as any) || 'Active',
-          vehicleId: d.vehicleId || undefined
-        }));
-        setDrivers(mappedDrivers);
-      }).catch(err => console.error("Failed to fetch drivers:", err));
-
-      // Fetch real vehicles from API
-      deliveryApi.getVehicles().then(res => {
-        const mappedVehicles: Vehicle[] = res.map(v => ({
-          id: v.id,
-          registrationNumber: v.registrationNumber,
-          type: v.type,
-          capacityKg: v.capacityKg,
-          status: (v.status as any) || 'Active'
-        }));
-        setVehicles(mappedVehicles);
-      }).catch(err => console.error("Failed to fetch vehicles:", err));
-    } else {
+    if (!user) {
       setShipments([]);
       setRoutes([]);
       setRouteStops([]);

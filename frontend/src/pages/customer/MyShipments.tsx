@@ -7,9 +7,13 @@ import { Package, Search, Filter, Plus, ArrowUpRight, Eye, RefreshCw, AlertCircl
 import { shipmentService, CustomerShipmentItem } from '@/services/shipmentService';
 import { ShipmentStatusBadge } from '@/components/common/ShipmentStatusBadge';
 import { formatFriendlyDate } from '@/utils/dateFormatter';
+import { useAuth } from '@/context/AuthContext';
 
 export function MyShipments() {
+  const { user } = useAuth();
   const navigate = useNavigate();
+
+  const isAdminOrSupport = user?.role === 'Administrator' || user?.role === 'SupportAgent';
 
   const [shipments, setShipments] = useState<CustomerShipmentItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -19,13 +23,15 @@ export function MyShipments() {
 
   useEffect(() => {
     fetchShipments();
-  }, []);
+  }, [user?.role]);
 
   const fetchShipments = async () => {
     try {
       setLoading(true);
       setError('');
-      const data = await shipmentService.getMyShipments();
+      const data = isAdminOrSupport
+        ? await shipmentService.getAllShipments(0, 100)
+        : await shipmentService.getMyShipments();
       setShipments(data || []);
     } catch (err: any) {
       setError(err.message || 'Failed to load shipments');
@@ -40,6 +46,7 @@ export function MyShipments() {
       !term ||
       s.trackingNumber.toLowerCase().includes(term) ||
       s.receiverName?.toLowerCase().includes(term) ||
+      s.senderName?.toLowerCase().includes(term) ||
       s.pickupAddress?.toLowerCase().includes(term) ||
       s.deliveryAddress?.toLowerCase().includes(term);
 
@@ -54,18 +61,24 @@ export function MyShipments() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-navy-900">My Shipments</h1>
+          <h1 className="text-2xl font-bold text-navy-900">
+            {isAdminOrSupport ? 'All Platform Shipments' : 'My Shipments'}
+          </h1>
           <p className="text-sm text-navy-500 mt-1">
-            Track and manage all your booked package deliveries
+            {isAdminOrSupport
+              ? 'Supervise, inspect, and track all customer shipments in the system'
+              : 'Track and manage all your booked package deliveries'}
           </p>
         </div>
         <div className="flex items-center gap-3">
           <Button variant="outline" onClick={fetchShipments} disabled={loading} className="h-10">
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} /> Refresh
           </Button>
-          <Button onClick={() => navigate('/shipments/create')} className="h-10">
-            <Plus className="h-4 w-4 mr-2" /> Book Shipment
-          </Button>
+          {!isAdminOrSupport && (
+            <Button onClick={() => navigate('/shipments/create')} className="h-10">
+              <Plus className="h-4 w-4 mr-2" /> Book Shipment
+            </Button>
+          )}
         </div>
       </div>
 
