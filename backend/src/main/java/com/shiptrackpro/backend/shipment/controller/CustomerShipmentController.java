@@ -23,6 +23,7 @@ import java.util.UUID;
 public class CustomerShipmentController {
 
     private final ShipmentService shipmentService;
+    private final com.shiptrackpro.backend.pod.service.PodService podService;
 
     @PostMapping
     @PreAuthorize("hasRole('CUSTOMER')")
@@ -49,5 +50,14 @@ public class CustomerShipmentController {
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         CustomerShipmentDto response = shipmentService.getCustomerShipmentById(id, userDetails.getUser());
         return ResponseEntity.ok(ApiResponse.success("Shipment details fetched successfully", response));
+    }
+
+    @GetMapping("/{id}/pod")
+    @PreAuthorize("hasAnyRole('CUSTOMER', 'ADMINISTRATOR', 'SUPPORT_AGENT', 'DRIVER')")
+    public ResponseEntity<ApiResponse<com.shiptrackpro.backend.pod.dto.PodResponse>> getShipmentPod(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        com.shiptrackpro.backend.pod.dto.PodResponse response = podService.getPodDetails(id, userDetails.getUser());
+        return ResponseEntity.ok(ApiResponse.success(response.getMessage(), response));
     }
 }

@@ -35,5 +35,6 @@ public class ProofOfDelivery {
 
     @CreationTimestamp
     @Column(name = "delivery_time", nullable = false, updatable = false)
-    private ZonedDateTime deliveryTime;
+    @Builder.Default
+    private ZonedDateTime deliveryTime = ZonedDateTime.now();
 }
