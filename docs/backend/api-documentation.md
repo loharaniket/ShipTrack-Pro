@@ -105,6 +105,12 @@ Base URL: `http://localhost:8080` (Endpoints support both `/api/...` and `/api/v
 
 ## 3. Admin Operations
 
+### Get Users
+* **Endpoint**: `GET /api/admin/users` (also `/api/users`, `/api/v1/admin/users`)
+* **Access**: Role `ADMINISTRATOR`
+* **Query Parameters**: `search`, `status`, `role`, `page`, `size`
+* **Response (200 OK)**: Paginated user response.
+
 ### Get Pending Unassigned Shipments
 * **Endpoint**: `GET /api/admin/shipments/pending`
 * **Access**: Role `ADMINISTRATOR`
@@ -121,6 +127,11 @@ Base URL: `http://localhost:8080` (Endpoints support both `/api/...` and `/api/v
   }
   ```
 * **Response (201 Created)**: Status changes `CREATED` -> `ASSIGNED`.
+
+### Get Drivers
+* **Endpoint**: `GET /api/admin/drivers`
+* **Access**: Role `ADMINISTRATOR`
+* **Response (200 OK)**: Returns active delivery drivers.
 
 ### Get Dashboard Statistics
 * **Endpoint**: `GET /api/admin/dashboard/stats`
@@ -143,6 +154,7 @@ Base URL: `http://localhost:8080` (Endpoints support both `/api/...` and `/api/v
 ### Get Admin Reports
 * **Endpoint**: `GET /api/admin/reports`
 * **Access**: Role `ADMINISTRATOR`
+* **Response (200 OK)**: Returns status breakdown and overall platform metrics.
 
 ---
 
@@ -241,3 +253,28 @@ Base URL: `http://localhost:8080` (Endpoints support both `/api/...` and `/api/v
 ### Mark Alert as Read
 * **Endpoint**: `PUT /api/notifications/{id}/read`
 * **Access**: Authenticated User (Owner only)
+
+---
+
+## 8. Global Error Responses
+
+All failed API requests return a consistent JSON response:
+
+```json
+{
+  "success": false,
+  "message": "Shipment must be in OUT_FOR_DELIVERY status to complete delivery.",
+  "timestamp": "2026-08-17T10:30:00Z",
+  "status": 400,
+  "error": "BAD_REQUEST",
+  "path": "/api/operator/pod"
+}
+```
+
+### Common HTTP Status Codes:
+- `400 Bad Request`: Validation failure or invalid lifecycle state transition.
+- `401 Unauthorized`: Missing or invalid JWT authentication token.
+- `403 Forbidden`: Insufficient role permissions or accessing unowned resources.
+- `404 Not Found`: Resource (shipment, ticket, user, notification) does not exist.
+- `409 Conflict`: Resource unique conflict (e.g. duplicate email registration).
+- `500 Internal Server Error`: Unhandled server exceptions.

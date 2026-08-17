@@ -39,4 +39,13 @@ public class CustomerTicketController {
         List<SupportTicketDto> response = supportService.getMyTickets(userDetails.getUser());
         return ResponseEntity.ok(ApiResponse.success("Support tickets fetched successfully", response));
     }
+
+    @GetMapping("/{id}")
+    @PreAuthorize("hasRole('CUSTOMER')")
+    public ResponseEntity<ApiResponse<SupportTicketDto>> getTicketById(
+            @PathVariable java.util.UUID id,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        SupportTicketDto response = supportService.getTicketDetails(id, userDetails.getUser());
+        return ResponseEntity.ok(ApiResponse.success("Support ticket fetched successfully", response));
+    }
 }
