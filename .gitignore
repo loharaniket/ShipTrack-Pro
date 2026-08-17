@@ -30,6 +30,13 @@ uploads/**
 **/uploads/
 **/uploads/**
 
+# Documentation
+docs/
+docs/**
+**/docs/
+**/docs/**
+
+
 # Logs
 logs/
 *.log
