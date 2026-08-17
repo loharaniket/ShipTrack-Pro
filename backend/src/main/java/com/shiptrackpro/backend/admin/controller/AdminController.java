@@ -24,6 +24,7 @@ public class AdminController {
 
     private final ShipmentService shipmentService;
     private final DeliveryService deliveryService;
+    private final com.shiptrackpro.backend.admin.service.AdminService adminService;
 
     @GetMapping("/shipments/pending")
     @PreAuthorize("hasRole('ADMINISTRATOR')")
@@ -47,5 +48,19 @@ public class AdminController {
     public ResponseEntity<ApiResponse<List<User>>> getDrivers() {
         List<User> drivers = deliveryService.getDrivers();
         return ResponseEntity.ok(ApiResponse.success("Drivers fetched successfully", drivers));
+    }
+
+    @GetMapping("/dashboard/stats")
+    @PreAuthorize("hasRole('ADMINISTRATOR')")
+    public ResponseEntity<ApiResponse<com.shiptrackpro.backend.admin.dto.DashboardStatsResponse>> getDashboardStats() {
+        com.shiptrackpro.backend.admin.dto.DashboardStatsResponse stats = adminService.getDashboardStats();
+        return ResponseEntity.ok(ApiResponse.success("Dashboard statistics fetched successfully", stats));
+    }
+
+    @GetMapping("/reports")
+    @PreAuthorize("hasRole('ADMINISTRATOR')")
+    public ResponseEntity<ApiResponse<com.shiptrackpro.backend.admin.dto.AdminReportResponse>> getAdminReports() {
+        com.shiptrackpro.backend.admin.dto.AdminReportResponse reports = adminService.getAdminReports();
+        return ResponseEntity.ok(ApiResponse.success("Admin reports fetched successfully", reports));
     }
 }
