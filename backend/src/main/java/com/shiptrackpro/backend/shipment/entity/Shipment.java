@@ -1,17 +1,21 @@
 package com.shiptrackpro.backend.shipment.entity;
 
 import com.shiptrackpro.backend.user.entity.User;
-import com.shiptrackpro.backend.organization.entity.Organization;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
 import java.time.ZonedDateTime;
 import java.util.UUID;
-import org.hibernate.annotations.NotFound;
-import org.hibernate.annotations.NotFoundAction;
 
 @Data
+@Builder
 @NoArgsConstructor
+@AllArgsConstructor
 @Entity
 @Table(name = "shipments")
 public class Shipment {
@@ -20,69 +24,47 @@ public class Shipment {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(name = "tracking_number", nullable = false, unique = true, length = 20)
+    @Column(name = "tracking_number", nullable = false, unique = true, length = 30)
     private String trackingNumber;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "organization_id", nullable = false)
-    private Organization organization;
+    @JoinColumn(name = "customer_id")
+    private User customer;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "created_by", nullable = false)
-    private User createdBy;
+    @Column(name = "sender_name", nullable = false, length = 150)
+    private String senderName;
 
-    @Column(name = "service_type", nullable = false, length = 100)
-    private String serviceType;
+    @Column(name = "sender_phone", length = 30)
+    private String senderPhone;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
-    private ShipmentPriority priority = ShipmentPriority.NORMAL;
+    @Column(name = "receiver_name", nullable = false, length = 150)
+    private String receiverName;
+
+    @Column(name = "receiver_phone", nullable = false, length = 30)
+    private String receiverPhone;
+
+    @Column(name = "pickup_address", nullable = false, length = 255)
+    private String pickupAddress;
+
+    @Column(name = "delivery_address", nullable = false, length = 255)
+    private String deliveryAddress;
+
+    @Column(name = "package_description", length = 255)
+    private String packageDescription;
+
+    @Column(name = "weight")
+    private Double weight;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
-    private ShipmentStatus status = ShipmentStatus.DRAFT;
+    @Builder.Default
+    private ShipmentStatus status = ShipmentStatus.CREATED;
 
-    @Column(name = "customer_name", nullable = false, length = 150)
-    private String customerName;
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private ZonedDateTime createdAt;
 
-    @Column(name = "recipient_name", nullable = false, length = 150)
-    private String recipientName;
-
-    @Column(name = "recipient_phone", nullable = false, length = 30)
-    private String recipientPhone;
-
-    @NotFound(action = NotFoundAction.IGNORE)
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "origin_address_id")
-    private Address originAddress;
-
-    @NotFound(action = NotFoundAction.IGNORE)
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "destination_address_id", nullable = false)
-    private Address destinationAddress;
-
-    @Column(name = "scheduled_pickup")
-    private ZonedDateTime scheduledPickup;
-
-    @Column(name = "scheduled_delivery")
-    private ZonedDateTime scheduledDelivery;
-
-    @Column(name = "created_at", updatable = false)
-    private ZonedDateTime createdAt = ZonedDateTime.now();
-
-    @Column(name = "updated_at")
-    private ZonedDateTime updatedAt = ZonedDateTime.now();
-
-    @PreUpdate
-    protected void onUpdate() {
-        this.updatedAt = ZonedDateTime.now();
-    }
-
-    public ZonedDateTime getEstimatedDeliveryTime() {
-        return this.scheduledDelivery;
-    }
-
-    public void setActualDeliveryDate(ZonedDateTime date) {
-        // Ignored or could be mapped to another field, skipping to maintain compatibility without DB change.
-    }
+    @UpdateTimestamp
+    @Column(name = "updated_at", nullable = false)
+    private ZonedDateTime updatedAt;
 }

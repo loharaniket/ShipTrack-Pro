@@ -1,32 +1,39 @@
 package com.shiptrackpro.backend.shipment.dto;
 
-import com.shiptrackpro.backend.shipment.entity.ShipmentPriority;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
-import java.util.List;
+import lombok.NoArgsConstructor;
 
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class CreateShipmentRequest {
-    @NotBlank
-    private String customerName;
 
-    @NotBlank
-    private String serviceType;
+    @NotBlank(message = "Sender name is required")
+    private String senderName;
 
-    @NotNull
-    private ShipmentPriority priority;
+    private String senderPhone;
 
-    @NotBlank
-    private String recipientName;
+    @NotBlank(message = "Receiver name is required")
+    private String receiverName;
 
-    @NotBlank
-    private String recipientPhone;
+    @NotBlank(message = "Receiver phone is required")
+    private String receiverPhone;
 
-    private AddressDto originAddress;
+    @NotBlank(message = "Pickup address is required")
+    private String pickupAddress;
 
-    @NotNull
-    private AddressDto deliveryAddress;
+    @NotBlank(message = "Delivery address is required")
+    private String deliveryAddress;
 
-    private List<ShipmentPackageDto> packages;
+    private String packageDescription;
+
+    @NotNull(message = "Weight is required")
+    @Positive(message = "Weight must be greater than zero")
+    private Double weight;
 }

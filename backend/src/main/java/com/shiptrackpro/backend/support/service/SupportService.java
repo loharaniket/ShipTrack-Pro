@@ -1,14 +1,16 @@
 package com.shiptrackpro.backend.support.service;
 
-import com.shiptrackpro.backend.support.entity.SupportEscalation;
-import com.shiptrackpro.backend.support.entity.SupportException;
-import com.shiptrackpro.backend.support.repository.SupportEscalationRepository;
-import com.shiptrackpro.backend.support.repository.SupportExceptionRepository;
-import com.shiptrackpro.backend.user.repository.UserRepository;
+import com.shiptrackpro.backend.shipment.entity.Shipment;
+import com.shiptrackpro.backend.shipment.repository.ShipmentRepository;
+import com.shiptrackpro.backend.support.entity.SupportTicket;
+import com.shiptrackpro.backend.support.repository.SupportTicketRepository;
+import com.shiptrackpro.backend.user.entity.User;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
-import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -16,33 +18,45 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class SupportService {
 
-    private final SupportExceptionRepository exceptionRepository;
-    private final SupportEscalationRepository escalationRepository;
-    private final UserRepository userRepository;
+    private final SupportTicketRepository supportTicketRepository;
+    private final ShipmentRepository shipmentRepository;
 
-    public List<SupportException> getExceptions() {
-        return exceptionRepository.findAll();
+    @Transactional
+    public SupportTicket createTicket(UUID shipmentId, String subject, String description, User customer) {
+        Shipment shipment = null;
+        if (shipmentId != null) {
+            shipment = shipmentRepository.findById(shipmentId).orElse(null);
+        }
+
+        SupportTicket ticket = SupportTicket.builder()
+                .customer(customer)
+                .shipment(shipment)
+                .subject(subject)
+                .description(description)
+                .status("OPEN")
+                .build();
+
+        return supportTicketRepository.save(ticket);
     }
 
-    public SupportException resolveException(UUID id) {
-        SupportException ex = exceptionRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Exception not found"));
-        ex.setStatus("RESOLVED");
-        ex.setResolvedAt(ZonedDateTime.now());
-        return exceptionRepository.save(ex);
+    @Transactional(readOnly = true)
+    public List<SupportTicket> getAllTickets(String status) {
+        if (status != null && !status.isBlank()) {
+            return supportTicketRepository.findByStatusOrderByCreatedAtDesc(status.toUpperCase());
+        }
+        return supportTicketRepository.findAll();
     }
 
-    public List<SupportEscalation> getEscalations() {
-        return escalationRepository.findAll();
+    @Transactional(readOnly = true)
+    public SupportTicket getTicketById(UUID id) {
+        return supportTicketRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Support ticket not found"));
     }
 
-    public SupportEscalation assignEscalation(UUID id, UUID agentId) {
-        SupportEscalation esc = escalationRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Escalation not found"));
-        
-        esc.setAssignedTo(userRepository.findById(agentId)
-                .orElseThrow(() -> new RuntimeException("User not found")));
-        esc.setStatus("IN_PROGRESS");
-        return escalationRepository.save(esc);
+    @Transactional
+    public SupportTicket updateTicketStatus(UUID id, String status) {
+        SupportTicket ticket = getTicketById(id);
+        ticket.setStatus(status.toUpperCase());
+        return supportTicketRepository.save(ticket);
     }
 }

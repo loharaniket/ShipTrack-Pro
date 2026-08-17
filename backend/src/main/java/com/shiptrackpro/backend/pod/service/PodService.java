@@ -1,51 +1,73 @@
 package com.shiptrackpro.backend.pod.service;
 
-import com.shiptrackpro.backend.delivery.repository.DriverRepository;
-import com.shiptrackpro.backend.pod.dto.PodSubmitRequest;
-import com.shiptrackpro.backend.pod.entity.PodRecord;
-import com.shiptrackpro.backend.pod.repository.PodRecordRepository;
+import com.shiptrackpro.backend.notifications.service.NotificationService;
+import com.shiptrackpro.backend.pod.entity.ProofOfDelivery;
+import com.shiptrackpro.backend.pod.repository.ProofOfDeliveryRepository;
+import com.shiptrackpro.backend.shipment.entity.Shipment;
+import com.shiptrackpro.backend.shipment.entity.ShipmentStatus;
 import com.shiptrackpro.backend.shipment.repository.ShipmentRepository;
+import com.shiptrackpro.backend.tracking.entity.ShipmentTracking;
+import com.shiptrackpro.backend.tracking.repository.ShipmentTrackingRepository;
+import com.shiptrackpro.backend.user.entity.User;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
-import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class PodService {
 
-    private final PodRecordRepository podRecordRepository;
+    private final ProofOfDeliveryRepository proofOfDeliveryRepository;
     private final ShipmentRepository shipmentRepository;
-    private final DriverRepository driverRepository;
+    private final ShipmentTrackingRepository shipmentTrackingRepository;
+    private final NotificationService notificationService;
 
-    public PodRecord submitPod(PodSubmitRequest request) {
-        PodRecord record = new PodRecord();
-        record.setShipment(shipmentRepository.findById(request.getShipmentId())
-                .orElseThrow(() -> new RuntimeException("Shipment not found")));
-        
-        if (request.getDriverId() != null) {
-            record.setDriver(driverRepository.findById(request.getDriverId())
-                    .orElseThrow(() -> new RuntimeException("Driver not found")));
+    @Transactional
+    public ProofOfDelivery saveProofOfDelivery(UUID shipmentId, String receiverName, String photoUrl, User driver) {
+        Shipment shipment = shipmentRepository.findById(shipmentId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Shipment not found"));
+
+        ProofOfDelivery pod = ProofOfDelivery.builder()
+                .shipment(shipment)
+                .receiverName(receiverName)
+                .photoUrl(photoUrl)
+                .build();
+        pod = proofOfDeliveryRepository.save(pod);
+
+        // Transactionally update shipment status to DELIVERED
+        shipment.setStatus(ShipmentStatus.DELIVERED);
+        shipmentRepository.save(shipment);
+
+        // Append tracking entry
+        String driverName = driver != null ? driver.getFirstName() + " " + driver.getLastName() : "Driver";
+        ShipmentTracking tracking = ShipmentTracking.builder()
+                .shipment(shipment)
+                .status(ShipmentStatus.DELIVERED)
+                .description("Package delivered to " + receiverName)
+                .updatedBy(driverName)
+                .build();
+        shipmentTrackingRepository.save(tracking);
+
+        // Notify customer
+        if (shipment.getCustomer() != null) {
+            notificationService.createNotification(
+                    shipment.getCustomer(),
+                    "Shipment Delivered",
+                    "Your shipment " + shipment.getTrackingNumber() + " has been successfully delivered to " + receiverName + ".",
+                    "SHIPMENT_DELIVERED"
+            );
         }
 
-        record.setPackagePhoto(request.getPackagePhotoBase64());
-        record.setDoorPhoto(request.getDoorPhotoBase64());
-        record.setSignature(request.getSignatureBase64());
-        record.setLatitude(request.getLatitude());
-        record.setLongitude(request.getLongitude());
-
-        return podRecordRepository.save(record);
+        return pod;
     }
 
-    public List<PodRecord> getPendingRecords() {
-        return podRecordRepository.findAll(); // Simplified for beginner friendly code
-    }
-
-    public PodRecord updateStatus(UUID id, String status) {
-        PodRecord record = podRecordRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("POD Record not found"));
-        record.setStatus(status);
-        return podRecordRepository.save(record);
+    @Transactional(readOnly = true)
+    public Optional<ProofOfDelivery> getPodByShipmentId(UUID shipmentId) {
+        return proofOfDeliveryRepository.findByShipmentId(shipmentId);
     }
 }
