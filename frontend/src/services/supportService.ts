@@ -30,7 +30,11 @@ export const supportService = {
   },
 
   async getTicketDetails(id: string): Promise<SupportTicket> {
-    return apiClient.get<SupportTicket>(`/api/customer/tickets/${id}`);
+    try {
+      return await apiClient.get<SupportTicket>(`/api/support/tickets/${id}`);
+    } catch (e) {
+      return apiClient.get<SupportTicket>(`/api/customer/tickets/${id}`);
+    }
   },
 
   async getAllTickets(status?: string): Promise<SupportTicket[]> {

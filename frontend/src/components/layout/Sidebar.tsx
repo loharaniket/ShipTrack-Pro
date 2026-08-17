@@ -51,6 +51,13 @@ export function Sidebar({ isMobileOpen, closeMobile }: { isMobileOpen?: boolean;
           { name: 'Assigned Deliveries', path: '/driver/deliveries', icon: Truck },
           { name: 'Notifications', path: '/notifications', icon: Bell },
         ];
+      case 'SupportAgent':
+        return [
+          { name: 'Dashboard', path: '/', icon: LayoutDashboard },
+          { name: 'Support Tickets', path: '/support/tickets', icon: HelpCircle },
+          { name: 'All Shipments', path: '/shipments', icon: Package },
+          { name: 'Notifications', path: '/notifications', icon: Bell },
+        ];
       default:
         return [];
     }

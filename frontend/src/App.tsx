@@ -22,6 +22,8 @@ import { PendingShipments } from '@/pages/admin/PendingShipments';
 import { Drivers } from '@/pages/admin/Drivers';
 import { Users } from '@/pages/admin/Users';
 import { Reports } from '@/pages/admin/Reports';
+import { Tickets } from '@/pages/support/Tickets';
+import { SupportTicketDetails } from '@/pages/support/SupportTicketDetails';
 import { Profile } from '@/pages/auth/Profile';
 import { NotFound } from '@/pages/NotFound';
 
@@ -68,6 +70,12 @@ function App() {
                 <Route path="/reports" element={<Reports />} />
                 <Route path="/users" element={<Users />} />
                 <Route path="/drivers" element={<Drivers />} />
+              </Route>
+
+              {/* Support Agent & Admin Routes */}
+              <Route element={<ProtectedRoute allowedRoles={['SupportAgent', 'Administrator']} />}>
+                <Route path="/support/tickets" element={<Tickets />} />
+                <Route path="/support/tickets/:id" element={<SupportTicketDetails />} />
               </Route>
               
               {/* Driver Only Routes */}
