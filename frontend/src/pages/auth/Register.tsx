@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { authService } from '@/services/authService';
+import { AlertCircle } from 'lucide-react';
 
 export function Register() {
   const [firstName, setFirstName] = useState('');
@@ -16,12 +16,16 @@ export function Register() {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   
-  const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
+
+    if (password.length < 6) {
+      setErrorMsg("Password must be at least 6 characters long");
+      return;
+    }
     
     if (password !== confirmPassword) {
       setErrorMsg("Passwords do not match");
@@ -31,17 +35,16 @@ export function Register() {
     setIsLoading(true);
 
     try {
-      const { user } = await authService.register({
-        firstName,
-        lastName,
-        email,
+      await authService.register({
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        email: email.trim(),
         password,
-        phone
+        phone: phone.trim() || undefined
       });
-      login(user);
-      navigate('/');
+      navigate('/auth/login?registered=true');
     } catch (err: any) {
-      setErrorMsg(err.message || "Registration failed");
+      setErrorMsg(err.message || "Registration failed. Please check your information and try again.");
     } finally {
       setIsLoading(false);
     }
@@ -50,15 +53,16 @@ export function Register() {
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-lg font-medium text-navy-900 text-center mb-1">Create an account</h3>
-        <p className="text-sm text-navy-500 text-center">
-          Sign up as a new customer
+        <h3 className="text-xl font-bold text-navy-900 text-center mb-1">Create Customer Account</h3>
+        <p className="text-xs text-navy-500 text-center">
+          Sign up to create and track your shipments
         </p>
       </div>
       
       {errorMsg && (
-        <div className="bg-danger-50 text-danger-600 p-3 rounded-md text-sm text-center">
-          {errorMsg}
+        <div className="flex items-center gap-2 bg-rose-50 text-rose-800 border border-rose-200 p-3 rounded-lg text-sm">
+          <AlertCircle className="h-4 w-4 text-rose-600 flex-shrink-0" />
+          <span>{errorMsg}</span>
         </div>
       )}
       
@@ -70,6 +74,7 @@ export function Register() {
             required 
             value={firstName}
             onChange={(e) => setFirstName(e.target.value)}
+            placeholder="Rahul"
           />
           <Input 
             label="Last name" 
@@ -77,6 +82,7 @@ export function Register() {
             required 
             value={lastName}
             onChange={(e) => setLastName(e.target.value)}
+            placeholder="Patil"
           />
         </div>
         
@@ -86,6 +92,7 @@ export function Register() {
           required 
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          placeholder="rahul.patil@example.com"
         />
         
         <Input 
@@ -93,6 +100,7 @@ export function Register() {
           type="tel" 
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
+          placeholder="9876543210"
         />
         
         <Input 
@@ -101,6 +109,7 @@ export function Register() {
           required 
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          placeholder="At least 6 characters"
         />
         
         <Input 
@@ -109,10 +118,11 @@ export function Register() {
           required 
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
+          placeholder="Repeat password"
         />
 
         <Button type="submit" className="w-full mt-6" isLoading={isLoading}>
-          Register
+          Create Account
         </Button>
       </form>
       

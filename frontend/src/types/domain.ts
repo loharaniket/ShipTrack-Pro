@@ -2,6 +2,7 @@ export type Role =
   | 'Administrator'
   | 'Driver'
   | 'Customer'
+  | 'SupportAgent'
   | 'BusinessClient';
 
 export type Permission =

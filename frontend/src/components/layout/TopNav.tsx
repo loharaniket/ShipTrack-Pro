@@ -50,11 +50,11 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
         <div className="relative group">
           <Link to="/profile" className="flex items-center space-x-3 hover:bg-navy-50 p-1.5 rounded-lg transition-colors cursor-pointer">
             <div className="h-8 w-8 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center font-bold">
-              {user?.name.charAt(0)}
+              {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
             </div>
             <div className="hidden md:block text-left">
-              <p className="text-sm font-medium text-navy-900 leading-tight">{user?.name}</p>
-              <p className="text-xs text-navy-500 leading-tight">{user?.role}</p>
+              <p className="text-sm font-medium text-navy-900 leading-tight">{user?.name || 'User'}</p>
+              <p className="text-xs text-navy-500 leading-tight font-semibold text-primary-600">{user?.role}</p>
             </div>
             <ChevronDown className="h-4 w-4 text-navy-400 hidden md:block" />
           </Link>

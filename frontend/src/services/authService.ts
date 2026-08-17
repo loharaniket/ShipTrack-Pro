@@ -3,57 +3,43 @@ import { apiClient } from './apiClient';
 
 const ROLE_MAP: Record<string, Role> = {
   ADMINISTRATOR: 'Administrator',
-  BUSINESS_CLIENT: 'BusinessClient',
   DRIVER: 'Driver',
   CUSTOMER: 'Customer',
+  SUPPORT_AGENT: 'SupportAgent',
+  BUSINESS_CLIENT: 'BusinessClient',
 };
 
 export const authService = {
-  async login(email: string, password: string): Promise<{user: User, accessToken: string}> {
+  async login(email: string, password: string): Promise<{ user: User; accessToken: string }> {
     try {
       const data: any = await apiClient.post('/auth/login', { email, password });
       
-      const backendRoles: string[] = data.user.roles || [];
-      const primaryRole = backendRoles.length > 0 ? ROLE_MAP[backendRoles[0]] || 'Customer' : 'Customer';
+      const roleStr = data.user?.role || (data.user?.roles && data.user.roles[0]) || 'CUSTOMER';
+      const primaryRole = ROLE_MAP[roleStr.toUpperCase()] || 'Customer';
 
       const user: User = {
         id: data.user.id,
-        name: `${data.user.firstName} ${data.user.lastName}`,
+        name: data.user.name || `${data.user.firstName || ''} ${data.user.lastName || ''}`.trim() || data.user.email,
         email: data.user.email,
         role: primaryRole,
       };
 
-      localStorage.setItem('accessToken', data.accessToken);
+      const token = data.accessToken || data.token;
+      localStorage.setItem('accessToken', token);
       if (data.refreshToken) {
-          localStorage.setItem('refreshToken', data.refreshToken);
+        localStorage.setItem('refreshToken', data.refreshToken);
       }
       
-      return { user, accessToken: data.accessToken };
+      return { user, accessToken: token };
     } catch (e: any) {
       throw new Error(e.message || 'Invalid email or password');
     }
   },
 
-  async register(data: any): Promise<{user: User, accessToken: string}> {
+  async register(data: { firstName: string; lastName: string; email: string; password: string; phone?: string }): Promise<any> {
     try {
       const responseData: any = await apiClient.post('/auth/register', data);
-      
-      const backendRoles: string[] = responseData.user.roles || [];
-      const primaryRole = backendRoles.length > 0 ? ROLE_MAP[backendRoles[0]] || 'Customer' : 'Customer';
-
-      const user: User = {
-        id: responseData.user.id,
-        name: `${responseData.user.firstName} ${responseData.user.lastName}`,
-        email: responseData.user.email,
-        role: primaryRole,
-      };
-
-      localStorage.setItem('accessToken', responseData.accessToken);
-      if (responseData.refreshToken) {
-          localStorage.setItem('refreshToken', responseData.refreshToken);
-      }
-      
-      return { user, accessToken: responseData.accessToken };
+      return responseData;
     } catch (e: any) {
       throw new Error(e.message || 'Registration failed');
     }
@@ -62,28 +48,32 @@ export const authService = {
   async logout(): Promise<void> {
     const refreshToken = localStorage.getItem('refreshToken');
     if (refreshToken) {
-        try {
-            await apiClient.post('/auth/logout', { refreshToken });
-        } catch (e) {
-            console.error('Error during logout API call', e);
-        }
+      try {
+        await apiClient.post('/auth/logout', { refreshToken });
+      } catch (e) {
+        console.error('Error during logout API call', e);
+      }
     }
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
   },
 
   async getCurrentUser(): Promise<User | null> {
+    const token = localStorage.getItem('accessToken');
+    if (!token) return null;
+
     try {
       const data: any = await apiClient.get('/auth/me');
-      
-      const backendRoles: string[] = data.roles || [];
-      const primaryRole = backendRoles.length > 0 ? ROLE_MAP[backendRoles[0]] || 'Customer' : 'Customer';
+      if (!data) return null;
+
+      const roleStr = data.role || (data.roles && data.roles[0]) || 'CUSTOMER';
+      const primaryRole = ROLE_MAP[roleStr.toUpperCase()] || 'Customer';
 
       return {
-          id: data.id,
-          name: `${data.firstName} ${data.lastName}`,
-          email: data.email,
-          role: primaryRole,
+        id: data.id,
+        name: data.name || `${data.firstName || ''} ${data.lastName || ''}`.trim() || data.email,
+        email: data.email,
+        role: primaryRole,
       };
     } catch (e) {
       console.error('Error fetching current user', e);
@@ -91,3 +81,4 @@ export const authService = {
     }
   }
 };
+
