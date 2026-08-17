@@ -73,7 +73,7 @@ public class PodService {
         ProofOfDelivery pod = ProofOfDelivery.builder()
                 .shipment(shipment)
                 .receiverName(receiverName.trim())
-                .photoUrl(photoUrl)
+                .photoUrl("http://localhost:8080"+photoUrl)
                 .build();
         pod = proofOfDeliveryRepository.saveAndFlush(pod);
 

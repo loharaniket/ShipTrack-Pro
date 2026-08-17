@@ -44,7 +44,7 @@ public class CustomerShipmentController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('CUSTOMER', 'ADMINISTRATOR', 'SUPPORT_AGENT')")
+    @PreAuthorize("hasAnyRole('CUSTOMER', 'ADMINISTRATOR', 'SUPPORT_AGENT', 'DRIVER')")
     public ResponseEntity<ApiResponse<CustomerShipmentDto>> getShipmentById(
             @PathVariable UUID id,
             @AuthenticationPrincipal CustomUserDetails userDetails) {

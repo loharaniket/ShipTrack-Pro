@@ -72,8 +72,8 @@ export function ShipmentDetails() {
     <div className="max-w-5xl mx-auto space-y-6">
       {/* Top Navigation */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <Button variant="ghost" size="sm" onClick={() => navigate('/shipments')} className="text-navy-600 self-start">
-          <ArrowLeft className="h-4 w-4 mr-1" /> Back to Shipments
+        <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="text-navy-600 self-start">
+          <ArrowLeft className="h-4 w-4 mr-1" /> Back
         </Button>
 
         <div className="flex items-center gap-3">

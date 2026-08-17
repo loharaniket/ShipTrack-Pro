@@ -97,7 +97,12 @@ public class ShipmentService {
         boolean isAdminOrSupport = user.getRoles().stream()
                 .anyMatch(r -> r.getName() == RoleName.ADMINISTRATOR || r.getName() == RoleName.SUPPORT_AGENT);
 
-        if (!isAdminOrSupport && (shipment.getCustomer() == null || !shipment.getCustomer().getId().equals(user.getId()))) {
+        boolean isDriver = user.getRoles().stream()
+                .anyMatch(r -> r.getName() == RoleName.DRIVER);
+
+        boolean isOwner = shipment.getCustomer() != null && shipment.getCustomer().getId().equals(user.getId());
+
+        if (!isAdminOrSupport && !isDriver && !isOwner) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied to this shipment");
         }
 

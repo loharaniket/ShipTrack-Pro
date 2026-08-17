@@ -16,18 +16,8 @@ import { TrackShipment } from '@/pages/customer/TrackShipment';
 import { CreateComplaint } from '@/pages/customer/CreateComplaint';
 import { MyTickets } from '@/pages/customer/MyTickets';
 import { TicketDetails } from '@/pages/customer/TicketDetails';
-import { LiveDelivery } from '@/pages/operations/LiveDelivery';
-import { DriverManagement } from '@/pages/operations/DriverManagement';
-import { MyRoute } from '@/pages/driver/MyRoute';
-import { RoutePlanner } from '@/pages/routes/RoutePlanner';
-import { RouteOptimization } from '@/pages/routes/RouteOptimization';
-import { Geofencing } from '@/pages/routes/Geofencing';
-import { ETAPrediction } from '@/pages/intelligence/ETAPrediction';
-import { PODDashboard } from '@/pages/delivery/PODDashboard';
-import { DigitalSignature } from '@/pages/delivery/DigitalSignature';
+import { AssignedDeliveries } from '@/pages/driver/AssignedDeliveries';
 import { NotificationCenter } from '@/pages/communications/NotificationCenter';
-import { CommunicationLogs } from '@/pages/communications/CommunicationLogs';
-import { ExecutiveAnalytics } from '@/pages/analytics/ExecutiveAnalytics';
 import { PendingShipments } from '@/pages/admin/PendingShipments';
 import { Drivers } from '@/pages/admin/Drivers';
 import { Users } from '@/pages/admin/Users';
@@ -80,10 +70,10 @@ function App() {
                 <Route path="/drivers" element={<Drivers />} />
               </Route>
               
-              {/* Driver Only Web Views */}
+              {/* Driver Only Routes */}
               <Route element={<ProtectedRoute allowedRoles={['Driver', 'Administrator']} />}>
-                <Route path="/my-route" element={<MyRoute />} />
-                <Route path="/pod/signature" element={<DigitalSignature />} />
+                <Route path="/driver/deliveries" element={<AssignedDeliveries />} />
+                <Route path="/operator/deliveries" element={<AssignedDeliveries />} />
               </Route>
             </Route>
           </Route>

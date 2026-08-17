@@ -48,9 +48,7 @@ export function Sidebar({ isMobileOpen, closeMobile }: { isMobileOpen?: boolean;
       case 'Driver':
         return [
           { name: 'Dashboard', path: '/', icon: LayoutDashboard },
-          { name: 'My Shipments', path: '/shipments', icon: Package },
-          { name: 'My Route', path: '/my-route', icon: Route },
-          { name: 'Proof of Delivery', path: '/pod/signature', icon: FileText },
+          { name: 'Assigned Deliveries', path: '/driver/deliveries', icon: Truck },
           { name: 'Notifications', path: '/notifications', icon: Bell },
         ];
       default:

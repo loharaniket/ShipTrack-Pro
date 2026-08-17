@@ -2,7 +2,7 @@ import React from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { CustomerDashboard } from './customer/CustomerDashboard';
 import { BusinessClientDashboard } from './dashboards/BusinessClientDashboard';
-import { DriverDashboard } from './dashboards/DriverDashboard';
+import { DriverDashboard } from './driver/DriverDashboard';
 import { AdminDashboard } from './admin/AdminDashboard';
 
 export function Dashboard() {
