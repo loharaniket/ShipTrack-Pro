@@ -51,6 +51,20 @@ public class NotificationService {
     }
 
     @Transactional
+    public void markAllAsRead(User user) {
+        if (user == null) return;
+        List<Notification> unread = notificationRepository.findByUserIdAndIsReadFalse(user.getId());
+        unread.forEach(n -> n.setIsRead(true));
+        notificationRepository.saveAll(unread);
+    }
+
+    @Transactional(readOnly = true)
+    public long getUnreadCount(User user) {
+        if (user == null) return 0;
+        return notificationRepository.countByUserIdAndIsReadFalse(user.getId());
+    }
+
+    @Transactional
     public Notification markAsRead(UUID notificationId) {
         Notification notification = notificationRepository.findById(notificationId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Notification not found"));

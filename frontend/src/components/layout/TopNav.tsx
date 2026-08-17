@@ -1,8 +1,9 @@
 import React from 'react';
-import { Menu, Search, Bell, ChevronDown } from 'lucide-react';
+import { Menu, Search, ChevronDown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Input } from '@/components/ui/Input';
 import { useAuth } from '@/context/AuthContext';
+import { NotificationBell } from '@/components/common/NotificationBell';
 
 export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
   const { user, logout } = useAuth();
@@ -41,10 +42,7 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
           <div className="h-2 w-2 rounded-full bg-success-500" />
           <span className="text-xs text-navy-500 hidden sm:block">Connected</span>
         </div>
-        <button className="p-2 text-navy-500 hover:text-navy-700 relative">
-          <Bell className="h-5 w-5" />
-          <span className="absolute top-1.5 right-1.5 block h-2 w-2 rounded-full bg-danger-500 ring-2 ring-white" />
-        </button>
+        <NotificationBell />
 
         {/* User Menu */}
         <div className="relative group">

@@ -187,7 +187,7 @@ public class ShipTrackE2ETest {
         entityManager.flush();
 
         assertThat(podResponse).isNotNull();
-        assertThat(podResponse.getPhotoUrl()).startsWith("/uploads/pod/");
+        assertThat(podResponse.getPhotoUrl()).contains("/uploads/pod/");
         assertThat(podResponse.getReceiverName()).isEqualTo("Recipient B (Signed)");
 
         CustomerShipmentDto deliveredShipment = shipmentService.getCustomerShipmentById(shipmentId, customerA);

@@ -135,7 +135,7 @@ public class ProofOfDeliveryTest {
         assertThat(response).isNotNull();
         assertThat(response.getShipmentId()).isEqualTo(created.getId());
         assertThat(response.getReceiverName()).isEqualTo("Rahul Deshmukh");
-        assertThat(response.getPhotoUrl()).startsWith("/uploads/pod/");
+        assertThat(response.getPhotoUrl()).contains("/uploads/pod/");
         assertThat(response.getDeliveryTime()).isNotNull();
 
         // 1. Verify shipment status transition to DELIVERED

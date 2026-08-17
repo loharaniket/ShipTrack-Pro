@@ -1,5 +1,6 @@
 HELP.md
 target/
+**/target/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
@@ -34,7 +35,10 @@ build/
 
 # Environment variables
 .env
+.env.*
 
-.mvn/
-
-uploads/pod/
+# Static Uploads & Media
+uploads/
+uploads/**
+**/uploads/
+**/uploads/**
