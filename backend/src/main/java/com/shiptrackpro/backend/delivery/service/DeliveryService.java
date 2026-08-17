@@ -106,4 +106,17 @@ public class DeliveryService {
                 .filter(u -> u.getRoles().stream().anyMatch(r -> r.getName() == RoleName.DRIVER))
                 .collect(Collectors.toList());
     }
+
+    public com.shiptrackpro.backend.admin.dto.AssignmentResponse mapToAssignmentResponse(DeliveryAssignment assignment) {
+        return com.shiptrackpro.backend.admin.dto.AssignmentResponse.builder()
+                .id(assignment.getId())
+                .shipmentId(assignment.getShipment().getId())
+                .trackingNumber(assignment.getShipment().getTrackingNumber())
+                .driverId(assignment.getDriver().getId())
+                .driverName(assignment.getDriver().getFirstName() + " " + assignment.getDriver().getLastName())
+                .status(assignment.getStatus())
+                .assignedDate(assignment.getAssignedDate())
+                .message("Driver assigned successfully")
+                .build();
+    }
 }
