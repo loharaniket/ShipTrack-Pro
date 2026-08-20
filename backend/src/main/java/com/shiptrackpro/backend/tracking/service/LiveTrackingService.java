@@ -19,7 +19,9 @@ import com.shiptrackpro.backend.tracking.repository.ShipmentTrackingRepository;
 import com.shiptrackpro.backend.user.entity.RoleName;
 import com.shiptrackpro.backend.user.entity.User;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -30,6 +32,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class LiveTrackingService {
@@ -39,6 +42,7 @@ public class LiveTrackingService {
     private final DeliveryAssignmentRepository deliveryAssignmentRepository;
     private final ShipmentTrackingRepository shipmentTrackingRepository;
     private final NotificationService notificationService;
+    private final SimpMessagingTemplate messagingTemplate;
 
     @Transactional
     public DriverLocationDto startTracking(StartTrackingRequest request, User driver) {
@@ -61,8 +65,9 @@ public class LiveTrackingService {
             if (!existingActive.get().getShipment().getId().equals(shipmentId)) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT, "Driver already has an active delivery session.");
             } else {
-                // Return current active session if started for the same shipment
-                return mapToDto(existingActive.get());
+                DriverLocationDto activeDto = mapToDto(existingActive.get());
+                broadcastLocation(activeDto);
+                return activeDto;
             }
         }
 
@@ -100,7 +105,9 @@ public class LiveTrackingService {
                 .build();
 
         DriverLocation saved = driverLocationRepository.save(location);
-        return mapToDto(saved);
+        DriverLocationDto dto = mapToDto(saved);
+        broadcastLocation(dto);
+        return dto;
     }
 
     @Transactional
@@ -121,14 +128,15 @@ public class LiveTrackingService {
         location.setLastPingAt(ZonedDateTime.now());
 
         DriverLocation updated = driverLocationRepository.save(location);
-        return mapToDto(updated);
+        DriverLocationDto dto = mapToDto(updated);
+        broadcastLocation(dto);
+        return dto;
     }
 
     @Transactional
     public DriverLocationDto stopTracking(UUID shipmentId, String endedReason, User user) {
         Optional<DriverLocation> activeOpt = driverLocationRepository.findByShipmentIdAndStatus(shipmentId, TrackingStatus.ACTIVE);
         if (activeOpt.isEmpty()) {
-            // Check if there is already a completed tracking record
             return driverLocationRepository.findFirstByShipmentIdOrderByStartedAtDesc(shipmentId)
                     .map(this::mapToDto)
                     .orElse(null);
@@ -150,7 +158,9 @@ public class LiveTrackingService {
         location.setEndedReason((endedReason != null && !endedReason.isBlank()) ? endedReason : "DELIVERED");
 
         DriverLocation saved = driverLocationRepository.save(location);
-        return mapToDto(saved);
+        DriverLocationDto dto = mapToDto(saved);
+        broadcastLocation(dto);
+        return dto;
     }
 
     @Transactional(readOnly = true)
@@ -172,7 +182,6 @@ public class LiveTrackingService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied to this shipment's live tracking");
         }
 
-        // Return active session if exists, otherwise the latest session
         DriverLocation location = driverLocationRepository.findByShipmentIdAndStatus(shipmentId, TrackingStatus.ACTIVE)
                 .or(() -> driverLocationRepository.findFirstByShipmentIdOrderByStartedAtDesc(shipmentId))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No live location data available for this shipment"));
@@ -210,8 +219,20 @@ public class LiveTrackingService {
         driverLocationRepository.findByShipmentIdAndStatus(shipmentId, TrackingStatus.ACTIVE)
                 .ifPresent(location -> {
                     location.setConnectionStatus(connectionStatus);
-                    driverLocationRepository.save(location);
+                    DriverLocation updated = driverLocationRepository.save(location);
+                    broadcastLocation(mapToDto(updated));
                 });
+    }
+
+    public void broadcastLocation(DriverLocationDto dto) {
+        if (dto == null || messagingTemplate == null) return;
+        try {
+            messagingTemplate.convertAndSend("/topic/shipment/" + dto.getShipmentId(), dto);
+            messagingTemplate.convertAndSend("/topic/tracking/" + dto.getShipmentId(), dto);
+            messagingTemplate.convertAndSend("/topic/admin/active-drivers", getActiveDrivers());
+        } catch (Exception e) {
+            log.warn("Failed to broadcast live location update: {}", e.getMessage());
+        }
     }
 
     public DriverLocationDto mapToDto(DriverLocation location) {

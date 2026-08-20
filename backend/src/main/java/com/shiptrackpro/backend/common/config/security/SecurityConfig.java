@@ -50,6 +50,8 @@ public class SecurityConfig {
                         "/api/v1/auth/**", 
                         "/api/tracking/**", 
                         "/api/v1/tracking/**", 
+                        "/ws/**",
+                        "/ws-tracking/**",
                         "/uploads/**", 
                         "/error"
                     ).permitAll()
