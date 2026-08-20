@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Polyline, Popup } from 'react-leaflet';
+import React, { useEffect, useRef } from 'react';
+import { MapContainer, TileLayer, Marker, Polyline, Popup, useMap, Circle } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -11,104 +11,132 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
-// Custom vehicle icon for the driver
-const vehicleIcon = new L.Icon({
-  iconUrl: 'https://cdn-icons-png.flaticon.com/512/3097/3097180.png', // Delivery motorcycle/truck icon
-  iconSize: [40, 40],
-  iconAnchor: [20, 20],
+// Custom vehicle/courier icon for the driver
+const driverVehicleIcon = new L.Icon({
+  iconUrl: 'https://cdn-icons-png.flaticon.com/512/3097/3097180.png',
+  iconSize: [42, 42],
+  iconAnchor: [21, 21],
+  popupAnchor: [0, -20],
 });
 
-interface LiveMapProps {
-  route: [number, number][];
-  driverName?: string;
-  showVehicle?: boolean;
+// Custom destination/home icon
+const destinationIcon = new L.Icon({
+  iconUrl: 'https://cdn-icons-png.flaticon.com/512/684/684908.png',
+  iconSize: [36, 36],
+  iconAnchor: [18, 36],
+  popupAnchor: [0, -36],
+});
+
+// Helper component to auto-recenter map when driver position changes
+function MapAutoRecenter({ center }: { center: [number, number] }) {
+  const map = useMap();
+  useEffect(() => {
+    if (center && center[0] && center[1]) {
+      map.panTo(center, { animate: true, duration: 1 });
+    }
+  }, [center, map]);
+  return null;
 }
 
-export function LiveMap({ route, driverName = 'Driver', showVehicle = true }: LiveMapProps) {
-  const [currentPosition, setCurrentPosition] = useState<[number, number] | undefined>(route && route.length > 0 ? route[0] : undefined);
-  const [progress, setProgress] = useState(0);
+interface LiveMapProps {
+  driverPosition?: [number, number];
+  destinationPosition?: [number, number];
+  route?: [number, number][];
+  driverName?: string;
+  accuracy?: number;
+  connectionStatus?: 'CONNECTED' | 'CONNECTION_LOST';
+  height?: string;
+}
 
-  useEffect(() => {
-    // Reset progress when the route changes
-    if (route && route.length > 0) {
-      setProgress(0);
-      setCurrentPosition(route[0]);
-    } else {
-      setCurrentPosition(undefined);
-    }
-  }, [route]);
+export function LiveMap({
+  driverPosition,
+  destinationPosition,
+  route,
+  driverName = 'Courier Driver',
+  accuracy,
+  connectionStatus = 'CONNECTED',
+  height = 'h-96',
+}: LiveMapProps) {
+  // Default coordinates (Pune/Mumbai region) if no GPS yet
+  const defaultCenter: [number, number] = driverPosition || destinationPosition || (route && route.length > 0 ? route[0] : [18.5204, 73.8567]);
 
-  useEffect(() => {
-    if (!showVehicle || !route || route.length < 2) return;
-    // Animate the bike along the route
-    const interval = setInterval(() => {
-      setProgress((prev) => {
-        const next = prev + 0.01; // Advance slightly
-        if (next >= 1) return 0; // Loop back for demo purposes
-        return next;
-      });
-    }, 100);
-
-    return () => clearInterval(interval);
-  }, [route, showVehicle]);
-
-  useEffect(() => {
-    if (!route || route.length < 2) return;
-    // Calculate the interpolated position based on progress (0 to 1)
-    const totalSegments = route.length - 1;
-    const scaledProgress = progress * totalSegments;
-    const segmentIndex = Math.floor(scaledProgress);
-    const segmentProgress = scaledProgress - segmentIndex;
-
-    if (segmentIndex >= totalSegments) {
-      setCurrentPosition(route[totalSegments]);
-      return;
-    }
-
-    const start = route[segmentIndex];
-    const end = route[segmentIndex + 1];
-
-    const lat = start[0] + (end[0] - start[0]) * segmentProgress;
-    const lng = start[1] + (end[1] - start[1]) * segmentProgress;
-
-    setCurrentPosition([lat, lng]);
-  }, [progress, route]);
+  // Construct connecting polyline if both driver and destination exist
+  const activePolyline: [number, number][] = 
+    route && route.length > 0 
+      ? route 
+      : driverPosition && destinationPosition 
+        ? [driverPosition, destinationPosition] 
+        : [];
 
   return (
-    <div className="h-96 w-full rounded-xl overflow-hidden border border-navy-200 shadow-sm relative z-0">
-      <MapContainer 
-        center={route && route.length > 0 ? route[0] : [18.85, 73.2]} 
-        zoom={9} 
-        scrollWheelZoom={false} 
+    <div className={`w-full ${height} rounded-2xl overflow-hidden border border-navy-200 shadow-sm relative z-0`}>
+      {/* Live Status Overlay Badge */}
+      <div className="absolute top-3 right-3 z-[1000] bg-white/95 backdrop-blur-md px-3.5 py-1.5 rounded-full shadow-md border border-navy-100 flex items-center gap-2">
+        <span
+          className={`h-2.5 w-2.5 rounded-full ${
+            connectionStatus === 'CONNECTED' ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'
+          }`}
+        />
+        <span className="text-xs font-semibold text-navy-800">
+          {connectionStatus === 'CONNECTED' ? 'Live Telemetry' : 'Connection Paused'}
+        </span>
+      </div>
+
+      <MapContainer
+        center={defaultCenter}
+        zoom={13}
+        scrollWheelZoom={false}
         className="h-full w-full"
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        
-        {route && route.length > 0 && (
-          <>
-            {/* Draw the full route */}
-            <Polyline positions={route} color="#0ea5e9" weight={4} opacity={0.6} dashArray="10, 10" />
 
-            {/* Origin Marker */}
-            <Marker position={route[0]}>
-              <Popup>Origin</Popup>
-            </Marker>
+        {driverPosition && <MapAutoRecenter center={driverPosition} />}
 
-            {/* Destination Marker */}
-            <Marker position={route[route.length - 1]}>
-              <Popup>Destination</Popup>
-            </Marker>
+        {/* Route / Connection Path */}
+        {activePolyline.length > 1 && (
+          <Polyline
+            positions={activePolyline}
+            color="#2563eb"
+            weight={4}
+            opacity={0.7}
+            dashArray="8, 8"
+          />
+        )}
 
-            {/* Moving Bike Marker */}
-            {showVehicle && currentPosition && (
-              <Marker position={currentPosition} icon={vehicleIcon}>
-                <Popup>{driverName} is currently here.</Popup>
-              </Marker>
-            )}
-          </>
+        {/* GPS Accuracy Circle */}
+        {driverPosition && accuracy && (
+          <Circle
+            center={driverPosition}
+            radius={Math.min(accuracy, 200)}
+            pathOptions={{ fillColor: '#3b82f6', fillOpacity: 0.15, stroke: false }}
+          />
+        )}
+
+        {/* Driver Vehicle Marker */}
+        {driverPosition && (
+          <Marker position={driverPosition} icon={driverVehicleIcon}>
+            <Popup>
+              <div className="text-xs space-y-1">
+                <p className="font-bold text-navy-900">{driverName}</p>
+                <p className="text-navy-500">Live GPS Location</p>
+                {accuracy && <p className="text-[10px] text-navy-400">Accuracy: ~{Math.round(accuracy)}m</p>}
+              </div>
+            </Popup>
+          </Marker>
+        )}
+
+        {/* Destination Marker */}
+        {destinationPosition && (
+          <Marker position={destinationPosition} icon={destinationIcon}>
+            <Popup>
+              <div className="text-xs">
+                <p className="font-bold text-navy-900">Delivery Destination</p>
+              </div>
+            </Popup>
+          </Marker>
         )}
       </MapContainer>
     </div>

@@ -4,7 +4,6 @@ import com.shiptrackpro.backend.delivery.service.DeliveryService;
 import com.shiptrackpro.backend.notifications.entity.Notification;
 import com.shiptrackpro.backend.notifications.repository.NotificationRepository;
 import com.shiptrackpro.backend.pod.dto.PodResponse;
-import com.shiptrackpro.backend.pod.entity.ProofOfDelivery;
 import com.shiptrackpro.backend.pod.repository.ProofOfDeliveryRepository;
 import com.shiptrackpro.backend.pod.service.PodService;
 import com.shiptrackpro.backend.shipment.dto.CreateShipmentRequest;

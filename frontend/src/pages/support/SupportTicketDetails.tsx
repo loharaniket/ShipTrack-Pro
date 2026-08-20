@@ -171,13 +171,24 @@ export function SupportTicketDetails() {
                 <Package className="h-3.5 w-3.5 text-navy-400" /> Linked Shipment
               </div>
               {ticket.trackingNumber ? (
-                <div>
+                <div className="space-y-2">
                   <Link
                     to={`/shipments/${ticket.shipmentId || ticket.trackingNumber}`}
                     className="text-sm font-mono font-bold text-primary-600 hover:underline flex items-center gap-1"
                   >
                     {ticket.trackingNumber} <ExternalLink className="h-3.5 w-3.5" />
                   </Link>
+                  {ticket.shipmentId && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => navigate(`/shipments/${ticket.shipmentId}/live-tracking`)}
+                      className="h-7 text-xs text-emerald-700 border-emerald-300 hover:bg-emerald-50"
+                    >
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping mr-1" />
+                      Live Driver Map
+                    </Button>
+                  )}
                   <p className="text-xs text-navy-500 mt-1">Click to view complete shipment & delivery timeline</p>
                 </div>
               ) : (

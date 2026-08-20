@@ -37,6 +37,7 @@ export function Sidebar({ isMobileOpen, closeMobile }: { isMobileOpen?: boolean;
       case 'Administrator':
         return [
           { name: 'Dashboard', path: '/', icon: LayoutDashboard },
+          { name: 'Live Fleet Tracking', path: '/admin/fleet', icon: Route },
           { name: 'Pending Dispatch', path: '/admin/shipments/pending', icon: Clock },
           { name: 'All Shipments', path: '/shipments', icon: Package },
           { name: 'Driver Pool', path: '/admin/drivers', icon: Truck },
@@ -54,6 +55,7 @@ export function Sidebar({ isMobileOpen, closeMobile }: { isMobileOpen?: boolean;
       case 'SupportAgent':
         return [
           { name: 'Dashboard', path: '/', icon: LayoutDashboard },
+          { name: 'Live Fleet Tracking', path: '/admin/fleet', icon: Route },
           { name: 'Support Tickets', path: '/support/tickets', icon: HelpCircle },
           { name: 'All Shipments', path: '/shipments', icon: Package },
           { name: 'Notifications', path: '/notifications', icon: Bell },

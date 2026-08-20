@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
@@ -6,12 +6,14 @@ import { Input } from '@/components/ui/Input';
 import { useNavigate, Link } from 'react-router-dom';
 import { 
   Truck, Package, Clock, CheckCircle2, AlertCircle, RefreshCw, 
-  MapPin, Phone, Camera, ArrowRight, UploadCloud, Check, User 
+  MapPin, Phone, Camera, ArrowRight, UploadCloud, Check, User,
+  Navigation, Radio, StopCircle, PlayCircle, ExternalLink, ShieldCheck
 } from 'lucide-react';
 import { driverService } from '@/services/driverService';
+import { liveTrackingService, DriverLocationDto } from '@/services/liveTrackingService';
 import { CustomerShipmentItem } from '@/services/shipmentService';
 import { ShipmentStatusBadge } from '@/components/common/ShipmentStatusBadge';
-import { formatFriendlyDate } from '@/utils/dateFormatter';
+import { formatFriendlyDate, formatRelativeTime } from '@/utils/dateFormatter';
 import { useAuth } from '@/context/AuthContext';
 
 export function DriverDashboard() {
@@ -22,6 +24,13 @@ export function DriverDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  // Live GPS Tracking State
+  const [activeTrackingSession, setActiveTrackingSession] = useState<DriverLocationDto | null>(null);
+  const [isBroadcastingGps, setIsBroadcastingGps] = useState(false);
+  const [lastCoords, setLastCoords] = useState<{ lat: number; lng: number; accuracy?: number } | null>(null);
+  const [trackingLoading, setTrackingLoading] = useState(false);
+  const geoWatchIdRef = useRef<number | null>(null);
 
   // Status Update Modal State
   const [statusModalShipment, setStatusModalShipment] = useState<CustomerShipmentItem | null>(null);
@@ -40,6 +49,9 @@ export function DriverDashboard() {
 
   useEffect(() => {
     loadDeliveries();
+    return () => {
+      stopGeolocationWatcher();
+    };
   }, []);
 
   const loadDeliveries = async () => {
@@ -52,6 +64,86 @@ export function DriverDashboard() {
       setError(err.message || 'Failed to load assigned deliveries');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const startGeolocationWatcher = (shipmentId: string) => {
+    if (!('geolocation' in navigator)) {
+      setError('Geolocation is not supported by your browser.');
+      return;
+    }
+
+    setIsBroadcastingGps(true);
+
+    const sendPosition = async (pos: GeolocationPosition) => {
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+      const acc = pos.coords.accuracy;
+      setLastCoords({ lat, lng, accuracy: acc });
+
+      try {
+        await liveTrackingService.updateLocation(shipmentId, lat, lng, acc);
+      } catch (e) {
+        console.warn('Live location update failed:', e);
+      }
+    };
+
+    // Immediate fix
+    navigator.geolocation.getCurrentPosition(
+      sendPosition,
+      (err) => console.warn('Geo current error:', err),
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+
+    // Continuous watch
+    const watchId = navigator.geolocation.watchPosition(
+      sendPosition,
+      (err) => console.warn('Geo watch error:', err),
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
+    );
+
+    geoWatchIdRef.current = watchId;
+  };
+
+  const stopGeolocationWatcher = () => {
+    if (geoWatchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(geoWatchIdRef.current);
+      geoWatchIdRef.current = null;
+    }
+    setIsBroadcastingGps(false);
+  };
+
+  const handleStartTracking = async (shipment: CustomerShipmentItem) => {
+    try {
+      setTrackingLoading(true);
+      setError('');
+      const session = await liveTrackingService.startTracking(shipment.id);
+      setActiveTrackingSession(session);
+      startGeolocationWatcher(shipment.id);
+      setSuccessMsg(`Live tracking activated for shipment ${shipment.trackingNumber}! Broadcasting GPS.`);
+      await loadDeliveries();
+      setTimeout(() => setSuccessMsg(''), 5000);
+    } catch (err: any) {
+      setError(err.message || 'Failed to start live tracking session');
+    } finally {
+      setTrackingLoading(false);
+    }
+  };
+
+  const handleStopTracking = async (shipmentId: string) => {
+    try {
+      setTrackingLoading(true);
+      setError('');
+      await liveTrackingService.stopTracking(shipmentId, 'COMPLETED');
+      stopGeolocationWatcher();
+      setActiveTrackingSession(null);
+      setSuccessMsg('Live tracking session stopped.');
+      await loadDeliveries();
+      setTimeout(() => setSuccessMsg(''), 5000);
+    } catch (err: any) {
+      setError(err.message || 'Failed to stop live tracking');
+    } finally {
+      setTrackingLoading(false);
     }
   };
 
@@ -140,6 +232,9 @@ export function DriverDashboard() {
 
     try {
       await driverService.uploadPod(podModalShipment.id, receiverName.trim(), photoFile);
+      // Auto-stop GPS watcher on POD completion
+      stopGeolocationWatcher();
+      setActiveTrackingSession(null);
       setSuccessMsg(`Delivery completed! POD uploaded for shipment ${podModalShipment.trackingNumber}.`);
       setPodModalShipment(null);
       await loadDeliveries();
@@ -153,7 +248,7 @@ export function DriverDashboard() {
 
   const totalAssigned = deliveries.length;
   const inProgressCount = deliveries.filter(d => ['ASSIGNED', 'PICKED_UP', 'IN_TRANSIT', 'OUT_FOR_DELIVERY'].includes(d.status)).length;
-  const readyForPodCount = deliveries.filter(d => d.status === 'OUT_FOR_DELIVERY').length;
+  const activeOutForDelivery = deliveries.find(d => d.status === 'OUT_FOR_DELIVERY');
   const deliveredCount = deliveries.filter(d => d.status === 'DELIVERED').length;
 
   return (
@@ -163,7 +258,7 @@ export function DriverDashboard() {
         <div>
           <h1 className="text-2xl font-bold text-navy-900">Courier Delivery Dashboard</h1>
           <p className="text-sm text-navy-500 mt-1">
-            Welcome back, {user?.name || 'Driver'}. Manage your assigned delivery routes and proof of deliveries.
+            Welcome back, {user?.name || 'Driver'}. Manage your assigned delivery routes, live GPS telemetry, and proof of deliveries.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -187,6 +282,76 @@ export function DriverDashboard() {
         </div>
       )}
 
+      {/* ACTIVE LIVE DELIVERY TRACKING BANNER */}
+      {activeOutForDelivery && (
+        <div className="bg-gradient-to-r from-primary-900 to-navy-900 text-white rounded-2xl p-5 shadow-lg border border-primary-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="flex items-center gap-1.5 bg-emerald-500/20 text-emerald-300 text-xs px-2.5 py-0.5 rounded-full font-bold border border-emerald-500/40">
+                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping" /> Active Delivery
+              </span>
+              {isBroadcastingGps ? (
+                <span className="flex items-center gap-1 bg-sky-500/20 text-sky-300 text-xs px-2.5 py-0.5 rounded-full font-semibold border border-sky-500/40">
+                  <Radio className="h-3 w-3 animate-pulse" /> GPS Streaming
+                </span>
+              ) : (
+                <span className="text-xs text-navy-300">GPS Inactive</span>
+              )}
+            </div>
+
+            <div>
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                Shipment {activeOutForDelivery.trackingNumber}
+              </h3>
+              <p className="text-xs text-navy-200 mt-0.5">
+                Delivering to: <strong className="text-white">{activeOutForDelivery.receiverName}</strong> ({activeOutForDelivery.deliveryAddress})
+              </p>
+              {lastCoords && (
+                <p className="text-[11px] font-mono text-emerald-300 mt-1">
+                  GPS: {lastCoords.lat.toFixed(5)}, {lastCoords.lng.toFixed(5)} (~{Math.round(lastCoords.accuracy || 0)}m accuracy)
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2.5">
+            {!isBroadcastingGps ? (
+              <Button
+                onClick={() => handleStartTracking(activeOutForDelivery)}
+                disabled={trackingLoading}
+                className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold"
+              >
+                <PlayCircle className="h-4 w-4 mr-2" /> Start GPS Broadcast
+              </Button>
+            ) : (
+              <Button
+                onClick={() => handleStopTracking(activeOutForDelivery.id)}
+                disabled={trackingLoading}
+                variant="outline"
+                className="border-rose-400 text-rose-300 hover:bg-rose-950/40"
+              >
+                <StopCircle className="h-4 w-4 mr-2" /> Stop GPS
+              </Button>
+            )}
+
+            <Button
+              onClick={() => navigate(`/shipments/${activeOutForDelivery.id}/live-tracking`)}
+              variant="outline"
+              className="border-white/20 text-white hover:bg-white/10"
+            >
+              <ExternalLink className="h-4 w-4 mr-2" /> Live Map
+            </Button>
+
+            <Button
+              onClick={() => handleOpenPodModal(activeOutForDelivery)}
+              className="bg-primary-500 hover:bg-primary-400 text-white font-bold"
+            >
+              <Camera className="h-4 w-4 mr-2" /> Complete POD
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Driver Metrics */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
@@ -204,32 +369,34 @@ export function DriverDashboard() {
         <Card>
           <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-xs font-bold uppercase text-sky-600 tracking-wider">Active In-Progress</p>
-              <p className="text-2xl font-extrabold text-sky-600 mt-1">{loading ? '...' : inProgressCount}</p>
+              <p className="text-xs font-bold uppercase text-navy-500 tracking-wider">In Progress</p>
+              <p className="text-2xl font-extrabold text-amber-600 mt-1">{loading ? '...' : inProgressCount}</p>
             </div>
-            <div className="h-12 w-12 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center">
+            <div className="h-12 w-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
               <Truck className="h-6 w-6" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-purple-200 bg-purple-50/20">
+        <Card>
           <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-xs font-bold uppercase text-purple-700 tracking-wider">Ready for POD</p>
-              <p className="text-2xl font-extrabold text-purple-700 mt-1">{loading ? '...' : readyForPodCount}</p>
+              <p className="text-xs font-bold uppercase text-navy-500 tracking-wider">Out for Delivery</p>
+              <p className="text-2xl font-extrabold text-primary-600 mt-1">
+                {loading ? '...' : deliveries.filter(d => d.status === 'OUT_FOR_DELIVERY').length}
+              </p>
             </div>
-            <div className="h-12 w-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
-              <Camera className="h-6 w-6" />
+            <div className="h-12 w-12 rounded-xl bg-primary-50 text-primary-600 flex items-center justify-center">
+              <Navigation className="h-6 w-6" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-emerald-200 bg-emerald-50/20">
+        <Card>
           <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-xs font-bold uppercase text-emerald-700 tracking-wider">Completed</p>
-              <p className="text-2xl font-extrabold text-emerald-700 mt-1">{loading ? '...' : deliveredCount}</p>
+              <p className="text-xs font-bold uppercase text-navy-500 tracking-wider">Delivered</p>
+              <p className="text-2xl font-extrabold text-emerald-600 mt-1">{loading ? '...' : deliveredCount}</p>
             </div>
             <div className="h-12 w-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
               <CheckCircle2 className="h-6 w-6" />
@@ -243,7 +410,7 @@ export function DriverDashboard() {
         <CardHeader className="py-4 border-b border-navy-100 flex flex-row items-center justify-between">
           <div>
             <CardTitle className="text-lg font-bold text-navy-900">Assigned Deliveries Queue</CardTitle>
-            <p className="text-xs text-navy-500 mt-0.5">Progress shipment statuses or capture POD to finalize delivery</p>
+            <p className="text-xs text-navy-500 mt-0.5">Progress shipment statuses, stream GPS telemetry, or capture POD to finalize delivery</p>
           </div>
         </CardHeader>
         <CardContent className="p-0">
@@ -313,7 +480,41 @@ export function DriverDashboard() {
                           <ShipmentStatusBadge status={delivery.status} />
                         </td>
                         <td className="px-6 py-4 text-right space-x-2 whitespace-nowrap">
-                          {nextStep && (
+                          {!isDelivered && !isOutForDelivery && (
+                            <Button
+                              size="sm"
+                              variant="primary"
+                              onClick={() => handleStartTracking(delivery)}
+                              className="h-8 px-2.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+                              title="Start Live Delivery and Stream GPS"
+                            >
+                              <PlayCircle className="h-3.5 w-3.5 mr-1" /> Start Delivery (GPS)
+                            </Button>
+                          )}
+
+                          {isOutForDelivery && (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => navigate(`/shipments/${delivery.id}/live-tracking`)}
+                                className="h-8 px-2.5 text-xs text-primary-700 border-primary-200"
+                              >
+                                <Navigation className="h-3.5 w-3.5 mr-1" /> Live Map
+                              </Button>
+
+                              <Button
+                                size="sm"
+                                variant="primary"
+                                onClick={() => handleOpenPodModal(delivery)}
+                                className="h-8 px-3 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+                              >
+                                <Camera className="h-3.5 w-3.5 mr-1" /> Complete POD
+                              </Button>
+                            </>
+                          )}
+
+                          {nextStep && !isOutForDelivery && (
                             <Button
                               size="sm"
                               variant="outline"
@@ -321,17 +522,6 @@ export function DriverDashboard() {
                               className="h-8 px-3 text-xs"
                             >
                               <Truck className="h-3.5 w-3.5 mr-1" /> {nextStep.label}
-                            </Button>
-                          )}
-
-                          {isOutForDelivery && (
-                            <Button
-                              size="sm"
-                              variant="primary"
-                              onClick={() => handleOpenPodModal(delivery)}
-                              className="h-8 px-3 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
-                            >
-                              <Camera className="h-3.5 w-3.5 mr-1" /> Complete (POD)
                             </Button>
                           )}
 
@@ -359,146 +549,145 @@ export function DriverDashboard() {
       {/* Status Transition Modal */}
       {statusModalShipment && (
         <Modal
-          isOpen={true}
+          isOpen={!!statusModalShipment}
           onClose={() => setStatusModalShipment(null)}
-          title={`Update Status: ${statusModalShipment.trackingNumber}`}
+          title={`Update Shipment Status (${statusModalShipment.trackingNumber})`}
         >
           <div className="space-y-4">
             {statusError && (
-              <div className="flex items-center gap-2 bg-rose-50 text-rose-800 border border-rose-200 p-3 rounded-lg text-xs">
-                <AlertCircle className="h-4 w-4 text-rose-600 flex-shrink-0" />
-                <span>{statusError}</span>
+              <div className="text-xs bg-rose-50 text-rose-700 p-3 rounded-lg border border-rose-200">
+                {statusError}
               </div>
             )}
 
-            <div className="bg-navy-50 rounded-xl p-4 border border-navy-100 text-xs space-y-2">
-              <div className="flex justify-between">
-                <span className="text-navy-500">Current Status:</span>
-                <ShipmentStatusBadge status={statusModalShipment.status} />
-              </div>
-              <div className="flex justify-between">
-                <span className="text-navy-500">New Status:</span>
-                <ShipmentStatusBadge status={targetStatus} />
-              </div>
-            </div>
-
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-navy-700 mb-1">
-                Update Status To
+              <label className="block text-xs font-bold uppercase text-navy-600 mb-1.5">
+                Target Status
               </label>
               <select
                 value={targetStatus}
                 onChange={(e) => setTargetStatus(e.target.value as any)}
-                className="w-full h-10 rounded-lg border border-navy-200 bg-white px-3 py-2 text-sm text-navy-800 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full h-10 px-3 rounded-lg border border-navy-200 bg-white text-sm font-medium text-navy-900 focus:outline-none focus:ring-2 focus:ring-primary-500"
               >
-                <option value="PICKED_UP">PICKED_UP (Courier Picked Up Package)</option>
-                <option value="IN_TRANSIT">IN_TRANSIT (In Transit Between Hubs)</option>
-                <option value="OUT_FOR_DELIVERY">OUT_FOR_DELIVERY (Out for Final Delivery)</option>
+                <option value="PICKED_UP">PICKED_UP - Package collected from origin</option>
+                <option value="IN_TRANSIT">IN_TRANSIT - En route between facilities</option>
+                <option value="OUT_FOR_DELIVERY">OUT_FOR_DELIVERY - Assigned for final dropoff</option>
               </select>
-              <p className="text-xs text-navy-400 mt-1">
-                Note: Direct transition to DELIVERED is not allowed here. Complete delivery via Proof of Delivery upload.
-              </p>
             </div>
 
-            <Input
-              label="Activity Note / Description"
-              required
-              value={statusDescription}
-              onChange={(e) => setStatusDescription(e.target.value)}
-              placeholder="e.g. Package scanned and loaded on vehicle"
-            />
+            <div>
+              <label className="block text-xs font-bold uppercase text-navy-600 mb-1.5">
+                Status Checkpoint Note
+              </label>
+              <Input
+                placeholder="e.g. Scanned at regional distribution hub"
+                value={statusDescription}
+                onChange={(e) => setStatusDescription(e.target.value)}
+              />
+            </div>
 
             <div className="flex items-center justify-end gap-3 pt-4 border-t border-navy-100">
-              <Button variant="ghost" onClick={() => setStatusModalShipment(null)}>
+              <Button
+                variant="ghost"
+                onClick={() => setStatusModalShipment(null)}
+                disabled={isUpdatingStatus}
+              >
                 Cancel
               </Button>
               <Button
                 variant="primary"
                 onClick={handleConfirmStatusUpdate}
-                isLoading={isUpdatingStatus}
+                disabled={isUpdatingStatus}
               >
-                Confirm Update
+                {isUpdatingStatus ? 'Updating...' : 'Confirm Update'}
               </Button>
             </div>
           </div>
         </Modal>
       )}
 
-      {/* Proof of Delivery (POD) Upload Modal */}
+      {/* Proof of Delivery (POD) Modal */}
       {podModalShipment && (
         <Modal
-          isOpen={true}
+          isOpen={!!podModalShipment}
           onClose={() => setPodModalShipment(null)}
-          title={`Upload Proof of Delivery: ${podModalShipment.trackingNumber}`}
+          title={`Upload Proof of Delivery (${podModalShipment.trackingNumber})`}
         >
           <div className="space-y-4">
             {podError && (
-              <div className="flex items-center gap-2 bg-rose-50 text-rose-800 border border-rose-200 p-3 rounded-lg text-xs">
-                <AlertCircle className="h-4 w-4 text-rose-600 flex-shrink-0" />
-                <span>{podError}</span>
+              <div className="text-xs bg-rose-50 text-rose-700 p-3 rounded-lg border border-rose-200">
+                {podError}
               </div>
             )}
 
-            <div className="bg-emerald-50/50 rounded-xl p-4 border border-emerald-200 text-xs space-y-1">
-              <p className="font-semibold text-emerald-900">Final Delivery Confirmation</p>
-              <p className="text-emerald-700">
-                Uploading the receiver's photo/signature will immediately mark this shipment as <strong>DELIVERED</strong> and dispatch customer delivery notifications.
-              </p>
+            <div>
+              <label className="block text-xs font-bold uppercase text-navy-600 mb-1.5">
+                Signee / Receiver Full Name *
+              </label>
+              <Input
+                placeholder="Name of recipient who accepted the parcel"
+                value={receiverName}
+                onChange={(e) => setReceiverName(e.target.value)}
+              />
             </div>
 
-            <Input
-              label="Receiver / Signee Full Name"
-              required
-              value={receiverName}
-              onChange={(e) => setReceiverName(e.target.value)}
-              placeholder="e.g. Amit Sharma (Received by recipient)"
-            />
-
-            {/* Photo Capture / File Picker */}
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-navy-700 mb-1">
-                POD Photo / Signature (.jpg, .png, .webp, max 5MB)
+              <label className="block text-xs font-bold uppercase text-navy-600 mb-1.5">
+                Proof of Delivery Photo *
               </label>
-              
-              <label className="flex flex-col items-center justify-center border-2 border-dashed border-navy-200 hover:border-primary-500 rounded-xl p-6 cursor-pointer bg-navy-50/40 transition-colors">
+              <div className="border-2 border-dashed border-navy-200 rounded-xl p-4 text-center hover:border-primary-400 transition-colors">
                 {photoPreview ? (
-                  <div className="space-y-2 text-center">
+                  <div className="space-y-2">
                     <img
                       src={photoPreview}
                       alt="POD Preview"
-                      className="max-h-40 rounded-lg mx-auto object-cover border border-navy-200 shadow-sm"
+                      className="max-h-48 mx-auto rounded-lg object-cover shadow-sm"
                     />
-                    <span className="text-xs text-primary-600 font-medium block">Click to choose a different photo</span>
+                    <label className="text-xs text-primary-600 font-semibold cursor-pointer hover:underline block">
+                      Change Photo
+                      <input
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        onChange={handleFileChange}
+                        className="hidden"
+                      />
+                    </label>
                   </div>
                 ) : (
-                  <div className="space-y-2 text-center text-navy-500">
-                    <UploadCloud className="h-10 w-10 text-navy-400 mx-auto" />
-                    <p className="text-sm font-medium text-navy-700">Click or tap to attach photo / capture camera</p>
-                    <p className="text-xs text-navy-400">JPEG, PNG, WebP up to 5MB</p>
-                  </div>
+                  <label className="cursor-pointer space-y-2 block">
+                    <UploadCloud className="h-8 w-8 text-navy-400 mx-auto" />
+                    <p className="text-xs text-navy-700 font-medium">
+                      Click to capture or upload signature/parcel photo
+                    </p>
+                    <p className="text-[11px] text-navy-400">JPG, PNG, WEBP up to 5MB</p>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      onChange={handleFileChange}
+                      className="hidden"
+                    />
+                  </label>
                 )}
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  className="hidden"
-                  onChange={handleFileChange}
-                />
-              </label>
+              </div>
             </div>
 
-            {/* Modal Actions */}
             <div className="flex items-center justify-end gap-3 pt-4 border-t border-navy-100">
-              <Button variant="ghost" onClick={() => setPodModalShipment(null)}>
+              <Button
+                variant="ghost"
+                onClick={() => setPodModalShipment(null)}
+                disabled={isUploadingPod}
+              >
                 Cancel
               </Button>
               <Button
                 variant="primary"
-                className="bg-emerald-600 hover:bg-emerald-700"
                 onClick={handleConfirmPodUpload}
-                isLoading={isUploadingPod}
-                disabled={!photoFile || !receiverName.trim()}
+                disabled={isUploadingPod}
+                className="bg-emerald-600 hover:bg-emerald-700"
               >
-                Upload POD & Complete Delivery
+                {isUploadingPod ? 'Uploading POD...' : 'Finalize Delivery'}
               </Button>
             </div>
           </div>

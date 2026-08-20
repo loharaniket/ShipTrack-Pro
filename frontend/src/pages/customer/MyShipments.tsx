@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useNavigate, Link } from 'react-router-dom';
-import { Package, Search, Filter, Plus, ArrowUpRight, Eye, RefreshCw, AlertCircle, FileText } from 'lucide-react';
+import { Package, Search, Filter, Plus, ArrowUpRight, Eye, RefreshCw, AlertCircle, FileText, Navigation } from 'lucide-react';
 import { shipmentService, CustomerShipmentItem } from '@/services/shipmentService';
 import { ShipmentStatusBadge } from '@/components/common/ShipmentStatusBadge';
 import { formatFriendlyDate } from '@/utils/dateFormatter';
@@ -181,6 +181,17 @@ export function MyShipments() {
                         {formatFriendlyDate(shipment.createdAt)}
                       </td>
                       <td className="px-6 py-4 text-right space-x-2 whitespace-nowrap">
+                        {shipment.status === 'OUT_FOR_DELIVERY' && (
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            onClick={() => navigate(`/shipments/${shipment.id}/live-tracking`)}
+                            className="h-8 px-2.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+                            title="Live Driver Tracking"
+                          >
+                            <Navigation className="h-3.5 w-3.5 mr-1" /> Live Map
+                          </Button>
+                        )}
                         <Button
                           variant="outline"
                           size="sm"

@@ -22,6 +22,8 @@ import { PendingShipments } from '@/pages/admin/PendingShipments';
 import { Drivers } from '@/pages/admin/Drivers';
 import { Users } from '@/pages/admin/Users';
 import { Reports } from '@/pages/admin/Reports';
+import { LiveFleetTracking } from '@/pages/admin/LiveFleetTracking';
+import { LiveTrackingView } from '@/pages/tracking/LiveTrackingView';
 import { Tickets } from '@/pages/support/Tickets';
 import { SupportTicketDetails } from '@/pages/support/SupportTicketDetails';
 import { Profile } from '@/pages/auth/Profile';
@@ -53,6 +55,8 @@ function App() {
               <Route path="/shipments" element={<MyShipments />} />
               <Route path="/shipments/create" element={<CreateShipment />} />
               <Route path="/shipments/:id" element={<ShipmentDetails />} />
+              <Route path="/shipments/:id/live-tracking" element={<LiveTrackingView />} />
+              <Route path="/tracking/live/:id" element={<LiveTrackingView />} />
               <Route path="/tracking" element={<TrackShipment />} />
               <Route path="/tracking/:trackingNumber" element={<TrackShipment />} />
 
@@ -61,6 +65,12 @@ function App() {
               <Route path="/customer/tickets/create" element={<CreateComplaint />} />
               <Route path="/customer/tickets/:id" element={<TicketDetails />} />
               
+              {/* Admin & Support Fleet Routes */}
+              <Route element={<ProtectedRoute allowedRoles={['Administrator', 'SupportAgent']} />}>
+                <Route path="/admin/fleet" element={<LiveFleetTracking />} />
+                <Route path="/admin/tracking/fleet" element={<LiveFleetTracking />} />
+              </Route>
+
               {/* Admin Only Routes */}
               <Route element={<ProtectedRoute allowedRoles={['Administrator']} />}>
                 <Route path="/admin/shipments/pending" element={<PendingShipments />} />

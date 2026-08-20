@@ -4,9 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { 
   Package, Truck, MapPin, User, Phone, Calendar, ArrowLeft, 
-  HelpCircle, CheckCircle2, AlertCircle, FileText, ExternalLink, Image as ImageIcon
+  HelpCircle, CheckCircle2, AlertCircle, FileText, ExternalLink, Image as ImageIcon,
+  Navigation, Radio
 } from 'lucide-react';
 import { shipmentService, CustomerShipmentItem, PodResponse } from '@/services/shipmentService';
+import { liveTrackingService, DriverLocationDto } from '@/services/liveTrackingService';
 import { ShipmentStatusBadge } from '@/components/common/ShipmentStatusBadge';
 import { formatFriendlyDate, formatRelativeTime } from '@/utils/dateFormatter';
 
@@ -16,6 +18,7 @@ export function ShipmentDetails() {
 
   const [shipment, setShipment] = useState<CustomerShipmentItem | null>(null);
   const [pod, setPod] = useState<PodResponse | null>(null);
+  const [liveLocation, setLiveLocation] = useState<DriverLocationDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -32,12 +35,20 @@ export function ShipmentDetails() {
       const data = await shipmentService.getShipmentById(shipmentId);
       setShipment(data);
 
+      if (data.status === 'OUT_FOR_DELIVERY' || data.status === 'IN_TRANSIT') {
+        try {
+          const loc = await liveTrackingService.getShipmentLiveLocation(shipmentId);
+          setLiveLocation(loc);
+        } catch (e) {
+          // No live session yet
+        }
+      }
+
       if (data.status === 'DELIVERED') {
         try {
           const podData = await shipmentService.getShipmentPod(shipmentId);
           setPod(podData);
         } catch (podErr) {
-          // POD might not exist or failed to load
           console.warn('POD not available:', podErr);
         }
       }
@@ -68,6 +79,8 @@ export function ShipmentDetails() {
     );
   }
 
+  const isLiveTrackingAvailable = ['OUT_FOR_DELIVERY', 'IN_TRANSIT'].includes(shipment.status) || !!liveLocation;
+
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       {/* Top Navigation */}
@@ -77,15 +90,28 @@ export function ShipmentDetails() {
         </Button>
 
         <div className="flex items-center gap-3">
+          {isLiveTrackingAvailable && (
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => navigate(`/shipments/${shipment.id}/live-tracking`)}
+              className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold flex items-center gap-1.5 shadow-sm"
+            >
+              <span className="h-2 w-2 rounded-full bg-white animate-ping" />
+              <Navigation className="h-4 w-4" /> Live Driver Tracking
+            </Button>
+          )}
+
           <Button
             variant="outline"
             size="sm"
             onClick={() => navigate(`/customer/tickets/create?shipmentId=${shipment.id}`)}
           >
-            <HelpCircle className="h-4 w-4 mr-2" /> Report Issue / Complaint
+            <HelpCircle className="h-4 w-4 mr-2" /> Report Issue
           </Button>
+
           <Button
-            variant="primary"
+            variant="outline"
             size="sm"
             onClick={() => navigate(`/tracking/${shipment.trackingNumber}`)}
           >
@@ -93,6 +119,35 @@ export function ShipmentDetails() {
           </Button>
         </div>
       </div>
+
+      {/* LIVE DRIVER BANNER */}
+      {isLiveTrackingAvailable && (
+        <div className="bg-gradient-to-r from-primary-900 to-navy-900 text-white rounded-2xl p-5 shadow-md border border-primary-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="flex items-center gap-1.5 bg-emerald-500/20 text-emerald-300 text-xs px-2.5 py-0.5 rounded-full font-bold border border-emerald-500/40">
+                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping" /> Live Telemetry
+              </span>
+              {liveLocation?.driverName && (
+                <span className="text-xs text-navy-200">
+                  Driver: <strong className="text-white">{liveLocation.driverName}</strong>
+                </span>
+              )}
+            </div>
+            <h3 className="text-lg font-bold text-white">Your parcel is out for delivery!</h3>
+            <p className="text-xs text-navy-200">
+              Watch real-time GPS courier movement and estimated arrival on the live interactive map.
+            </p>
+          </div>
+
+          <Button
+            onClick={() => navigate(`/shipments/${shipment.id}/live-tracking`)}
+            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold whitespace-nowrap"
+          >
+            <Navigation className="h-4 w-4 mr-2" /> Open Live Map
+          </Button>
+        </div>
+      )}
 
       {/* Main Header Banner */}
       <Card className="bg-white border-navy-200">
@@ -168,87 +223,89 @@ export function ShipmentDetails() {
       </Card>
 
       {/* Proof of Delivery (POD) Section if delivered */}
-      {pod && (
-        <Card className="border-emerald-200 bg-emerald-50/30">
-          <CardHeader className="py-4 border-b border-emerald-100 flex flex-row items-center justify-between">
+      {shipment.status === 'DELIVERED' && pod && (
+        <Card className="border-emerald-200 bg-emerald-50/20 shadow-sm overflow-hidden">
+          <CardHeader className="border-b border-emerald-100/70 pb-3">
             <CardTitle className="text-base font-bold text-emerald-900 flex items-center gap-2">
-              <CheckCircle2 className="h-5 w-5 text-emerald-600" /> Proof of Delivery (POD)
+              <CheckCircle2 className="h-5 w-5 text-emerald-600" /> Proof of Delivery (POD) Verified
             </CardTitle>
-            <span className="text-xs font-medium text-emerald-700 bg-emerald-100/80 px-2.5 py-1 rounded-full">
-              Delivered at {formatFriendlyDate(pod.deliveryTime)}
-            </span>
           </CardHeader>
           <CardContent className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-              <div className="space-y-3 text-sm">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
                 <div>
-                  <span className="text-xs uppercase text-navy-500 font-semibold">Received by</span>
+                  <span className="text-xs font-semibold uppercase text-navy-500">Receiver / Signee</span>
                   <p className="text-base font-bold text-navy-900 mt-0.5">{pod.receiverName}</p>
                 </div>
                 <div>
-                  <span className="text-xs uppercase text-navy-500 font-semibold">Timestamp</span>
-                  <p className="text-sm text-navy-700 mt-0.5">{new Date(pod.deliveryTime).toLocaleString()}</p>
+                  <span className="text-xs font-semibold uppercase text-navy-500">Delivered At</span>
+                  <p className="text-sm font-medium text-navy-800 mt-0.5">
+                    {formatFriendlyDate(pod.deliveryTime)} ({formatRelativeTime(pod.deliveryTime)})
+                  </p>
                 </div>
               </div>
 
-              <div>
-                <span className="text-xs uppercase text-navy-500 font-semibold block mb-2">Delivery Photo / Signature</span>
-                {pod.photoUrl ? (
-                  <div className="rounded-xl overflow-hidden border border-navy-200 bg-white max-w-sm">
+              {pod.photoUrl && (
+                <div>
+                  <span className="text-xs font-semibold uppercase text-navy-500 block mb-2">
+                    Delivery Photo / Signature
+                  </span>
+                  <div className="relative group max-w-sm rounded-xl overflow-hidden border border-navy-200 shadow-sm">
                     <img
                       src={pod.photoUrl}
-                      alt={`POD for ${shipment.trackingNumber}`}
-                      className="w-full h-48 object-cover hover:scale-105 transition-transform duration-300"
+                      alt="Proof of delivery"
+                      className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
                     />
+                    <a
+                      href={pod.photoUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold gap-1.5"
+                    >
+                      <ImageIcon className="h-4 w-4" /> View Full Image
+                    </a>
                   </div>
-                ) : (
-                  <div className="p-6 bg-navy-50 rounded-xl text-center text-xs text-navy-400 border border-navy-200">
-                    <ImageIcon className="h-8 w-8 mx-auto mb-1 text-navy-300" />
-                    No image available
-                  </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Shipment Tracking Timeline */}
+      {/* Shipment Journey Tracking History */}
       <Card>
-        <CardHeader className="py-4 border-b border-navy-100">
+        <CardHeader className="border-b border-navy-100 pb-3">
           <CardTitle className="text-base font-bold text-navy-900 flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-primary-600" /> Tracking Milestones
+            <FileText className="h-4 w-4 text-primary-500" /> Milestone Tracking History
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6">
-          {shipment.timeline && shipment.timeline.length > 0 ? (
-            <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-navy-200">
-              {shipment.timeline.map((event, idx) => (
-                <div key={idx} className="relative">
-                  <div className="absolute -left-6 top-1 h-5 w-5 rounded-full bg-white border-2 border-primary-600 flex items-center justify-center">
-                    <div className="h-2 w-2 rounded-full bg-primary-600" />
+          {shipment.trackingHistory && shipment.trackingHistory.length > 0 ? (
+            <div className="space-y-6 relative before:absolute before:inset-0 before:left-3.5 before:w-0.5 before:bg-navy-200">
+              {shipment.trackingHistory.map((item, idx) => (
+                <div key={item.id || idx} className="relative flex items-start gap-4">
+                  <div className="h-7 w-7 rounded-full bg-primary-600 text-white flex items-center justify-center text-xs font-bold z-10 shadow-sm">
+                    {idx + 1}
                   </div>
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <ShipmentStatusBadge status={event.status} />
+                  <div className="bg-navy-50/70 rounded-xl p-4 border border-navy-100 flex-1 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <ShipmentStatusBadge status={item.status} />
                       <span className="text-xs text-navy-400 font-mono">
-                        {formatFriendlyDate(event.createdAt)}
+                        {formatFriendlyDate(item.createdAt)}
                       </span>
                     </div>
-                    <p className="text-sm font-medium text-navy-800">{event.description}</p>
-                    {event.location && (
-                      <p className="text-xs text-navy-500 flex items-center gap-1">
-                        <MapPin className="h-3 w-3" /> {event.location}
-                      </p>
+                    <p className="text-sm font-medium text-navy-800">{item.description}</p>
+                    {item.updatedBy && (
+                      <p className="text-xs text-navy-500">Updated by: {item.updatedBy}</p>
                     )}
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-sm text-navy-500 text-center py-6">
-              Initial status recorded as <strong>{shipment.status}</strong>.
-            </p>
+            <div className="text-center py-8 text-navy-400 text-sm">
+              No tracking events recorded yet.
+            </div>
           )}
         </CardContent>
       </Card>
