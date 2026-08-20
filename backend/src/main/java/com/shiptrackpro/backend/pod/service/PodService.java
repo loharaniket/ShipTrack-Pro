@@ -13,6 +13,7 @@ import com.shiptrackpro.backend.tracking.entity.ShipmentTracking;
 import com.shiptrackpro.backend.tracking.repository.ShipmentTrackingRepository;
 import com.shiptrackpro.backend.user.entity.RoleName;
 import com.shiptrackpro.backend.user.entity.User;
+import com.shiptrackpro.backend.tracking.service.LiveTrackingService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -33,6 +34,7 @@ public class PodService {
     private final ShipmentTrackingRepository shipmentTrackingRepository;
     private final NotificationService notificationService;
     private final FileStorageService fileStorageService;
+    private final LiveTrackingService liveTrackingService;
 
     @Transactional
     public PodResponse uploadPod(UUID shipmentId, String receiverName, MultipartFile photo, User user) {
@@ -100,6 +102,9 @@ public class PodService {
                     "SHIPMENT_DELIVERED"
             );
         }
+
+        // Automatically complete live tracking session
+        liveTrackingService.stopTracking(savedShipment.getId(), "DELIVERED", user);
 
         return mapToPodResponse(pod, "Proof of Delivery uploaded and shipment delivered successfully");
     }
