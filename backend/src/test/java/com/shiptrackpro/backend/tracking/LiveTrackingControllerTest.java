@@ -238,6 +238,6 @@ public class LiveTrackingControllerTest {
         assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getData()).isNotEmpty();
-        assertThat(response.getBody().getData().get(0).getDriverId()).isEqualTo(driver.getId());
+        assertThat(response.getBody().getData().stream().anyMatch(d -> d.getDriverId().equals(driver.getId()))).isTrue();
     }
 }

@@ -1,5 +1,6 @@
 package com.shiptrackpro.backend.shipment.entity;
 
+import com.shiptrackpro.backend.address.entity.Address;
 import com.shiptrackpro.backend.user.entity.User;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -48,6 +49,14 @@ public class Shipment {
 
     @Column(name = "delivery_address", nullable = false, length = 255)
     private String deliveryAddress;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "origin_address_id")
+    private Address originAddress;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "destination_address_id")
+    private Address destinationAddress;
 
     @Column(name = "package_description", length = 255)
     private String packageDescription;

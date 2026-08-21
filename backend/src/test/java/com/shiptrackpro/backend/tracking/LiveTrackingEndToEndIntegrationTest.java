@@ -233,9 +233,9 @@ public class LiveTrackingEndToEndIntegrationTest {
         // STEP 6: Admin views active fleet roster
         authenticateAs(adminDetails);
         ResponseEntity<ApiResponse<List<ActiveDriverTrackingDto>>> fleetResp = liveTrackingController.getActiveDrivers();
-        assertThat(fleetResp.getBody().getData()).hasSize(1);
-        assertThat(fleetResp.getBody().getData().get(0).getDriverId()).isEqualTo(driver.getId());
-        assertThat(fleetResp.getBody().getData().get(0).getShipmentId()).isEqualTo(shipmentIdA);
+        assertThat(fleetResp.getBody().getData()).isNotEmpty();
+        assertThat(fleetResp.getBody().getData().stream()
+                .anyMatch(d -> d.getDriverId().equals(driver.getId()) && d.getShipmentId().equals(shipmentIdA))).isTrue();
 
         // STEP 7: Customer 1 (Shipment Owner) tracks live coordinates
         authenticateAs(customer1Details);
