@@ -1,4 +1,5 @@
 import { apiClient } from './apiClient';
+import { AddressDto } from './addressService';
 
 export interface TrackingTimelineEvent {
   status: string;
@@ -10,6 +11,14 @@ export interface TrackingTimelineEvent {
 export interface PublicTrackingResponse {
   trackingNumber: string;
   currentStatus: string;
+  pickupAddress?: string;
+  deliveryAddress?: string;
+  originAddress?: AddressDto;
+  destinationAddress?: AddressDto;
+  originLatitude?: number;
+  originLongitude?: number;
+  destLatitude?: number;
+  destLongitude?: number;
   timeline: TrackingTimelineEvent[];
 }
 

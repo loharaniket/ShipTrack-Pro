@@ -19,7 +19,15 @@ const driverVehicleIcon = new L.Icon({
   popupAnchor: [0, -20],
 });
 
-// Custom destination/home icon
+// Custom origin pickup icon (green)
+const originPickupIcon = new L.Icon({
+  iconUrl: 'https://cdn-icons-png.flaticon.com/512/2776/2776067.png',
+  iconSize: [36, 36],
+  iconAnchor: [18, 36],
+  popupAnchor: [0, -36],
+});
+
+// Custom destination/home icon (red/blue pin)
 const destinationIcon = new L.Icon({
   iconUrl: 'https://cdn-icons-png.flaticon.com/512/684/684908.png',
   iconSize: [36, 36],
@@ -27,46 +35,102 @@ const destinationIcon = new L.Icon({
   popupAnchor: [0, -36],
 });
 
-// Helper component to auto-recenter map when driver position changes
-function MapAutoRecenter({ center }: { center: [number, number] }) {
+// Helper component to auto-fit bounds based on shipment origin, destination, and courier location
+function MapAutoFitBounds({
+  points,
+  driverPosition,
+}: {
+  points: [number, number][];
+  driverPosition?: [number, number];
+}) {
   const map = useMap();
+  const hasFitInitialBoundsRef = useRef(false);
+
   useEffect(() => {
-    if (center && center[0] && center[1]) {
-      map.panTo(center, { animate: true, duration: 1 });
+    const validPoints = points.filter(
+      (p) => p && typeof p[0] === 'number' && typeof p[1] === 'number' && !isNaN(p[0]) && !isNaN(p[1]) && !(p[0] === 0 && p[1] === 0)
+    );
+
+    if (validPoints.length >= 2 && !hasFitInitialBoundsRef.current) {
+      const bounds = L.latLngBounds(validPoints.map((p) => [p[0], p[1]]));
+      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15, animate: true });
+      hasFitInitialBoundsRef.current = true;
+    } else if (validPoints.length === 1 && !hasFitInitialBoundsRef.current) {
+      map.setView(validPoints[0], 13, { animate: true });
+      hasFitInitialBoundsRef.current = true;
     }
-  }, [center, map]);
+  }, [points, map]);
+
+  // Smoothly pan when live driver GPS updates
+  useEffect(() => {
+    if (driverPosition && typeof driverPosition[0] === 'number' && typeof driverPosition[1] === 'number') {
+      map.panTo(driverPosition, { animate: true, duration: 1 });
+    }
+  }, [driverPosition, map]);
+
   return null;
 }
 
 interface LiveMapProps {
-  driverPosition?: [number, number];
+  originPosition?: [number, number];
   destinationPosition?: [number, number];
+  driverPosition?: [number, number];
   route?: [number, number][];
   driverName?: string;
+  originAddress?: string;
+  destinationAddress?: string;
   accuracy?: number;
   connectionStatus?: 'CONNECTED' | 'CONNECTION_LOST';
   height?: string;
 }
 
 export function LiveMap({
-  driverPosition,
+  originPosition,
   destinationPosition,
+  driverPosition,
   route,
   driverName = 'Courier Driver',
+  originAddress,
+  destinationAddress,
   accuracy,
   connectionStatus = 'CONNECTED',
   height = 'h-96',
 }: LiveMapProps) {
-  // Default coordinates (Pune/Mumbai region) if no GPS yet
-  const defaultCenter: [number, number] = driverPosition || destinationPosition || (route && route.length > 0 ? route[0] : [18.5204, 73.8567]);
+  // Collect all valid positions for dynamic framing
+  const allPoints: [number, number][] = [];
+  if (originPosition && !isNaN(originPosition[0]) && !isNaN(originPosition[1])) {
+    allPoints.push(originPosition);
+  }
+  if (driverPosition && !isNaN(driverPosition[0]) && !isNaN(driverPosition[1])) {
+    allPoints.push(driverPosition);
+  }
+  if (destinationPosition && !isNaN(destinationPosition[0]) && !isNaN(destinationPosition[1])) {
+    allPoints.push(destinationPosition);
+  }
+  if (route && route.length > 0) {
+    route.forEach((p) => {
+      if (p && !isNaN(p[0]) && !isNaN(p[1])) allPoints.push(p);
+    });
+  }
 
-  // Construct connecting polyline if both driver and destination exist
-  const activePolyline: [number, number][] = 
-    route && route.length > 0 
-      ? route 
-      : driverPosition && destinationPosition 
-        ? [driverPosition, destinationPosition] 
-        : [];
+  // Dynamic default center fallback
+  const defaultCenter: [number, number] =
+    driverPosition ||
+    destinationPosition ||
+    originPosition ||
+    (allPoints.length > 0 ? allPoints[0] : [19.076, 72.8777]);
+
+  // Construct connecting polyline
+  let activePolyline: [number, number][] = [];
+  if (route && route.length > 0) {
+    activePolyline = route;
+  } else if (originPosition && driverPosition && destinationPosition) {
+    activePolyline = [originPosition, driverPosition, destinationPosition];
+  } else if (driverPosition && destinationPosition) {
+    activePolyline = [driverPosition, destinationPosition];
+  } else if (originPosition && destinationPosition) {
+    activePolyline = [originPosition, destinationPosition];
+  }
 
   return (
     <div className={`w-full ${height} rounded-2xl overflow-hidden border border-navy-200 shadow-sm relative z-0`}>
@@ -78,7 +142,7 @@ export function LiveMap({
           }`}
         />
         <span className="text-xs font-semibold text-navy-800">
-          {connectionStatus === 'CONNECTED' ? 'Live Telemetry' : 'Connection Paused'}
+          {driverPosition ? (connectionStatus === 'CONNECTED' ? 'Live Telemetry' : 'Connection Paused') : 'Shipment Route'}
         </span>
       </div>
 
@@ -93,7 +157,8 @@ export function LiveMap({
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
-        {driverPosition && <MapAutoRecenter center={driverPosition} />}
+        {/* Dynamic Bounds & Auto-recenter */}
+        <MapAutoFitBounds points={allPoints} driverPosition={driverPosition} />
 
         {/* Route / Connection Path */}
         {activePolyline.length > 1 && (
@@ -101,7 +166,7 @@ export function LiveMap({
             positions={activePolyline}
             color="#2563eb"
             weight={4}
-            opacity={0.7}
+            opacity={0.75}
             dashArray="8, 8"
           />
         )}
@@ -115,14 +180,32 @@ export function LiveMap({
           />
         )}
 
+        {/* Origin Pickup Marker */}
+        {originPosition && (
+          <Marker position={originPosition} icon={originPickupIcon}>
+            <Popup>
+              <div className="text-xs space-y-0.5">
+                <p className="font-bold text-emerald-800">Origin / Pickup</p>
+                {originAddress && <p className="text-navy-600">{originAddress}</p>}
+                <p className="text-[10px] font-mono text-navy-400">
+                  {originPosition[0].toFixed(4)}, {originPosition[1].toFixed(4)}
+                </p>
+              </div>
+            </Popup>
+          </Marker>
+        )}
+
         {/* Driver Vehicle Marker */}
         {driverPosition && (
           <Marker position={driverPosition} icon={driverVehicleIcon}>
             <Popup>
               <div className="text-xs space-y-1">
                 <p className="font-bold text-navy-900">{driverName}</p>
-                <p className="text-navy-500">Live GPS Location</p>
+                <p className="text-navy-500">Live GPS Courier</p>
                 {accuracy && <p className="text-[10px] text-navy-400">Accuracy: ~{Math.round(accuracy)}m</p>}
+                <p className="text-[10px] font-mono text-navy-400">
+                  {driverPosition[0].toFixed(4)}, {driverPosition[1].toFixed(4)}
+                </p>
               </div>
             </Popup>
           </Marker>
@@ -132,8 +215,12 @@ export function LiveMap({
         {destinationPosition && (
           <Marker position={destinationPosition} icon={destinationIcon}>
             <Popup>
-              <div className="text-xs">
-                <p className="font-bold text-navy-900">Delivery Destination</p>
+              <div className="text-xs space-y-0.5">
+                <p className="font-bold text-rose-800">Delivery Destination</p>
+                {destinationAddress && <p className="text-navy-600">{destinationAddress}</p>}
+                <p className="text-[10px] font-mono text-navy-400">
+                  {destinationPosition[0].toFixed(4)}, {destinationPosition[1].toFixed(4)}
+                </p>
               </div>
             </Popup>
           </Marker>

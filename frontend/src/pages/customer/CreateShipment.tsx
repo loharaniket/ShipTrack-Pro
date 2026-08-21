@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { AddressAutocompleteInput } from '@/components/common/AddressAutocompleteInput';
+import { AddressDto } from '@/services/addressService';
 import { useAuth } from '@/context/AuthContext';
-import { useNavigate } from 'react-router-dom';
-import { Package, Truck, CheckCircle2, ArrowRight, AlertCircle, Copy, Check } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { Package, Truck, CheckCircle2, ArrowRight, AlertCircle, Copy, Check, MapPin, Navigation } from 'lucide-react';
 import { shipmentService, CreateShipmentResponse } from '@/services/shipmentService';
 
 export function CreateShipment() {
@@ -15,8 +17,13 @@ export function CreateShipment() {
   const [senderPhone, setSenderPhone] = useState('');
   const [receiverName, setReceiverName] = useState('');
   const [receiverPhone, setReceiverPhone] = useState('');
-  const [pickupAddress, setPickupAddress] = useState('');
-  const [deliveryAddress, setDeliveryAddress] = useState('');
+  
+  // Address & Geocoding State
+  const [pickupAddressText, setPickupAddressText] = useState('');
+  const [pickupAddressDto, setPickupAddressDto] = useState<AddressDto | null>(null);
+  const [deliveryAddressText, setDeliveryAddressText] = useState('');
+  const [deliveryAddressDto, setDeliveryAddressDto] = useState<AddressDto | null>(null);
+
   const [packageDescription, setPackageDescription] = useState('');
   const [weight, setWeight] = useState<string>('1.0');
 
@@ -40,7 +47,7 @@ export function CreateShipment() {
       return;
     }
 
-    if (!pickupAddress.trim() || !deliveryAddress.trim()) {
+    if (!pickupAddressText.trim() || !deliveryAddressText.trim()) {
       setErrorMsg('Please specify complete pickup and delivery addresses.');
       return;
     }
@@ -53,8 +60,10 @@ export function CreateShipment() {
         senderPhone: senderPhone.trim(),
         receiverName: receiverName.trim(),
         receiverPhone: receiverPhone.trim(),
-        pickupAddress: pickupAddress.trim(),
-        deliveryAddress: deliveryAddress.trim(),
+        pickupAddress: pickupAddressText.trim(),
+        deliveryAddress: deliveryAddressText.trim(),
+        originAddress: pickupAddressDto || undefined,
+        destinationAddress: deliveryAddressDto || undefined,
         packageDescription: packageDescription.trim() || 'General Package',
         weight: weightNum
       });
@@ -78,8 +87,10 @@ export function CreateShipment() {
   const handleReset = () => {
     setReceiverName('');
     setReceiverPhone('');
-    setPickupAddress('');
-    setDeliveryAddress('');
+    setPickupAddressText('');
+    setPickupAddressDto(null);
+    setDeliveryAddressText('');
+    setDeliveryAddressDto(null);
     setPackageDescription('');
     setWeight('1.0');
     setCreatedResult(null);
@@ -97,48 +108,39 @@ export function CreateShipment() {
             <div>
               <h2 className="text-2xl font-bold text-navy-900">Shipment Created Successfully!</h2>
               <p className="text-sm text-navy-500 mt-1">
-                Your delivery request has been booked and queued for dispatch.
+                Your delivery request has been booked with geocoded route coordinates.
               </p>
             </div>
 
-            <div className="bg-navy-50 rounded-xl p-6 border border-navy-100">
-              <p className="text-xs uppercase font-semibold text-navy-500 tracking-wider">Tracking Number</p>
-              <div className="flex items-center justify-center gap-3 mt-2">
-                <span className="text-3xl font-extrabold text-primary-600 font-mono tracking-tight">
+            <div className="bg-navy-50/70 p-4 rounded-xl border border-navy-100 flex items-center justify-between max-w-md mx-auto">
+              <div className="text-left">
+                <p className="text-xs text-navy-500 font-semibold uppercase">Tracking Number</p>
+                <p className="font-mono text-xl font-bold text-primary-600 tracking-wider">
                   {createdResult.trackingNumber}
-                </span>
-                <button
-                  onClick={copyTracking}
-                  className="p-2 rounded-lg bg-white border border-navy-200 text-navy-600 hover:text-primary-600 hover:border-primary-300 transition-colors"
-                  title="Copy Tracking Number"
-                >
-                  {copied ? <Check className="h-5 w-5 text-emerald-600" /> : <Copy className="h-5 w-5" />}
-                </button>
+                </p>
               </div>
-              <p className="text-xs text-navy-400 mt-2">Initial Status: <strong className="text-navy-700">CREATED</strong></p>
+              <Button size="sm" variant="outline" onClick={copyTracking} className="h-9">
+                {copied ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
+                <span className="ml-1.5">{copied ? 'Copied' : 'Copy'}</span>
+              </Button>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
               <Button
-                variant="outline"
-                onClick={() => navigate(`/tracking/${createdResult.trackingNumber}`)}
-                className="h-11 px-6"
-              >
-                Track Live
-              </Button>
-              <Button
                 variant="primary"
-                onClick={() => navigate(`/shipments/${createdResult.id}`)}
-                className="h-11 px-6"
+                onClick={() => navigate(`/tracking/${createdResult.trackingNumber}`)}
+                className="font-bold"
               >
-                View Details <ArrowRight className="h-4 w-4 ml-2" />
+                <Navigation className="h-4 w-4 mr-2" /> Live Track Route
               </Button>
               <Button
-                variant="ghost"
-                onClick={handleReset}
-                className="h-11 px-4 text-navy-600"
+                variant="outline"
+                onClick={() => navigate(`/shipments/${createdResult.id}`)}
               >
-                Book Another
+                View Shipment Details
+              </Button>
+              <Button variant="ghost" onClick={handleReset}>
+                Create Another
               </Button>
             </div>
           </CardContent>
@@ -148,12 +150,14 @@ export function CreateShipment() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-navy-900">Book a New Shipment</h1>
-        <p className="text-sm text-navy-500 mt-1">
-          Provide package and contact details to initiate your shipment.
-        </p>
+    <div className="max-w-4xl mx-auto space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-navy-900">Create New Shipment</h1>
+          <p className="text-sm text-navy-500 mt-1">
+            Book a parcel pickup with automatic OpenStreetMap address geocoding.
+          </p>
+        </div>
       </div>
 
       {errorMsg && (
@@ -163,121 +167,155 @@ export function CreateShipment() {
         </div>
       )}
 
-      <Card>
-        <CardContent className="p-6">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Sender Information */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-bold uppercase tracking-wider text-navy-700 border-b border-navy-100 pb-2">
-                1. Sender Information
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Sender & Pickup Details */}
+          <Card className="border-navy-200">
+            <CardHeader className="bg-navy-50/50 border-b border-navy-100">
+              <CardTitle className="text-base font-bold text-navy-900 flex items-center gap-2">
+                <Truck className="h-4 w-4 text-primary-600" /> 1. Origin / Sender Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-5 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold uppercase text-navy-600 mb-1">
+                  Sender Name *
+                </label>
                 <Input
-                  label="Sender Full Name"
-                  required
                   value={senderName}
                   onChange={(e) => setSenderName(e.target.value)}
-                  placeholder="e.g. Rahul Patil"
-                />
-                <Input
-                  label="Sender Phone Number"
-                  type="tel"
+                  placeholder="Full name or company"
                   required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase text-navy-600 mb-1">
+                  Sender Phone *
+                </label>
+                <Input
+                  type="tel"
                   value={senderPhone}
                   onChange={(e) => setSenderPhone(e.target.value)}
-                  placeholder="e.g. 9876543210"
+                  placeholder="+91 98765 43210"
+                  required
                 />
               </div>
-              <Input
-                label="Pickup Address"
-                required
-                value={pickupAddress}
-                onChange={(e) => setPickupAddress(e.target.value)}
-                placeholder="Complete street address, area, city, pincode"
-              />
-            </div>
 
-            {/* Receiver Information */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-bold uppercase tracking-wider text-navy-700 border-b border-navy-100 pb-2">
-                2. Recipient Information
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Autocomplete Pickup Input */}
+              <AddressAutocompleteInput
+                label="Pickup Address (Origin)"
+                placeholder="Search pickup hub, landmark, or street..."
+                value={pickupAddressText}
+                onChange={setPickupAddressText}
+                onAddressSelect={setPickupAddressDto}
+                selectedAddress={pickupAddressDto}
+                required
+              />
+            </CardContent>
+          </Card>
+
+          {/* Receiver & Delivery Details */}
+          <Card className="border-navy-200">
+            <CardHeader className="bg-navy-50/50 border-b border-navy-100">
+              <CardTitle className="text-base font-bold text-navy-900 flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-primary-600" /> 2. Destination / Receiver Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-5 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold uppercase text-navy-600 mb-1">
+                  Receiver Name *
+                </label>
                 <Input
-                  label="Receiver Full Name"
-                  required
                   value={receiverName}
                   onChange={(e) => setReceiverName(e.target.value)}
-                  placeholder="e.g. Amit Sharma"
-                />
-                <Input
-                  label="Receiver Phone Number"
-                  type="tel"
+                  placeholder="Full recipient name"
                   required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase text-navy-600 mb-1">
+                  Receiver Phone *
+                </label>
+                <Input
+                  type="tel"
                   value={receiverPhone}
                   onChange={(e) => setReceiverPhone(e.target.value)}
-                  placeholder="e.g. 9876543211"
+                  placeholder="+91 98765 43211"
+                  required
                 />
               </div>
-              <Input
-                label="Delivery Address"
+
+              {/* Autocomplete Delivery Input */}
+              <AddressAutocompleteInput
+                label="Delivery Address (Destination)"
+                placeholder="Search delivery locality, city, or pincode..."
+                value={deliveryAddressText}
+                onChange={setDeliveryAddressText}
+                onAddressSelect={setDeliveryAddressDto}
+                selectedAddress={deliveryAddressDto}
                 required
-                value={deliveryAddress}
-                onChange={(e) => setDeliveryAddress(e.target.value)}
-                placeholder="Complete destination address, landmark, city, pincode"
+              />
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Package Specs */}
+        <Card className="border-navy-200">
+          <CardHeader className="bg-navy-50/50 border-b border-navy-100">
+            <CardTitle className="text-base font-bold text-navy-900 flex items-center gap-2">
+              <Package className="h-4 w-4 text-primary-600" /> 3. Package Specifications
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold uppercase text-navy-600 mb-1">
+                Weight (kg) *
+              </label>
+              <Input
+                type="number"
+                step="0.1"
+                min="0.1"
+                value={weight}
+                onChange={(e) => setWeight(e.target.value)}
+                placeholder="1.0"
+                required
               />
             </div>
-
-            {/* Package Details */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-bold uppercase tracking-wider text-navy-700 border-b border-navy-100 pb-2">
-                3. Package Details
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="md:col-span-2">
-                  <Input
-                    label="Package Description"
-                    required
-                    value={packageDescription}
-                    onChange={(e) => setPackageDescription(e.target.value)}
-                    placeholder="e.g. Dell Laptop / Documents / Clothes"
-                  />
-                </div>
-                <div>
-                  <Input
-                    label="Weight (kg)"
-                    type="number"
-                    step="0.1"
-                    min="0.1"
-                    required
-                    value={weight}
-                    onChange={(e) => setWeight(e.target.value)}
-                    placeholder="1.5"
-                  />
-                </div>
-              </div>
+            <div>
+              <label className="block text-xs font-semibold uppercase text-navy-600 mb-1">
+                Contents Description
+              </label>
+              <Input
+                value={packageDescription}
+                onChange={(e) => setPackageDescription(e.target.value)}
+                placeholder="e.g. Fragile Electronics, Documents, Clothing"
+              />
             </div>
+          </CardContent>
+        </Card>
 
-            <div className="pt-4 flex items-center justify-end gap-3 border-t border-navy-100">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => navigate('/shipments')}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                variant="primary"
-                className="h-11 px-8 font-semibold"
-                isLoading={isSubmitting}
-              >
-                Confirm & Create Shipment
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+        {/* Action Controls */}
+        <div className="flex items-center justify-end gap-3 pt-2">
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => navigate(-1)}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            variant="primary"
+            className="px-8 font-bold"
+            isLoading={isSubmitting}
+          >
+            Book Shipment <ArrowRight className="h-4 w-4 ml-1.5" />
+          </Button>
+        </div>
+      </form>
     </div>
   );
 }

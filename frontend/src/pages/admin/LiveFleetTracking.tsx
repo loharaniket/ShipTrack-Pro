@@ -7,6 +7,8 @@ import {
   MapPin, Phone, User, Package, ExternalLink, Clock 
 } from 'lucide-react';
 import { liveTrackingService, ActiveDriverTrackingDto } from '@/services/liveTrackingService';
+import { shipmentService, CustomerShipmentItem } from '@/services/shipmentService';
+import { addressService } from '@/services/addressService';
 import { LiveMap } from '@/components/maps/LiveMap';
 import { formatRelativeTime } from '@/utils/dateFormatter';
 
@@ -15,6 +17,9 @@ export function LiveFleetTracking() {
 
   const [activeDrivers, setActiveDrivers] = useState<ActiveDriverTrackingDto[]>([]);
   const [selectedDriver, setSelectedDriver] = useState<ActiveDriverTrackingDto | null>(null);
+  const [selectedShipment, setSelectedShipment] = useState<CustomerShipmentItem | null>(null);
+  const [destCoords, setDestCoords] = useState<[number, number] | undefined>(undefined);
+  const [originCoords, setOriginCoords] = useState<[number, number] | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [refreshing, setRefreshing] = useState(false);
@@ -24,6 +29,45 @@ export function LiveFleetTracking() {
     const interval = setInterval(pollActiveDrivers, 6000);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    if (selectedDriver?.shipmentId) {
+      loadShipmentDetails(selectedDriver.shipmentId, selectedDriver.deliveryAddress);
+    } else {
+      setSelectedShipment(null);
+      setDestCoords(undefined);
+      setOriginCoords(undefined);
+    }
+  }, [selectedDriver?.shipmentId]);
+
+  const loadShipmentDetails = async (shipmentId: string, deliveryAddressFallback?: string) => {
+    try {
+      const s = await shipmentService.getShipmentById(shipmentId);
+      setSelectedShipment(s);
+
+      // Origin Coords
+      if (s.originAddress?.latitude && s.originAddress?.longitude) {
+        setOriginCoords([Number(s.originAddress.latitude), Number(s.originAddress.longitude)]);
+      } else if (s.pickupAddress) {
+        const geo = await addressService.geocodeAddress(s.pickupAddress);
+        if (geo) setOriginCoords([geo.latitude, geo.longitude]);
+      }
+
+      // Destination Coords
+      if (s.destinationAddress?.latitude && s.destinationAddress?.longitude) {
+        setDestCoords([Number(s.destinationAddress.latitude), Number(s.destinationAddress.longitude)]);
+      } else if (s.deliveryAddress || deliveryAddressFallback) {
+        const geo = await addressService.geocodeAddress(s.deliveryAddress || deliveryAddressFallback || '');
+        if (geo) setDestCoords([geo.latitude, geo.longitude]);
+      }
+    } catch (e) {
+      // Fallback geocode directly from driver deliveryAddress
+      if (deliveryAddressFallback) {
+        const geo = await addressService.geocodeAddress(deliveryAddressFallback);
+        if (geo) setDestCoords([geo.latitude, geo.longitude]);
+      }
+    }
+  };
 
   const loadActiveDrivers = async () => {
     try {
@@ -57,6 +101,9 @@ export function LiveFleetTracking() {
   const handleManualRefresh = async () => {
     setRefreshing(true);
     await loadActiveDrivers();
+    if (selectedDriver?.shipmentId) {
+      await loadShipmentDetails(selectedDriver.shipmentId, selectedDriver.deliveryAddress);
+    }
     setRefreshing(false);
   };
 
@@ -139,33 +186,26 @@ export function LiveFleetTracking() {
                           {driver.driverName.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <p className="font-bold text-sm text-navy-900">{driver.driverName}</p>
-                          <p className="text-xs text-navy-500 font-mono">
-                            Shipment #{driver.trackingNumber}
-                          </p>
+                          <p className="font-bold text-navy-900 text-sm">{driver.driverName}</p>
+                          <p className="text-xs text-navy-500">{driver.driverPhone || driver.driverEmail}</p>
                         </div>
                       </div>
-
-                      <span
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                          driver.connectionStatus === 'CONNECTED'
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : 'bg-amber-100 text-amber-800'
-                        }`}
-                      >
-                        {driver.connectionStatus === 'CONNECTED' ? 'Live' : 'Lost'}
+                      <span className="flex items-center gap-1 bg-emerald-50 text-emerald-700 text-[10px] px-2 py-0.5 rounded-full font-bold">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping" /> Live
                       </span>
                     </div>
 
-                    <div className="mt-3 pt-2 border-t border-navy-100/60 text-xs space-y-1 text-navy-600">
-                      <p className="truncate">
-                        <strong className="text-navy-700">To:</strong> {driver.receiverName} ({driver.deliveryAddress})
-                      </p>
-                      <div className="flex items-center justify-between text-navy-400 text-[11px] pt-1">
-                        <span>Updated {formatRelativeTime(driver.lastPingAt)}</span>
-                        <span className="font-mono text-primary-600 hover:underline">
-                          Inspect Map →
-                        </span>
+                    <div className="mt-3 pt-3 border-t border-navy-100 text-xs space-y-1">
+                      <div className="flex items-center justify-between text-navy-600">
+                        <span>Shipment:</span>
+                        <strong className="text-primary-600 font-mono">{driver.trackingNumber}</strong>
+                      </div>
+                      <div className="flex items-center justify-between text-navy-500">
+                        <span>Receiver:</span>
+                        <span className="truncate max-w-[140px]">{driver.receiverName}</span>
+                      </div>
+                      <div className="text-[11px] text-navy-400 truncate">
+                        📍 {driver.deliveryAddress}
                       </div>
                     </div>
                   </div>
@@ -174,7 +214,7 @@ export function LiveFleetTracking() {
             </div>
           </div>
 
-          {/* Interactive Live Map of Selected Driver */}
+          {/* Map & Live Courier Telemetry View */}
           <div className="lg:col-span-2 space-y-4">
             {selectedDriver && (
               <>
@@ -197,7 +237,11 @@ export function LiveFleetTracking() {
                   </CardHeader>
                   <CardContent className="p-0">
                     <LiveMap
+                      originPosition={originCoords}
+                      destinationPosition={destCoords}
                       driverPosition={driverCoords}
+                      originAddress={selectedShipment?.pickupAddress}
+                      destinationAddress={selectedDriver.deliveryAddress}
                       driverName={selectedDriver.driverName}
                       accuracy={selectedDriver.accuracy}
                       connectionStatus={selectedDriver.connectionStatus}

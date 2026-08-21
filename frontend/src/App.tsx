@@ -13,6 +13,7 @@ import { MyShipments } from '@/pages/customer/MyShipments';
 import { CreateShipment } from '@/pages/customer/CreateShipment';
 import { ShipmentDetails } from '@/pages/customer/ShipmentDetails';
 import { TrackShipment } from '@/pages/customer/TrackShipment';
+import { PublicTrackPage } from '@/pages/customer/PublicTrackPage';
 import { CreateComplaint } from '@/pages/customer/CreateComplaint';
 import { MyTickets } from '@/pages/customer/MyTickets';
 import { TicketDetails } from '@/pages/customer/TicketDetails';
@@ -24,6 +25,7 @@ import { Users } from '@/pages/admin/Users';
 import { Reports } from '@/pages/admin/Reports';
 import { LiveFleetTracking } from '@/pages/admin/LiveFleetTracking';
 import { LiveTrackingView } from '@/pages/tracking/LiveTrackingView';
+import { ExecutiveAnalytics } from '@/pages/analytics/ExecutiveAnalytics';
 import { Tickets } from '@/pages/support/Tickets';
 import { SupportTicketDetails } from '@/pages/support/SupportTicketDetails';
 import { Profile } from '@/pages/auth/Profile';
@@ -34,24 +36,21 @@ function App() {
     <AuthProvider>
       <DomainProvider>
         <Routes>
+          {/* Authentication Routes */}
           <Route path="/auth" element={<AuthLayout />}>
             <Route path="login" element={<Login />} />
             <Route path="register" element={<Register />} />
             <Route path="forgot-password" element={<ForgotPassword />} />
           </Route>
 
-          {/* Public Track Route (accessible without login) */}
-          <Route path="/track" element={<TrackShipment />} />
-          <Route path="/track/:trackingNumber" element={<TrackShipment />} />
-        
-          {/* Core Authenticated Routes */}
+          {/* Core Authenticated Routes wrapped with ProtectedRoute and DashboardLayout */}
           <Route element={<ProtectedRoute />}>
             <Route element={<DashboardLayout />}>
               <Route path="/" element={<Dashboard />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/notifications" element={<NotificationCenter />} />
 
-              {/* Customer Shipment Routes */}
+              {/* Customer & General Shipment Routes */}
               <Route path="/shipments" element={<MyShipments />} />
               <Route path="/shipments/create" element={<CreateShipment />} />
               <Route path="/shipments/:id" element={<ShipmentDetails />} />
@@ -59,6 +58,12 @@ function App() {
               <Route path="/tracking/live/:id" element={<LiveTrackingView />} />
               <Route path="/tracking" element={<TrackShipment />} />
               <Route path="/tracking/:trackingNumber" element={<TrackShipment />} />
+              <Route path="/track" element={<TrackShipment />} />
+              <Route path="/track/:trackingNumber" element={<TrackShipment />} />
+
+              {/* Analytics & Reports */}
+              <Route path="/analytics" element={<ExecutiveAnalytics />} />
+              <Route path="/reports" element={<Reports />} />
 
               {/* Customer Support Routes */}
               <Route path="/customer/tickets" element={<MyTickets />} />
@@ -77,7 +82,6 @@ function App() {
                 <Route path="/admin/drivers" element={<Drivers />} />
                 <Route path="/admin/users" element={<Users />} />
                 <Route path="/admin/reports" element={<Reports />} />
-                <Route path="/reports" element={<Reports />} />
                 <Route path="/users" element={<Users />} />
                 <Route path="/drivers" element={<Drivers />} />
               </Route>
@@ -95,6 +99,12 @@ function App() {
               </Route>
             </Route>
           </Route>
+
+          {/* Public Track Route (accessible without login with public navbar) */}
+          <Route path="/track" element={<PublicTrackPage />} />
+          <Route path="/track/:trackingNumber" element={<PublicTrackPage />} />
+          <Route path="/tracking" element={<PublicTrackPage />} />
+          <Route path="/tracking/:trackingNumber" element={<PublicTrackPage />} />
           
           <Route path="*" element={<NotFound />} />
         </Routes>

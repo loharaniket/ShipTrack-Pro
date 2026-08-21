@@ -3,11 +3,13 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { LiveMap } from '@/components/maps/LiveMap';
 import { 
   Search, Package, Truck, CheckCircle2, Clock, MapPin, 
-  ArrowLeft, AlertCircle, ShieldCheck 
+  ArrowLeft, AlertCircle, ShieldCheck, Navigation, ExternalLink 
 } from 'lucide-react';
 import { trackingService, PublicTrackingResponse } from '@/services/trackingService';
+import { addressService } from '@/services/addressService';
 import { ShipmentStatusBadge } from '@/components/common/ShipmentStatusBadge';
 import { formatFriendlyDate } from '@/utils/dateFormatter';
 
@@ -27,6 +29,8 @@ export function TrackShipment() {
   const navigate = useNavigate();
   const [query, setQuery] = useState(initialNumber);
   const [trackingData, setTrackingData] = useState<PublicTrackingResponse | null>(null);
+  const [dynamicOriginCoords, setDynamicOriginCoords] = useState<[number, number] | undefined>(undefined);
+  const [dynamicDestCoords, setDynamicDestCoords] = useState<[number, number] | undefined>(undefined);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -44,9 +48,37 @@ export function TrackShipment() {
       setError('');
       const data = await trackingService.getPublicTracking(num.trim());
       setTrackingData(data);
+
+      // Resolve Origin Coords
+      if (data.originLatitude && data.originLongitude) {
+        setDynamicOriginCoords([Number(data.originLatitude), Number(data.originLongitude)]);
+      } else if (data.originAddress?.latitude && data.originAddress?.longitude) {
+        setDynamicOriginCoords([Number(data.originAddress.latitude), Number(data.originAddress.longitude)]);
+      } else if (data.pickupAddress) {
+        addressService.geocodeAddress(data.pickupAddress).then((geo) => {
+          if (geo) setDynamicOriginCoords([geo.latitude, geo.longitude]);
+        });
+      } else {
+        setDynamicOriginCoords(undefined);
+      }
+
+      // Resolve Destination Coords
+      if (data.destLatitude && data.destLongitude) {
+        setDynamicDestCoords([Number(data.destLatitude), Number(data.destLongitude)]);
+      } else if (data.destinationAddress?.latitude && data.destinationAddress?.longitude) {
+        setDynamicDestCoords([Number(data.destinationAddress.latitude), Number(data.destinationAddress.longitude)]);
+      } else if (data.deliveryAddress) {
+        addressService.geocodeAddress(data.deliveryAddress).then((geo) => {
+          if (geo) setDynamicDestCoords([geo.latitude, geo.longitude]);
+        });
+      } else {
+        setDynamicDestCoords(undefined);
+      }
     } catch (err: any) {
       setError(err.message || 'Tracking number not found. Please check and try again.');
       setTrackingData(null);
+      setDynamicOriginCoords(undefined);
+      setDynamicDestCoords(undefined);
     } finally {
       setLoading(false);
     }
@@ -73,7 +105,7 @@ export function TrackShipment() {
       <div className="text-center space-y-2">
         <h1 className="text-3xl font-extrabold text-navy-900">Shipment Live Tracking</h1>
         <p className="text-sm text-navy-500">
-          Enter your shipment tracking ID to get instant milestone updates
+          Enter your shipment tracking ID to get instant milestone updates and geocoded route map
         </p>
       </div>
 
@@ -164,6 +196,69 @@ export function TrackShipment() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Dynamic Geocoded OpenStreetMap Route View */}
+          {(dynamicOriginCoords || dynamicDestCoords) && (
+            <Card className="border-navy-200 overflow-hidden">
+              <CardHeader className="py-3 px-5 bg-navy-50/50 border-b border-navy-100 flex flex-row items-center justify-between">
+                <CardTitle className="text-sm font-bold text-navy-900 flex items-center gap-2">
+                  <Navigation className="h-4 w-4 text-primary-600" /> Geocoded Delivery Route Map
+                </CardTitle>
+                <div className="text-xs text-navy-500 flex items-center gap-3">
+                  <span className="flex items-center gap-1">
+                    <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" /> Pickup Origin
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="h-2.5 w-2.5 rounded-full bg-rose-500" /> Destination
+                  </span>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                <LiveMap
+                  originPosition={dynamicOriginCoords}
+                  destinationPosition={dynamicDestCoords}
+                  originAddress={trackingData.pickupAddress}
+                  destinationAddress={trackingData.deliveryAddress}
+                  height="h-72 sm:h-80"
+                />
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Origin & Destination Summary Card */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Card className="border-navy-200">
+              <CardContent className="p-4 space-y-1">
+                <p className="text-xs uppercase font-bold text-emerald-700 flex items-center gap-1.5">
+                  <MapPin className="h-3.5 w-3.5" /> Pickup Origin
+                </p>
+                <p className="text-sm font-medium text-navy-900">
+                  {trackingData.pickupAddress || 'Origin Location'}
+                </p>
+                {dynamicOriginCoords && (
+                  <p className="text-[11px] font-mono text-emerald-700">
+                    Coords: {dynamicOriginCoords[0].toFixed(4)}, {dynamicOriginCoords[1].toFixed(4)}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="border-navy-200">
+              <CardContent className="p-4 space-y-1">
+                <p className="text-xs uppercase font-bold text-rose-700 flex items-center gap-1.5">
+                  <MapPin className="h-3.5 w-3.5" /> Delivery Destination
+                </p>
+                <p className="text-sm font-medium text-navy-900">
+                  {trackingData.deliveryAddress || 'Destination Location'}
+                </p>
+                {dynamicDestCoords && (
+                  <p className="text-[11px] font-mono text-rose-700">
+                    Coords: {dynamicDestCoords[0].toFixed(4)}, {dynamicDestCoords[1].toFixed(4)}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
 
           {/* Chronological Timeline */}
           <Card>

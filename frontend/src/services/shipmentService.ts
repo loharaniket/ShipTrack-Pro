@@ -1,4 +1,5 @@
 import { apiClient } from './apiClient';
+import { AddressDto } from './addressService';
 
 export interface CreateShipmentPayload {
   senderName: string;
@@ -7,6 +8,8 @@ export interface CreateShipmentPayload {
   receiverPhone: string;
   pickupAddress: string;
   deliveryAddress: string;
+  originAddress?: AddressDto;
+  destinationAddress?: AddressDto;
   packageDescription: string;
   weight: number;
 }
@@ -25,6 +28,8 @@ export interface CustomerShipmentItem {
   receiverName: string;
   pickupAddress: string;
   deliveryAddress: string;
+  originAddress?: AddressDto;
+  destinationAddress?: AddressDto;
   status: string;
   weight: number;
   createdAt: string;
