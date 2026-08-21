@@ -1,5 +1,6 @@
 package com.shiptrackpro.backend.shipment.dto;
 
+import com.shiptrackpro.backend.address.dto.AddressDto;
 import com.shiptrackpro.backend.shipment.entity.ShipmentStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -24,6 +25,8 @@ public class CustomerShipmentDto {
     private String receiverPhone;
     private String pickupAddress;
     private String deliveryAddress;
+    private AddressDto originAddress;
+    private AddressDto destinationAddress;
     private String packageDescription;
     private Double weight;
     private ShipmentStatus status;

@@ -1,5 +1,6 @@
 package com.shiptrackpro.backend.shipment.dto;
 
+import com.shiptrackpro.backend.address.dto.AddressDto;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -30,6 +31,10 @@ public class CreateShipmentRequest {
 
     @NotBlank(message = "Delivery address is required")
     private String deliveryAddress;
+
+    private AddressDto originAddress;
+
+    private AddressDto destinationAddress;
 
     private String packageDescription;
 

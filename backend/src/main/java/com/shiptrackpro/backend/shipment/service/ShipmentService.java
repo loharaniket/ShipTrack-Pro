@@ -1,5 +1,7 @@
 package com.shiptrackpro.backend.shipment.service;
 
+import com.shiptrackpro.backend.address.entity.Address;
+import com.shiptrackpro.backend.address.service.AddressService;
 import com.shiptrackpro.backend.notifications.service.NotificationService;
 import com.shiptrackpro.backend.shipment.dto.CreateShipmentRequest;
 import com.shiptrackpro.backend.shipment.dto.CreateShipmentResponse;
@@ -30,12 +32,41 @@ public class ShipmentService {
     private final ShipmentRepository shipmentRepository;
     private final ShipmentTrackingRepository shipmentTrackingRepository;
     private final NotificationService notificationService;
+    private final AddressService addressService;
 
     @Transactional
     public CreateShipmentResponse createShipment(CreateShipmentRequest request, User customer) {
         if (customer == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User must be authenticated");
         }
+
+        // 1. Resolve Origin Address
+        Address originAddress;
+        if (request.getOriginAddress() != null) {
+            originAddress = addressService.findOrCreateAddress(request.getOriginAddress());
+        } else if (request.getPickupAddress() != null && !request.getPickupAddress().trim().isEmpty()) {
+            originAddress = addressService.findOrCreateFromRaw(request.getPickupAddress());
+        } else {
+            originAddress = addressService.findOrCreateFromRaw("Origin Location");
+        }
+
+        // 2. Resolve Destination Address
+        Address destinationAddress;
+        if (request.getDestinationAddress() != null) {
+            destinationAddress = addressService.findOrCreateAddress(request.getDestinationAddress());
+        } else if (request.getDeliveryAddress() != null && !request.getDeliveryAddress().trim().isEmpty()) {
+            destinationAddress = addressService.findOrCreateFromRaw(request.getDeliveryAddress());
+        } else {
+            destinationAddress = addressService.findOrCreateFromRaw("Delivery Location");
+        }
+
+        String pickupStr = request.getPickupAddress() != null && !request.getPickupAddress().trim().isEmpty()
+                ? request.getPickupAddress()
+                : (originAddress != null ? originAddress.getLine1() : "Origin Location");
+
+        String deliveryStr = request.getDeliveryAddress() != null && !request.getDeliveryAddress().trim().isEmpty()
+                ? request.getDeliveryAddress()
+                : (destinationAddress != null ? destinationAddress.getLine1() : "Delivery Location");
 
         // Generate unique sequential tracking number (e.g. STP10001)
         String trackingNumber = generateTrackingNumber();
@@ -47,8 +78,10 @@ public class ShipmentService {
                 .senderPhone(request.getSenderPhone())
                 .receiverName(request.getReceiverName())
                 .receiverPhone(request.getReceiverPhone())
-                .pickupAddress(request.getPickupAddress())
-                .deliveryAddress(request.getDeliveryAddress())
+                .pickupAddress(pickupStr)
+                .deliveryAddress(deliveryStr)
+                .originAddress(originAddress)
+                .destinationAddress(destinationAddress)
                 .packageDescription(request.getPackageDescription())
                 .weight(request.getWeight())
                 .status(ShipmentStatus.CREATED)
@@ -151,6 +184,8 @@ public class ShipmentService {
                 .receiverPhone(shipment.getReceiverPhone())
                 .pickupAddress(shipment.getPickupAddress())
                 .deliveryAddress(shipment.getDeliveryAddress())
+                .originAddress(shipment.getOriginAddress() != null ? addressService.toDto(shipment.getOriginAddress()) : null)
+                .destinationAddress(shipment.getDestinationAddress() != null ? addressService.toDto(shipment.getDestinationAddress()) : null)
                 .packageDescription(shipment.getPackageDescription())
                 .weight(shipment.getWeight())
                 .status(shipment.getStatus())

@@ -1,7 +1,10 @@
 package com.shiptrackpro.backend.tracking.service;
 
+import com.shiptrackpro.backend.address.service.AddressService;
 import com.shiptrackpro.backend.shipment.entity.Shipment;
 import com.shiptrackpro.backend.shipment.repository.ShipmentRepository;
+import com.shiptrackpro.backend.tracking.dto.PublicTrackingResponse;
+import com.shiptrackpro.backend.tracking.dto.PublicTrackingTimelineDto;
 import com.shiptrackpro.backend.tracking.entity.ShipmentTracking;
 import com.shiptrackpro.backend.tracking.repository.ShipmentTrackingRepository;
 import lombok.RequiredArgsConstructor;
@@ -10,9 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import com.shiptrackpro.backend.tracking.dto.PublicTrackingResponse;
-import com.shiptrackpro.backend.tracking.dto.PublicTrackingTimelineDto;
-
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -23,6 +24,7 @@ public class TrackingService {
 
     private final ShipmentRepository shipmentRepository;
     private final ShipmentTrackingRepository shipmentTrackingRepository;
+    private final AddressService addressService;
 
     @Transactional(readOnly = true)
     public PublicTrackingResponse getPublicTrackingTimeline(String trackingNumber) {
@@ -39,9 +41,22 @@ public class TrackingService {
                         .build())
                 .collect(Collectors.toList());
 
+        BigDecimal originLat = shipment.getOriginAddress() != null ? shipment.getOriginAddress().getLatitude() : null;
+        BigDecimal originLng = shipment.getOriginAddress() != null ? shipment.getOriginAddress().getLongitude() : null;
+        BigDecimal destLat = shipment.getDestinationAddress() != null ? shipment.getDestinationAddress().getLatitude() : null;
+        BigDecimal destLng = shipment.getDestinationAddress() != null ? shipment.getDestinationAddress().getLongitude() : null;
+
         return PublicTrackingResponse.builder()
                 .trackingNumber(shipment.getTrackingNumber())
                 .currentStatus(shipment.getStatus())
+                .pickupAddress(shipment.getPickupAddress())
+                .deliveryAddress(shipment.getDeliveryAddress())
+                .originAddress(shipment.getOriginAddress() != null ? addressService.toDto(shipment.getOriginAddress()) : null)
+                .destinationAddress(shipment.getDestinationAddress() != null ? addressService.toDto(shipment.getDestinationAddress()) : null)
+                .originLatitude(originLat)
+                .originLongitude(originLng)
+                .destLatitude(destLat)
+                .destLongitude(destLng)
                 .timeline(timeline)
                 .build();
     }
